@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>T1 2.1 · Attention 机制</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root {
+  --bg: #fafaf7;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7;
+  --purple-bg: #EEEDFE;
+  --teal: #1D9E75;
+  --teal-bg: #E1F5EE;
+  --amber: #BA7517;
+  --amber-bg: #FAEEDA;
+  --blue: #185FA5;
+  --blue-bg: #E6F1FB;
+  --coral: #993C1D;
+  --coral-bg: #FAECE7;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+  font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 32px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.tag.t1 { background: var(--purple-bg); color: var(--purple); }
+.tag.section { background: #f1f1f1; color: var(--muted); }
+.tag.time { background: var(--teal-bg); color: var(--teal); }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 22px; font-weight: 600; margin: 8px 0 4px; }
+.subtitle { color: var(--muted); font-size: 14px; }
+h2 { font-size: 18px; font-weight: 600; margin: 40px 0 12px; padding-left: 12px; border-left: 3px solid var(--purple); }
+h3 { font-size: 15px; font-weight: 600; margin: 20px 0 8px; color: #333; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin: 16px 0; }
+.card.intuition { background: var(--blue-bg); border-color: rgba(24,95,165,0.15); }
+.card.warning { background: var(--coral-bg); border-color: rgba(153,60,29,0.15); }
+.card.deepen { background: var(--amber-bg); border-color: rgba(186,117,23,0.15); }
+.card.takeaway { background: var(--teal-bg); border-color: rgba(29,158,117,0.15); }
+.card.insight { background: var(--purple-bg); border-color: rgba(83,74,183,0.15); }
+.card-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.card.intuition .card-title { color: var(--blue); }
+.card.warning .card-title { color: var(--coral); }
+.card.deepen .card-title { color: var(--amber); }
+.card.takeaway .card-title { color: var(--teal); }
+.card.insight .card-title { color: var(--purple); }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+th { font-weight: 600; background: #f7f7f4; color: var(--muted); font-size: 13px; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: #f1f1ee; padding: 2px 6px; border-radius: 4px; color: #d63384; }
+.diagram { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin: 16px 0; }
+.math-block { background: #f7f7f4; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin: 12px 0; }
+.thinking { border-left: 3px solid var(--amber); padding: 4px 16px; margin: 16px 0; font-style: italic; color: #555; }
+.footer-actions { margin-top: 48px; padding: 20px; background: var(--purple-bg); border-radius: 10px; }
+.footer-actions h3 { margin-top: 0; color: var(--purple); }
+.footer-actions ul { padding-left: 20px; }
+.footer-actions li { margin: 6px 0; }
+.footer-actions a { color: var(--purple); font-weight: 500; white-space: nowrap; }
+strong { font-weight: 600; }
+em { color: #555; }
+.anchor-nav a { display: inline-block; padding: 4px 10px; border-radius: 14px; font-size: 12px; font-weight: 500; text-decoration: none; }
+.anchor-nav a.done { background: var(--teal-bg); color: #0F6E56; }
+.anchor-nav a.pending { background: #f1f1f1; color: var(--muted); }
+.token-badge { display: inline-block; background: var(--purple-bg); color: var(--purple); border: 1px solid rgba(83,74,183,0.25); border-radius: 4px; padding: 1px 7px; font-size: 13px; font-family: "SF Mono", Menlo, monospace; margin: 0 2px; }
+.token-badge.teal { background: var(--teal-bg); color: #0F6E56; border-color: rgba(29,158,117,0.25); }
+.token-badge.amber { background: var(--amber-bg); color: var(--amber); border-color: rgba(186,117,23,0.25); }
+.term-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t1">T1 LLM 系统</span>
+    <span class="tag section">2.1 Attention 机制</span>
+    <span class="tag time">≈ 75 min · 进度 5/5</span>
+    <a href="../../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+    <a href="2.1-attention-quiz.html" class="nav-link">Quiz →</a>
+  </div>
+  <h1>Attention 机制：让每个词动态"问路"的设计</h1>
+  <div class="subtitle">Scaled Dot-Product · Q/K/V 三角 · √d_k 的第一性原理 · 从 DDAgent 读合同看本质</div>
+
+  <div class="anchor-nav" style="display:flex;gap:8px;margin-top:16px;font-size:12px;flex-wrap:wrap;">
+    <a href="#is" class="done">① 是什么 ✓</a>
+    <a href="#how" class="done">② 怎么实现 ✓</a>
+    <a href="#why" class="done">③ 为什么 ✓</a>
+    <a href="#evolution" class="done">④ 演进 ✓</a>
+    <a href="#connect" class="done">⑤ 与产品 ✓</a>
+  </div>
+</div>
+
+<!-- ====== 章节一览图 ====== -->
+<div class="diagram" style="margin:24px 0 8px;">
+<p style="font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px;">章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 300" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <defs>
+    <marker id="ov-arr21" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- ① 紫色节点（顶部居中） -->
+  <rect x="210" y="10" width="260" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="340" y="30" font-family="-apple-system,sans-serif" font-size="13" font-weight="500" fill="#534AB7" text-anchor="middle">① 是什么</text>
+  <text x="340" y="48" font-family="-apple-system,sans-serif" font-size="11" fill="#3C3489" text-anchor="middle">每个 token 动态问其他 token "你对我有多重要？"</text>
+
+  <!-- 箭头 ↓ -->
+  <line x1="340" y1="62" x2="340" y2="88" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr21)"/>
+
+  <!-- ② 蓝色节点（居中） -->
+  <rect x="210" y="92" width="260" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="340" y="112" font-family="-apple-system,sans-serif" font-size="13" font-weight="500" fill="#185FA5" text-anchor="middle">② 怎么实现</text>
+  <text x="340" y="130" font-family="-apple-system,sans-serif" font-size="11" fill="#0C447C" text-anchor="middle">Q·Kᵀ / √dₖ → Softmax → 加权 V</text>
+
+  <!-- 箭头 ↓ -->
+  <line x1="340" y1="144" x2="340" y2="170" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr21)"/>
+
+  <!-- ③ 琥珀节点（居中） -->
+  <rect x="210" y="174" width="260" height="52" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="340" y="194" font-family="-apple-system,sans-serif" font-size="13" font-weight="500" fill="#BA7517" text-anchor="middle">③ 为什么</text>
+  <text x="340" y="212" font-family="-apple-system,sans-serif" font-size="11" fill="#633806" text-anchor="middle">√dₖ防梯度消失 · Q≠K≠V 让检索与存储解耦</text>
+
+  <!-- 箭头到 ④⑤ 分叉 -->
+  <line x1="340" y1="226" x2="340" y2="246" stroke="#888780" stroke-width="0.5"/>
+  <line x1="340" y1="246" x2="168" y2="246" stroke="#888780" stroke-width="0.5"/>
+  <line x1="340" y1="246" x2="512" y2="246" stroke="#888780" stroke-width="0.5"/>
+  <line x1="168" y1="246" x2="168" y2="256" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr21)"/>
+  <line x1="512" y1="246" x2="512" y2="256" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr21)"/>
+
+  <!-- ④ 紫浅节点（演进）左 -->
+  <rect x="52" y="260" width="232" height="30" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text x="168" y="278" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#534AB7" text-anchor="middle">④ 演进：MQA → GQA → MLA → FlashAttn</text>
+
+  <!-- ⑤ 绿色节点（产品）右 -->
+  <rect x="396" y="260" width="232" height="30" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text x="512" y="278" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#1D9E75" text-anchor="middle">⑤ 产品：DDAgent 条款定位 · KBA 召回</text>
+</svg>
+</div>
+
+<!-- ====== §① 是什么 ====== -->
+<section id="is">
+<h2>① 是什么：每个 token 动态"问路"</h2>
+
+<div class="card intuition">
+  <div class="card-title">💡 直觉类比</div>
+  <p><strong>把 Attention 想象成一个跨境支付合同的审查员。</strong></p>
+  <p>合同里有一句话："<em>付款方须在交割日前三日提交汇款凭证，逾期按日收取 0.05% 违约金</em>"。当审查员读到"<strong>逾期</strong>"这个词时，他会本能地回头找"<strong>交割日</strong>"——因为知道"逾期"的含义必须依附于某个时间锚点。</p>
+  <p>Attention 做的事情完全一样：<strong>当前 token 向序列中所有其他 token "发问"，根据相关性动态加权，把最有用的信息拉过来</strong>，合成自己的新表示。这种"动态加权"区别于固定权重的卷积——不同语境下，同一个词的关注对象完全不同。</p>
+</div>
+
+<h3>为什么需要 Attention？</h3>
+
+<p>在 Transformer 出现之前，RNN 处理序列依靠"接力棒"：每个位置把信息压缩进一个隐向量传给下一位置。问题是<strong>长距离依赖会衰减</strong>——第 1 个词的信息传到第 100 个词时已经面目全非。</p>
+
+<p>Attention 的根本动机是：<strong>让任意两个位置之间直接"通信"，不经过中间节点</strong>。距离从 O(n) 降到 O(1)。</p>
+
+<div class="diagram" style="padding:16px;">
+<svg viewBox="0 0 640 160" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr-rnn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#993C1D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arr-att" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- RNN 行 -->
+  <text x="8" y="38" font-family="-apple-system,sans-serif" font-size="11" fill="#993C1D" font-weight="600">RNN</text>
+  <rect x="50" y="18" width="48" height="28" rx="5" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+  <text x="74" y="36" font-family="-apple-system,sans-serif" font-size="11" fill="#993C1D" text-anchor="middle">付款方</text>
+  <line x1="98" y1="32" x2="146" y2="32" stroke="#993C1D" stroke-width="0.8" marker-end="url(#arr-rnn)"/>
+  <rect x="150" y="18" width="48" height="28" rx="5" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+  <text x="174" y="36" font-family="-apple-system,sans-serif" font-size="11" fill="#993C1D" text-anchor="middle">须在</text>
+  <line x1="198" y1="32" x2="246" y2="32" stroke="#993C1D" stroke-width="0.8" marker-end="url(#arr-rnn)"/>
+  <rect x="250" y="18" width="48" height="28" rx="5" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+  <text x="274" y="36" font-family="-apple-system,sans-serif" font-size="11" fill="#993C1D" text-anchor="middle">交割日</text>
+  <line x1="298" y1="32" x2="346" y2="32" stroke="#993C1D" stroke-width="0.8" marker-end="url(#arr-rnn)"/>
+  <text x="302" y="16" font-family="-apple-system,sans-serif" font-size="9" fill="#993C1D" text-anchor="middle">已衰减</text>
+  <rect x="350" y="18" width="48" height="28" rx="5" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+  <text x="374" y="36" font-family="-apple-system,sans-serif" font-size="11" fill="#993C1D" text-anchor="middle">逾期</text>
+  <line x1="398" y1="32" x2="446" y2="32" stroke="#993C1D" stroke-width="0.8" marker-end="url(#arr-rnn)"/>
+  <rect x="450" y="18" width="48" height="28" rx="5" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+  <text x="474" y="36" font-family="-apple-system,sans-serif" font-size="11" fill="#993C1D" text-anchor="middle">违约金</text>
+  <text x="420" y="16" font-family="-apple-system,sans-serif" font-size="9" fill="#993C1D" text-anchor="middle">早忘了</text>
+
+  <!-- Attention 行 -->
+  <text x="8" y="108" font-family="-apple-system,sans-serif" font-size="11" fill="#185FA5" font-weight="600">Attention</text>
+  <rect x="50" y="88" width="48" height="28" rx="5" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+  <text x="74" y="106" font-family="-apple-system,sans-serif" font-size="11" fill="#185FA5" text-anchor="middle">付款方</text>
+  <rect x="150" y="88" width="48" height="28" rx="5" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+  <text x="174" y="106" font-family="-apple-system,sans-serif" font-size="11" fill="#185FA5" text-anchor="middle">须在</text>
+  <rect x="250" y="88" width="48" height="28" rx="5" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+  <text x="274" y="106" font-family="-apple-system,sans-serif" font-size="11" fill="#185FA5" text-anchor="middle">交割日</text>
+  <rect x="350" y="88" width="48" height="28" rx="5" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.2"/>
+  <text x="374" y="106" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" font-weight="600" text-anchor="middle">逾期</text>
+  <rect x="450" y="88" width="48" height="28" rx="5" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+  <text x="474" y="106" font-family="-apple-system,sans-serif" font-size="11" fill="#185FA5" text-anchor="middle">违约金</text>
+
+  <!-- 直接连线：逾期 → 交割日 -->
+  <path d="M374 88 C374 66 274 66 274 88" fill="none" stroke="#534AB7" stroke-width="1.2" marker-end="url(#arr-att)" stroke-dasharray="4,2"/>
+  <text x="324" y="62" font-family="-apple-system,sans-serif" font-size="10" fill="#534AB7" text-anchor="middle">直接关注 · O(1)</text>
+
+  <!-- 逾期 → 付款方 (弱) -->
+  <path d="M374 116 C374 142 74 142 74 116" fill="none" stroke="#AFA9EC" stroke-width="0.6" stroke-dasharray="3,3"/>
+</svg>
+</div>
+
+<h3>三个核心术语</h3>
+
+<div class="term-row">
+  <span class="token-badge">Query Q</span>
+  <span class="token-badge teal">Key K</span>
+  <span class="token-badge amber">Value V</span>
+</div>
+
+<p>用图书馆类比理解三者：</p>
+<ul>
+  <li><strong>Query（查询）</strong>：你在图书馆柜台写下的<em>检索需求</em>——"我要找跨境支付监管相关的书"</li>
+  <li><strong>Key（键）</strong>：每本书封面上的<em>关键词标签</em>——"监管/合规/支付"</li>
+  <li><strong>Value（值）</strong>：书的<em>实际内容</em>，真正会被你带走阅读的信息</li>
+</ul>
+<p>Attention 的逻辑：用你的 Query 去比对所有书的 Key，得到"相关度分数"，然后<strong>按相关度加权，把各本书的 Value 混合返回给你</strong>。</p>
+
+<div class="card takeaway">
+  <div class="card-title">§① 核心结论</div>
+  <p>Attention 的本质是<strong>动态内容寻址</strong>：同一个位置在不同上下文中会关注不同的位置，实现了 O(1) 的长距离依赖。三个不同投影（Q/K/V）的分离让"检索"与"存储"解耦，是整个机制能运作的关键设计。</p>
+</div>
+</section>
+
+<!-- ====== §② 怎么实现 ====== -->
+<section id="how">
+<h2>② 怎么实现：Scaled Dot-Product Attention</h2>
+
+<div class="card intuition">
+  <div class="card-title">💡 PM 直觉</div>
+  <p>整个 Attention 的数学不过是<strong>三步走</strong>：算相似度 → 归一化 → 加权求和。就像你在评估多个供应商：先给每家打个"契合度分"，然后归一化成"权重比例"，最后把各家的方案按比例混合，得到最终方案。</p>
+</div>
+
+<h3>Step 1：准备三组投影矩阵</h3>
+
+<p>输入的 token 嵌入向量 $\mathbf{X} \in \mathbb{R}^{n \times d_{model}}$（n 个 token，每个 $d_{model}$ 维），通过三个可学习的权重矩阵投影：</p>
+
+$$\mathbf{Q} = \mathbf{X} W^Q, \quad \mathbf{K} = \mathbf{X} W^K, \quad \mathbf{V} = \mathbf{X} W^V$$
+
+<p>其中 $W^Q, W^K \in \mathbb{R}^{d_{model} \times d_k}$，$W^V \in \mathbb{R}^{d_{model} \times d_v}$。这三个矩阵是模型训练时学到的，<strong>不是固定的</strong>——模型会学习用什么"视角"去查询、用什么"标签"去响应、用什么"内容"去传递。</p>
+
+<h3>Step 2：计算注意力分数</h3>
+
+<p>Q 和 K 的点积衡量"相关程度"，再除以 $\sqrt{d_k}$ 缩放：</p>
+
+$$\text{scores} = \frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}} \in \mathbb{R}^{n \times n}$$
+
+<p>得到一个 $n \times n$ 的矩阵，第 $(i, j)$ 个元素代表<strong>第 i 个 token 对第 j 个 token 的关注程度（未归一化）</strong>。</p>
+
+<h3>Step 3：Softmax 归一化</h3>
+
+<p>对每行做 Softmax，把原始分数变成概率分布（每行之和为 1）：</p>
+
+$$\mathbf{A} = \text{Softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)$$
+
+<p>$\mathbf{A}_{ij}$ 就是"第 i 个 token 给第 j 个 token 分配的注意力权重"。</p>
+
+<h3>Step 4：加权聚合 Value</h3>
+
+$$\text{Attention}(\mathbf{Q}, \mathbf{K}, \mathbf{V}) = \text{Softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}}\right)\mathbf{V}$$
+
+<p>用注意力权重矩阵 $\mathbf{A}$ 对 $\mathbf{V}$ 做加权求和：第 i 个位置的输出 = 所有位置的 Value 向量按权重混合的结果。</p>
+
+<div class="diagram" style="padding:16px;">
+<p style="font-size:12px;color:var(--muted);margin:0 0 10px;font-weight:500;">Scaled Dot-Product Attention 完整流程</p>
+<svg viewBox="0 0 640 240" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr-flow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- 输入 X -->
+  <rect x="20" y="95" width="64" height="50" rx="6" fill="#f7f7f4" stroke="#888" stroke-width="0.8"/>
+  <text x="52" y="116" font-family="-apple-system,sans-serif" font-size="12" fill="#333" text-anchor="middle" font-weight="500">输入 X</text>
+  <text x="52" y="132" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">n × d_model</text>
+
+  <!-- 三条分支线 -->
+  <line x1="84" y1="120" x2="110" y2="50" stroke="#534AB7" stroke-width="0.8"/>
+  <line x1="84" y1="120" x2="110" y2="120" stroke="#185FA5" stroke-width="0.8"/>
+  <line x1="84" y1="120" x2="110" y2="190" stroke="#BA7517" stroke-width="0.8"/>
+
+  <!-- Q, K, V 块 -->
+  <rect x="110" y="22" width="64" height="56" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.8"/>
+  <text x="142" y="46" font-family="-apple-system,sans-serif" font-size="13" fill="#534AB7" text-anchor="middle" font-weight="600">Q</text>
+  <text x="142" y="64" font-family="-apple-system,sans-serif" font-size="10" fill="#3C3489" text-anchor="middle">× W^Q</text>
+  <text x="142" y="74" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">n × d_k</text>
+
+  <rect x="110" y="92" width="64" height="56" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+  <text x="142" y="116" font-family="-apple-system,sans-serif" font-size="13" fill="#185FA5" text-anchor="middle" font-weight="600">K</text>
+  <text x="142" y="134" font-family="-apple-system,sans-serif" font-size="10" fill="#0C447C" text-anchor="middle">× W^K</text>
+  <text x="142" y="144" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">n × d_k</text>
+
+  <rect x="110" y="162" width="64" height="56" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.8"/>
+  <text x="142" y="186" font-family="-apple-system,sans-serif" font-size="13" fill="#BA7517" text-anchor="middle" font-weight="600">V</text>
+  <text x="142" y="204" font-family="-apple-system,sans-serif" font-size="10" fill="#633806" text-anchor="middle">× W^V</text>
+  <text x="142" y="214" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">n × d_v</text>
+
+  <!-- 箭头：Q K 到 MatMul -->
+  <line x1="174" y1="50" x2="220" y2="80" stroke="#534AB7" stroke-width="0.8" marker-end="url(#arr-flow)"/>
+  <line x1="174" y1="120" x2="220" y2="90" stroke="#185FA5" stroke-width="0.8" marker-end="url(#arr-flow)"/>
+
+  <!-- MatMul QK^T 块 -->
+  <rect x="224" y="62" width="80" height="40" rx="6" fill="#f1f1ee" stroke="#888" stroke-width="0.8"/>
+  <text x="264" y="80" font-family="-apple-system,sans-serif" font-size="11" fill="#333" text-anchor="middle" font-weight="500">QKᵀ / √dₖ</text>
+  <text x="264" y="96" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">n × n</text>
+
+  <!-- 箭头到 Softmax -->
+  <line x1="304" y1="82" x2="348" y2="82" stroke="#888" stroke-width="0.8" marker-end="url(#arr-flow)"/>
+
+  <!-- Softmax 块 -->
+  <rect x="352" y="62" width="80" height="40" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.8"/>
+  <text x="392" y="80" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle" font-weight="500">Softmax</text>
+  <text x="392" y="96" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">n × n 权重</text>
+
+  <!-- 箭头：Softmax + V → MatMul2 -->
+  <line x1="432" y1="82" x2="460" y2="100" stroke="#534AB7" stroke-width="0.8" marker-end="url(#arr-flow)"/>
+  <line x1="174" y1="190" x2="460" y2="120" stroke="#BA7517" stroke-width="0.8" marker-end="url(#arr-flow)"/>
+
+  <!-- 最终 MatMul 块 -->
+  <rect x="464" y="92" width="80" height="40" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.8"/>
+  <text x="504" y="110" font-family="-apple-system,sans-serif" font-size="11" fill="#1D9E75" text-anchor="middle" font-weight="500">× V</text>
+  <text x="504" y="126" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">加权输出</text>
+
+  <!-- 输出箭头 -->
+  <line x1="544" y1="112" x2="590" y2="112" stroke="#1D9E75" stroke-width="0.8" marker-end="url(#arr-flow)"/>
+  <text x="598" y="108" font-family="-apple-system,sans-serif" font-size="11" fill="#1D9E75" font-weight="600">Output</text>
+  <text x="598" y="122" font-family="-apple-system,sans-serif" font-size="10" fill="#888">n × d_v</text>
+</svg>
+</div>
+
+<h3>一个具体例子：理解注意力矩阵</h3>
+<p>以序列 "交割 日 逾期" 为例（3个token），注意力矩阵 $\mathbf{A}$ 的第3行代表"逾期"对每个位置的关注度：</p>
+
+<table>
+  <thead>
+    <tr><th></th><th>交割</th><th>日</th><th>逾期</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>交割</strong></td><td>0.60</td><td>0.30</td><td>0.10</td></tr>
+    <tr><td><strong>日</strong></td><td>0.40</td><td>0.50</td><td>0.10</td></tr>
+    <tr><td style="color:var(--purple);font-weight:600;">逾期</td><td style="color:var(--purple);">0.55</td><td style="color:var(--purple);">0.35</td><td style="color:var(--purple);">0.10</td></tr>
+  </tbody>
+</table>
+<p>"逾期"这个词把 55% 的注意力分配给"交割"，说明模型学到了它们之间的时间依赖关系。</p>
+
+<div class="card takeaway">
+  <div class="card-title">§② 核心结论</div>
+  <p>Scaled Dot-Product Attention = <strong>QKᵀ 打分 → 除以 √dₖ 稳定 → Softmax 归一化 → 加权 V</strong>，输出维度与 V 相同（$n \times d_v$）。整个操作<strong>可以用矩阵乘法并行完成</strong>，这是 Transformer 训练效率高于 RNN 的关键。</p>
+</div>
+</section>
+
+<!-- ====== §③ 为什么 ====== -->
+<section id="why">
+<h2>③ 为什么：第一性原理挖掘设计取舍</h2>
+
+<div class="card intuition">
+  <div class="card-title">💡 最关键的问题：为什么要除以 √dₖ？</div>
+  <p>这是面试必考、理解 Attention 最核心的一个问题。直觉：<strong>不除会让 Softmax 饱和，梯度接近于 0</strong>。</p>
+</div>
+
+<h3>√dₖ 的第一性原理推导</h3>
+
+<p>假设 Q 和 K 的每个元素独立同分布，均值 0，方差 1。则 Q 和 K 的点积 $\mathbf{q} \cdot \mathbf{k} = \sum_{i=1}^{d_k} q_i k_i$：</p>
+
+$$\mathbb{E}[q_i k_i] = 0, \quad \text{Var}[q_i k_i] = 1$$
+
+$$\text{Var}\left[\sum_{i=1}^{d_k} q_i k_i\right] = d_k$$
+
+<p>点积的方差随 $d_k$ 线性增长！当 $d_k = 64$ 时，标准差达到 $\sqrt{64} = 8$，点积取值范围很大。Softmax 面对这么大的输入会怎样？</p>
+
+<div class="card warning">
+  <div class="card-title">⚠️ Softmax 饱和问题</div>
+  <p>Softmax($\mathbf{z}$) 中，若某个 $z_i$ 远大于其他元素（比如 +8 vs 接近 0），softmax 输出几乎是 one-hot（[0,0,...,1,...,0]）。梯度 $\frac{\partial \text{softmax}}{\partial z} \approx 0$，<strong>模型无法从这个 token 学到任何东西</strong>——即梯度消失。</p>
+</div>
+
+<p>解决方案：除以 $\sqrt{d_k}$ 把方差归一化回 1：</p>
+
+$$\text{Var}\left[\frac{\mathbf{q} \cdot \mathbf{k}}{\sqrt{d_k}}\right] = \frac{d_k}{d_k} = 1$$
+
+<h3>为什么 Q、K、V 要是三个不同的投影？</h3>
+
+<p>这是另一个深层设计问题。理论上可以用同一个矩阵 $W$ 同时生成 Q 和 K（相当于 $W^Q = W^K$）。为什么不这么做？</p>
+
+<p><strong>检索与存储的职责分离</strong>：</p>
+<ul>
+  <li>Q 代表"我要找什么"（当前 token 的需求），K 代表"我能提供什么标签"（其他 token 的索引描述）</li>
+  <li>V 代表"我真正包含什么内容"（其他 token 要传递的实际语义）</li>
+  <li>如果 K = V，则"你能被检索到"和"你的内容"完全绑定，无法独立优化。分离后，K 可以专注于"好被发现"，V 可以专注于"内容丰富"</li>
+</ul>
+
+<p><strong>类比</strong>：搜索引擎里，网页的<em>SEO关键词</em>（K）和<em>正文内容</em>（V）是两回事——关键词决定你能被搜到，正文决定用户得到什么。</p>
+
+<h3>因果掩码（Causal Mask）：为什么生成时不能"偷看未来"</h3>
+
+<p>在解码阶段（生成文本），第 $i$ 个 token 不能关注第 $i+1, i+2, ...$ 个 token（因为它们还没生成）。实现方式：在计算 Softmax 之前，将注意力矩阵的<strong>上三角部分设为 $-\infty$</strong>（经过 Softmax 后变成 0 权重）：</p>
+
+$$\text{Masked-Attention} = \text{Softmax}\left(\frac{\mathbf{Q}\mathbf{K}^\top}{\sqrt{d_k}} + \mathbf{M}\right)\mathbf{V}$$
+
+<p>其中 $\mathbf{M}_{ij} = -\infty$ 当 $j > i$，否则 $0$。</p>
+
+<h3>复杂度分析</h3>
+<table>
+  <thead><tr><th>维度</th><th>标准 Self-Attention</th><th>说明</th></tr></thead>
+  <tbody>
+    <tr><td>时间复杂度</td><td>$O(n^2 \cdot d)$</td><td>QKᵀ 是 n×n 矩阵乘法</td></tr>
+    <tr><td>空间复杂度</td><td>$O(n^2)$</td><td>需存 n×n 注意力矩阵</td></tr>
+    <tr><td>最大依赖距离</td><td>$O(1)$</td><td>任意两 token 直接计算</td></tr>
+    <tr><td>并行度</td><td>高</td><td>矩阵乘法 GPU 友好</td></tr>
+  </tbody>
+</table>
+
+<p>$O(n^2)$ 的空间复杂度是长上下文的瓶颈所在（上一章 1.4 解决的正是这个问题），也是 FlashAttention 系列工作的动机。</p>
+
+<div class="card takeaway">
+  <div class="card-title">§③ 核心结论</div>
+  <p>✦ <strong>除以 √dₖ</strong>：防止高维空间中点积方差爆炸导致 Softmax 饱和（梯度消失）<br>
+  ✦ <strong>Q/K/V 分离</strong>：让检索（K）和内容（V）独立优化，灵活性更高<br>
+  ✦ <strong>因果掩码</strong>：训练和推理的一致性保证，阻止模型在训练时"作弊"<br>
+  ✦ <strong>$O(n^2)$ 瓶颈</strong>：长上下文研究（NSA/FlashAttention）的起点</p>
+</div>
+</section>
+
+<!-- ====== §④ 演进 ====== -->
+<section id="evolution">
+<h2>④ 演进格局：从 MHA 到 MLA 的工程进化</h2>
+
+<div class="card intuition">
+  <div class="card-title">💡 演进主线</div>
+  <p>Attention 的演进有一条清晰的工程主线：<strong>保持或提升模型质量的前提下，减少 KV Cache 内存占用</strong>——因为推理时 KV Cache 是显存瓶颈，直接决定能服务多少用户、支持多长上下文。</p>
+</div>
+
+<h3>Multi-Head Attention (MHA) — 原版，2017</h3>
+<p>《Attention is All You Need》提出。把单个 Attention 拆成 $h$ 个独立的"头"并行计算，每头维度 $d_k = d_{model}/h$，最后拼接：</p>
+
+$$\text{MultiHead}(\mathbf{Q},\mathbf{K},\mathbf{V}) = \text{Concat}(\text{head}_1, ..., \text{head}_h) W^O$$
+
+<p>为什么要多头？<strong>每个头可以在不同子空间里学习不同类型的依赖</strong>（语法依赖、语义依赖、指代关系等），总体表达能力远超单头。GPT-3 用 96 头，每头 128 维。</p>
+
+<h3>演进时间线</h3>
+<div class="diagram" style="padding:16px;">
+<svg viewBox="0 0 640 340" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr-tl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- 时间主轴 -->
+  <line x1="60" y1="280" x2="600" y2="280" stroke="#ccc" stroke-width="1.5" marker-end="url(#arr-tl)"/>
+  <text x="610" y="284" font-family="-apple-system,sans-serif" font-size="11" fill="#888">时间</text>
+
+  <!-- 2017 MHA -->
+  <line x1="90" y1="275" x2="90" y2="265" stroke="#888" stroke-width="1"/>
+  <text x="90" y="296" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">2017</text>
+  <rect x="30" y="180" width="120" height="68" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.8"/>
+  <text x="90" y="200" font-family="-apple-system,sans-serif" font-size="12" fill="#534AB7" text-anchor="middle" font-weight="600">MHA</text>
+  <text x="90" y="216" font-family="-apple-system,sans-serif" font-size="10" fill="#3C3489" text-anchor="middle">h个独立头</text>
+  <text x="90" y="230" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">KV×h，内存大</text>
+  <text x="90" y="244" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">Transformer基础</text>
+  <line x1="90" y1="248" x2="90" y2="265" stroke="#534AB7" stroke-width="0.8" stroke-dasharray="3,2"/>
+
+  <!-- 2023 MQA/GQA -->
+  <line x1="240" y1="275" x2="240" y2="265" stroke="#888" stroke-width="1"/>
+  <text x="240" y="296" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">2023</text>
+  <rect x="180" y="100" width="120" height="90" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+  <text x="240" y="120" font-family="-apple-system,sans-serif" font-size="12" fill="#185FA5" text-anchor="middle" font-weight="600">MQA / GQA</text>
+  <text x="240" y="136" font-family="-apple-system,sans-serif" font-size="10" fill="#0C447C" text-anchor="middle">共享KV头</text>
+  <text x="240" y="150" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">MQA: 1组KV</text>
+  <text x="240" y="164" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">GQA: g组KV</text>
+  <text x="240" y="178" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">Llama3/Qwen3采用</text>
+  <line x1="240" y1="190" x2="240" y2="265" stroke="#185FA5" stroke-width="0.8" stroke-dasharray="3,2"/>
+
+  <!-- 2024 MLA -->
+  <line x1="400" y1="275" x2="400" y2="265" stroke="#888" stroke-width="1"/>
+  <text x="400" y="296" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">2024</text>
+  <rect x="340" y="60" width="120" height="108" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.8"/>
+  <text x="400" y="80" font-family="-apple-system,sans-serif" font-size="12" fill="#BA7517" text-anchor="middle" font-weight="600">MLA</text>
+  <text x="400" y="96" font-family="-apple-system,sans-serif" font-size="10" fill="#633806" text-anchor="middle">DeepSeek-V2 提出</text>
+  <text x="400" y="110" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">KV压缩到低维潜空间</text>
+  <text x="400" y="124" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">缓存压缩向量c</text>
+  <text x="400" y="138" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">KV减少93.3%</text>
+  <text x="400" y="152" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">DeepSeek-V3/R1采用</text>
+  <line x1="400" y1="168" x2="400" y2="265" stroke="#BA7517" stroke-width="0.8" stroke-dasharray="3,2"/>
+
+  <!-- 2022/24 FlashAttention -->
+  <line x1="540" y1="275" x2="540" y2="265" stroke="#888" stroke-width="1"/>
+  <text x="540" y="296" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">2022-2026</text>
+  <rect x="478" y="140" width="124" height="102" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.8"/>
+  <text x="540" y="160" font-family="-apple-system,sans-serif" font-size="12" fill="#1D9E75" text-anchor="middle" font-weight="600">FlashAttention</text>
+  <text x="540" y="176" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">IO感知算法</text>
+  <text x="540" y="190" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">FA-2: A100, 2023</text>
+  <text x="540" y="204" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">FA-3: H100, 2024</text>
+  <text x="540" y="218" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">FA-4: B200, 2026.3</text>
+  <text x="540" y="232" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">不改算法改工程</text>
+  <line x1="540" y1="242" x2="540" y2="265" stroke="#1D9E75" stroke-width="0.8" stroke-dasharray="3,2"/>
+</svg>
+</div>
+
+<h3>四种变体对比</h3>
+<table>
+  <thead><tr><th>变体</th><th>Q头数</th><th>KV头数</th><th>KV Cache</th><th>代表模型</th><th>主要取舍</th></tr></thead>
+  <tbody>
+    <tr><td><strong>MHA</strong></td><td>h</td><td>h（独立）</td><td>最大</td><td>GPT-3, BERT</td><td>质量高，内存大</td></tr>
+    <tr><td><strong>MQA</strong></td><td>h</td><td>1（极端共享）</td><td>最小</td><td>早期 Falcon</td><td>推理快，质量略降</td></tr>
+    <tr><td><strong>GQA</strong></td><td>h</td><td>g（分组，g&lt;h）</td><td>中等</td><td>Llama3, Qwen3</td><td>均衡，行业主流</td></tr>
+    <tr><td><strong>MLA</strong></td><td>h</td><td>压缩潜向量 c</td><td>极小</td><td>DeepSeek-V2/V3, Kimi K2</td><td>训练稍贵，推理极省</td></tr>
+  </tbody>
+</table>
+
+<h3>MLA 的核心思路（扩展）</h3>
+<p>MLA（Multi-head Latent Attention，DeepSeek-V2 / arxiv 2405.04434, 2024-05）的核心：<strong>不缓存完整的 K, V，而是缓存一个低维压缩向量 $\mathbf{c}$</strong>，推理时动态解压。</p>
+
+<p>以 DeepSeek-V2 为例：$d_{model} = 5120$，K 和 V 各 5120 维，缓存 $\mathbf{c}$ 仅 512 维，<strong>内存减少 20 倍</strong>，KV Cache 总体减少 93.3%，生成速度提升 5.76 倍。</p>
+
+<p>2026 年：Kimi K2、GLM-5 等多家中国头部模型也采用了 MLA 架构，表明这已成为追求推理效率时的行业选择之一。</p>
+
+<div class="card takeaway">
+  <div class="card-title">§④ 核心结论</div>
+  <p>Attention 变体的演进=<strong>减少 KV Cache 内存</strong>：MQA/GQA 靠"共享 KV 头"，MLA 靠"压缩潜空间"。FlashAttention 是正交维度的工程优化（IO 效率），不改变算法语义但从 FA-1 到 FA-4 持续提升 GPU 利用率。2026 年行业主流：<strong>Dense 模型用 GQA，追求极致推理效率用 MLA</strong>。</p>
+</div>
+</section>
+
+<!-- ====== §⑤ 与产品 ====== -->
+<section id="connect">
+<h2>⑤ 与产品：Attention 在 Fitz 业务场景中的应用</h2>
+
+<div class="card intuition">
+  <div class="card-title">💡 串联思路</div>
+  <p>每次你用 DDAgent 读一份跨境支付合同、用 KBA 搜索一条合规规则，背后都是 Attention 在做"文本内部的意义路由"。理解 Attention 就是理解 LLM 为什么能读懂长文档中的复杂依赖。</p>
+</div>
+
+<h3>DDAgent：长合同中的关键条款定位</h3>
+<p>场景：DDAgent 读入一份 80 页的跨境汇款协议，需要定位"什么情况下触发违约金"。</p>
+
+<p>Attention 在这里做的事情：</p>
+<ul>
+  <li>当模型处理"<strong>逾期</strong>"这个词时，Attention 会把高权重分配给上文出现的"<strong>交割日</strong>"、"<strong>付款期限</strong>"等时间锚点</li>
+  <li>当处理"<strong>违约金</strong>"时，会关注"<strong>0.05%</strong>"、"<strong>按日计算</strong>"等数值描述</li>
+  <li>这些跨段落的长距离依赖，是 RNN 做不到但 Transformer 能做到的</li>
+</ul>
+
+<p><strong>产品含义</strong>：DDAgent 能准确提取合同条款，本质上依赖于 Attention 跨越段落的动态关注能力。这也是为什么 128K 以上长上下文模型（1.4 章节的主题）对 DDAgent 如此重要。</p>
+
+<h3>KBA：知识库问答中的语义匹配</h3>
+<p>场景：用户在 KBA 中问"新加坡 MPI 牌照对单笔汇款上限是多少"，系统要从知识库中召回正确条目。</p>
+
+<p>Attention 的角色分工：</p>
+<ul>
+  <li><strong>Embedding 层（已在 1.2 章学过）</strong>：把问题和文档都变成高维向量</li>
+  <li><strong>Attention 层</strong>：在 Encoder 端，让问题里的"MPI牌照""单笔上限"等关键词相互增强，生成更精准的查询表示</li>
+  <li><strong>Cross-Attention（RAG 场景）</strong>：在 Decoder 生成答案时，Q 来自问题，K/V 来自检索到的文档，把检索结果和问题需求动态融合</li>
+</ul>
+
+<h3>FxAgent：汇率信息的语义感知</h3>
+<p>FxAgent 处理"某个汇率波动时推送提醒"的任务，需要理解"USD/CNH 的波动"和"提醒时机"之间的条件依赖——这种条件关系在文本中常常是跨句的。</p>
+<p>Attention 让模型能捕捉"当……时"和"则……"之间的语义关联，而不依赖句子里的线性位置。</p>
+
+<h3>选型决策：什么时候用 GQA vs MLA？</h3>
+<table>
+  <thead><tr><th>场景</th><th>推荐</th><th>理由</th></tr></thead>
+  <tbody>
+    <tr><td>自部署推理，显存有限</td><td><strong>GQA 模型</strong>（如 Qwen3-8B）</td><td>KV Cache 小，可服务更多并发用户</td></tr>
+    <tr><td>超大规模服务，追求极致吞吐</td><td><strong>MLA 模型</strong>（如 DeepSeek-V3）</td><td>KV Cache 减少 93%，H100 上 token 成本更低</td></tr>
+    <tr><td>长文档分析（DDAgent）</td><td>长上下文模型 + FlashAttention</td><td>FA 让 128K+ 上下文计算变得实际可行</td></tr>
+    <tr><td>RAG / 知识库（KBA）</td><td>Embedding 模型 + GQA 生成模型</td><td>检索阶段不需要 MLA，生成阶段 GQA 已足够</td></tr>
+  </tbody>
+</table>
+
+<div class="card takeaway">
+  <div class="card-title">§⑤ 核心结论</div>
+  <p>Attention 对 PM 最重要的产品含义：<br>
+  ✦ <strong>长文档理解能力</strong> = Attention 的跨距离关注（DDAgent 的基础）<br>
+  ✦ <strong>RAG 效果</strong> = Cross-Attention 融合检索与生成（KBA 的关键）<br>
+  ✦ <strong>推理成本</strong> = KV Cache 大小（GQA vs MLA 的选型依据）<br>
+  ✦ FlashAttention 是基础设施优化，几乎所有框架默认启用，PM 无需额外配置</p>
+</div>
+</section>
+
+<div class="footer-actions">
+  <h3>⏭ 继续学习</h3>
+  <ul>
+    <li><a href="2.1-attention-quiz.html">📝 做 Quiz（10 题检验理解）</a></li>
+    <li><a href="../2.2-multihead-variants/2.2-multihead-variants-chapter.html">→ 2.2 多头与变种：MHA/MQA/GQA/MLA 深入</a></li>
+    <li><a href="../../../INDEX.html">← 返回知识图谱</a></li>
+  </ul>
+  <p style="font-size:12px;color:var(--muted);margin-top:12px;">参考来源：Vaswani et al. "Attention is All You Need" (NeurIPS 2017) · DeepSeek-V2 MLA (arxiv 2405.04434, 2024-05) · Qwen3 官方博客 GQA 架构 (2025-04) · FlashAttention-3 (NeurIPS 2024 Spotlight) · FlashAttention-4 (2026-03)</p>
+</div>
+
+</body>
+</html>

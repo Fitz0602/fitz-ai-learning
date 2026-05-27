@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>A3.1 Prompt → Context Engineering · Token 经济学视角的信息管理革命 · T2 Agent 工程</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card-bg:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--teal-bg);color:#0F6E56}
+.tag-chapter{background:var(--purple-bg);color:var(--purple)}
+.tag-status{background:var(--amber-bg);color:var(--amber)}
+h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:4px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.progress-nav{display:flex;gap:4px;margin:16px 0 0;flex-wrap:wrap}
+.progress-nav a{font-size:11px;padding:3px 8px;border-radius:8px;text-decoration:none;background:var(--purple-bg);color:var(--purple);font-weight:500}
+.progress-nav a.done{background:var(--teal-bg);color:var(--teal)}
+section{margin-top:36px;padding-top:20px;border-top:1px solid #E8E8E4}
+section h2{font-size:20px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;padding:2px 8px;border-radius:8px}
+h3{font-size:16px;font-weight:600;margin:16px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--amber-bg);border-color:var(--amber)}
+.card.takeaway{background:var(--teal-bg);border-color:var(--teal)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card.deepen{background:var(--blue-bg);border-color:var(--blue)}
+.card.insight{background:var(--purple-bg);border-color:var(--purple)}
+.card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.card.intuition .card-label{color:var(--amber)}
+.card.takeaway .card-label{color:var(--teal)}
+.card.warning .card-label{color:var(--coral)}
+.card.deepen .card-label{color:var(--blue)}
+.card.insight .card-label{color:var(--purple)}
+.diagram{margin:20px 0}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid #E0E0DC;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{background:#fff}
+code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;background:#F0F0EC;padding:1px 4px;border-radius:3px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+pre{background:#F7F6F3;border:1px solid #E8E8E4;border-radius:8px;padding:14px 18px;margin:14px 0;font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;line-height:1.8;overflow-x:auto}
+ul,ol{padding-left:20px}
+li{margin-bottom:4px}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+.example-box{border-left:3px solid var(--purple);background:#fafafa;padding:14px 18px;margin:14px 0;border-radius:0 8px 8px 0}
+.example-box .example-label{font-size:11px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.compare-table{margin:16px 0}
+.compare-table th{background:linear-gradient(135deg,var(--purple),#6B5CE7);color:#fff}
+.compare-table td:first-child{font-weight:500}
+.flow-step{display:flex;gap:12px;align-items:flex-start;margin:10px 0}
+.step-num{min-width:28px;height:28px;background:var(--purple);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.step-content{flex:1;padding-top:3px}
+.formula-block{background:var(--purple-bg);border:1px solid rgba(83,74,183,0.2);border-radius:10px;padding:16px 20px;margin:14px 0;text-align:center;font-size:15px}
+blockquote{border-left:4px solid var(--purple);padding:12px 18px;margin:16px 0;background:var(--purple-bg);border-radius:0 8px 8px 0;font-style:italic;color:#3C3489}
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">A3 上下文记忆</span>
+<span class="tag tag-chapter">A3.1</span>
+<span class="tag tag-status">✅ 完成</span>
+<a href="../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱（../../INDEX.html）</a>
+<a href="A3.1-prompt-context-eng-quiz.html" class="nav-link">Quiz →</a>
+</div>
+<h1>Prompt → Context Engineering</h1>
+<p class="subtitle">从"怎么问"到"让 AI 看到什么" — Token 经济学视角的信息管理革命</p>
+<div class="spine-link">🔗 主线连接：信息管理：100:1 Token 比例与 KV Cache 成本约束下的工程最优解</div>
+
+<div class="progress-nav">
+<a href="#is">#① 是什么</a>
+<a href="#how">#② 怎么实现</a>
+<a href="#why">#③ 为什么</a>
+<a href="#evolution">#④ 演进与对比</a>
+<a href="#connect">#⑤ 产品连接</a>
+</div>
+</div>
+
+<!-- ===== SVG 章节一览图 ===== -->
+<svg viewBox="0 0 720 180" style="width:100%;height:auto;border-radius:10px;background:#fff;border:1px solid #e0e0dc;">
+<defs>
+<marker id="ov-arr31" orient="auto" markerWidth="8" markerHeight="8" refX="7" refY="4"><path d="M0,0 L8,4 L0,8 Z" fill="#888"/>
+</marker>
+</defs>
+
+<text x="360" y="22" text-anchor="middle" fill="#333" font-size="15" font-weight="600">A3.1 Context Engineering 章节一览</text>
+
+<!-- Node ① 是什么 — 紫 -->
+<rect x="20" y="42" width="118" height="52" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="79" y="65" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="600">是什么</text>
+<text x="79" y="82" text-anchor="middle" fill="#888780" font-size="10">Context 直觉</text>
+
+<!-- Node ② 怎么实现 — 绿(蓝绿) -->
+<rect x="158" y="42" width="118" height="52" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="217" y="65" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="600">怎么实现</text>
+<text x="217" y="82" text-anchor="middle" fill="#888780" font-size="10">四大策略</text>
+
+<!-- Node ③ 为什么 — 琥珀 -->
+<rect x="296" y="42" width="118" height="52" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="355" y="65" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="600">为什么</text>
+<text x="355" y="82" text-anchor="middle" fill="#888780" font-size="10">Token 稀缺</text>
+
+<!-- Node ④ 演进对比 — 蓝 -->
+<rect x="434" y="42" width="118" height="52" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="493" y="65" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="600">演进对比</text>
+<text x="493" y="82" text-anchor="middle" fill="#888780" font-size="10">2023→2026</text>
+
+<!-- Node ⑤ 产品连接 — 并排色(珊瑚) -->
+<rect x="572" y="42" width="128" height="52" rx="10" fill="#FDEEE8" stroke="#993C1D" stroke-width="1.5"/>
+<text x="636" y="65" text-anchor="middle" fill="#993C1D" font-size="12" font-weight="600">产品连接</text>
+<text x="636" y="82" text-anchor="middle" fill="#888780" font-size="10">DDAgent/KBA</text>
+
+<!-- Arrows -->
+<line x1="138" y1="68" x2="155" y2="68" stroke="#534AB7" stroke-width="1.5" marker-end="url(#ov-arr31)"/>
+<line x1="276" y1="68" x2="293" y2="68" stroke="#534AB7" stroke-width="1.5" marker-end="url(#ov-arr31)"/>
+<line x1="414" y1="68" x2="431" y2="68" stroke="#534AB7" stroke-width="1.5" marker-end="url(#ov-arr31)"/>
+<line x1="552" y1="68" x2="569" y2="68" stroke="#534AB7" stroke-width="1.5" marker-end="url(#ov-arr31)"/>
+
+<!-- Bottom spine label -->
+<rect x="180" y="125" width="360" height="38" rx="19" fill="none" stroke="#534AB7" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="360" y="150" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="500">KV Cache 约束下的 Context Budget 最优分配</text>
+</svg>
+
+
+<!-- ============================================================ -->
+<!-- §① IS：Context Engineering 直觉 -->
+<!-- ============================================================ -->
+<section id="is">
+<h2><span class="sec-num">#①</span> 是什么 — Context Engineering 直觉：Prompt 是命令，Context 是卷宗资料</h2>
+
+<div class="card intuition">
+<div class="card-label">💡 核心直觉</div>
+<p><strong>Prompt Engineering 关注"你怎么说"</strong>——指令格式、语气、Few-shot 模板。</p>
+<p><strong>Context Engineering 关注"AI 能看到什么"</strong>——背景数据、检索精度、信息密度。</p>
+<p>当模型已经足够聪明时，"你怎么说"不再是瓶颈，<strong>"让它看到什么"才是决定性因素。</strong></p>
+</div>
+
+<h3>一个直觉类比：法庭辩护</h3>
+<p>想象你在法庭上为一位客户辩护：</p>
+<ul>
+<li><strong>Prompt Engineering</strong> = 你在法庭上怎么说话——用什么措辞、什么语气、如何组织论点</li>
+<li><strong>Context Engineering</strong> = 你递给法官的卷宗里放了哪些证据、哪些判例、哪些证人证言——以及你如何从堆积如山的文件中挑选出最有力的几份</li>
+</ul>
+<p>法官（模型）已经够聪明了。决定案件结果的不是你的口才，而是<strong>卷宗的质量和相关性</strong>。</p>
+
+<h3>Gartner 2025 官方定义</h3>
+<blockquote>
+<p>"AI 开发的重心已从编写更好的提示词转移到工程化更好的上下文。"</p>
+<p style="font-size:12px;color:var(--muted);font-style:normal;margin-top:6px;">— Gartner Hype Cycle for AI, 2025 Q3</p>
+</blockquote>
+
+<h3>谁在推动这场范式转移？</h3>
+<table class="compare-table">
+<tr><th>推动者</th><th>核心观点</th><th>影响力</th></tr>
+<tr><td><strong>Tobi Lütke</strong><br/>Shopify CEO</td><td>公开宣布 Shopify 已从 Prompt Engineering 全面转向 Context Engineering，强调"上下文质量决定一切"</td><td>全球最大电商平台的工程决策</td></tr>
+<tr><td><strong>Andrej Karpathy</strong><br/>前 AI Director @ OpenAI</td><td>多次强调 "context engineering is the new prompt engineering"，认为这是 AI 工程的下一个 frontier</td><td>AI 工程社区的意见领袖</td></tr>
+<tr><td><strong>Anthropic</strong></td><td>2025 年发布官方工程指南，正式将 Context Engineering 定义为一门独立 discipline</td><td>Claude 生态的标准制定者</td></tr>
+<tr><td><strong>Gartner Research</strong></td><td>将 Context Engineering 列入 2025 Top Strategic Technology Trends，预计 2027 年 60%+ 企业采用</td><td>企业技术战略风向标</td></tr>
+</table>
+
+<h3>为什么现在才发生？——边际收益递减</h3>
+<p>答案很简单：<strong>模型的指令跟随能力已趋近饱和。</strong></p>
+
+<table class="compare-table">
+<tr><th>投入方向</th><th>2023 效果</th><th>2025-26 效果</th></tr>
+<tr><td>优化 Prompt 措辞 / CoT 模板</td><td>⭐⭐⭐⭐⭐ 显著提升<br/><span style="font-size:11px;color:var(--muted)">GPT-3.5 需要精心引导才能做对推理</span></td><td>⭐⭐ 边际收益极低<br/><span style="font-size:11px;color:var(--muted)">Claude/GPT-5 几乎理解任何格式</span></td></tr>
+<tr><td>提升 Context 质量与精度</td><td>⭐⭐ 少人关注<br/><span style="font-size:11px;color:var(--muted)">窗口小，塞不下太多东西</span></td><td>⭐⭐⭐⭐⭐ 决定性差异<br/><span style="font-size:11px;color:var(--muted)">128K+窗口 + 高质量检索 = 新战场</span></td></tr>
+</table>
+
+<div class="card insight">
+<div class="card-label">💡 本质洞察</div>
+<p>这不是说 Prompt Engineering "死了"。它只是<strong>从瓶颈变成了基线能力</strong>——就像你不再因为一个人会写 SQL 而觉得他厉害，但不会写仍然是问题。真正的差异化竞争力转移到了<strong>信息管理和上下文编排</strong>。</p>
+</div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- §② HOW：四大核心策略 -->
+<!-- ============================================================ -->
+<section id="how">
+<h2><span class="sec-num">#②</span> 怎么实现 — 四大核心策略：选择、检索、压缩、持久化</h2>
+
+<p>Context Engineering 不是单一技术，而是一套<strong>围绕 Token 预算的信息管理方法论</strong>。四大策略相互配合，形成一个完整的 Pipeline：</p>
+
+<svg viewBox="0 0 720 200" style="width:100%;height:auto;margin:18px 0;">
+<defs>
+<marker id="how-arr" orient="auto" markerWidth="7" markerHeight="7" refX="6" refY="3.5"><path d="M0,0 L7,3.5 L0,7 Z" fill="#534AB7"/>
+</marker>
+</defs>
+
+<!-- 四个策略块 -->
+<rect x="20" y="30" width="155" height="70" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="97" y="54" text-anchor="middle" fill="#534AB7" font-size="13" font-weight="600">Selection 选择</text>
+<text x="97" y="72" text-anchor="middle" fill="#666" font-size="10">按意图筛选最相关子集</text>
+<text x="97" y="88" text-anchor="middle" fill="#999" font-size="9">代码片段 / 元数据注入</text>
+
+<rect x="195" y="30" width="155" height="70" rx="8" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="272" y="54" text-anchor="middle" fill="#1D9E75" font-size="13" font-weight="600">Retrieval 检索</text>
+<text x="272" y="72" text-anchor="middle" fill="#666" font-size="10">混合检索 + 重排序</text>
+<text x="272" y="88" text-anchor="middle" fill="#999" font-size="9">BM25+向量 → Top5</text>
+
+<rect x="370" y="30" width="155" height="70" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="447" y="54" text-anchor="middle" fill="#BA7517" font-size="13" font-weight="600">Compression 压缩</text>
+<text x="447" y="72" text-anchor="middle" fill="#666" font-size="10">语义总结 + 信息提取</text>
+<text x="447" y="88" text-anchor="middle" fill="#999" font-size="9">去噪 / 提炼 / 层级化</text>
+
+<rect x="545" y="30" width="155" height="70" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="622" y="54" text-anchor="middle" fill="#185FA5" font-size="13" font-weight="600">Persistence 持久化</text>
+<text x="622" y="72" text-anchor="middle" fill="#666" font-size="10">CLAUDE.md 机制</text>
+<text x="622" y="88" text-anchor="middle" fill="#999" font-size="9">项目决策持久存储</text>
+
+<!-- 箭头连接 -->
+<line x1="175" y1="65" x2="192" y2="65" stroke="#534AB7" stroke-width="1.5" marker-end="url(#how-arr)"/>
+<line x1="350" y1="65" x2="367" y2="65" stroke="#534AB7" stroke-width="1.5" marker-end="url(#how-arr)"/>
+<line x1="525" y1="65" x2="542" y2="65" stroke="#534AB7" stroke-width="1.5" marker-end="url(#how-arr)"/>
+
+<!-- 底部输入输出标注 -->
+<text x="97" y="125" text-anchor="middle" fill="#888" font-size="11">海量候选信息</text>
+<text x="622" y="125" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="600">高密度 Context</text>
+<line x1="120" y1="115" x2="599" y2="115" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3"/>
+
+<!-- Token 变化指示 -->
+<text x="360" y="148" text-anchor="middle" fill="#666" font-size="10">原始 ~50K tokens</text>
+<text x="360" y="165" text-anchor="middle" fill="#ccc" font-size="16">↓</text>
+<text x="360" y="185" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="600">精选 ~5K tokens (90% 压缩)</text>
+</svg>
+
+<h3>1. Selection（选择）— 不是所有背景都有用</h3>
+<p>根据当前 Task 意图，从海量候选信息中挑选最相关的子集。<strong>这不是简单的截断，而是基于语义相关性的智能筛选。</strong></p>
+
+<table class="compare-table">
+<tr><th>选择维度</th><th>示例</th><th>场景</th></tr>
+<tr><td>关联代码片段</td><td>不只是当前文件，还包括 import 链、函数调用链、接口定义</td><td>代码生成 / Debug</td></tr>
+<tr><td>元数据注入</td><td>技术栈版本号、系统负载状态、用户角色权限</td><td>环境感知 Agent</td></tr>
+<tr><td>任务感知过滤</td><td>Debug 任务优先展示错误日志；Feature 开发优先展示架构文档</td><td>多任务 Agent</td></tr>
+</table>
+
+<div class="example-box">
+<div class="example-label">例：DDAgent 的 Selection 实践</div>
+<pre><code># DDAgent 根据任务类型动态选择 Context
+def select_context(task_type: str, candidate_docs: list[Document]) -> list[Document]:
+    if task_type == "financial_analysis":
+        return [d for d in candidate_docs if d.tags & {"财务", "报表", "指标"}]
+    elif task_type == "risk_assessment":
+        return [d for d in candidate_docs if d.tags & {"风险", "合规", "诉讼"}]
+    elif task_type == "company_overview":
+        return sorted(candidate_docs,
+                      key=lambda d: d.relevance_score,
+                      reverse=True)[:10]
+    else:
+        return candidate_docs[:5]  # 默认 Top 5
+
+# 同样的知识库，不同任务看到完全不同的"世界"</code></pre>
+</div>
+
+<h3>2. Retrieval（检索）— 超越基础向量搜索</h3>
+
+<div class="card warning">
+<div class="card-label">⚠️ 关键认知</div>
+<p><strong>纯向量搜索的召回率在实际生产中通常只有 60-70%</strong>。混合检索 + 重排序是标配。</p>
+</div>
+
+<table class="compare-table">
+<tr><th>检索阶段</th><th>方法</th><th>作用</th><th>效果提升</th></tr>
+<tr><td><strong>第一阶段：粗召回</strong></td><td>混合检索 Hybrid Search</td><td>BM25 关键词 + Embedding 语义双路并行召回</td><td>召回率 60-70% → <strong>85-92%</strong></td></tr>
+<tr><td><strong>第二阶段：精排序</strong></td><td>重排序 Re-ranking</td><td>用轻量 Cross-encoder 对前 100 条重新打分</td><td>Top-5 准确率再提升 <strong>15-25%</strong></td></tr>
+</table>
+
+<div class="example-box">
+<div class="example-label">例：KBA Skill 的两阶段检索流程</div>
+<pre><code>class KBARetrievalPipeline:
+    """KBA 知识库标准检索流程"""
+
+    def retrieve(self, query: str, top_k: int = 5) -> list[Document]:
+        # Stage 1: 粗召回 —— 混合检索取 100 条候选
+        bm25_results = self.bm25_search(query, top_k=100)
+        vector_results = self.vector_search(query, top_k=100)
+
+        # RRF (Reciprocal Rank Fusion) 融合
+        candidates = rrf_fusion(bm25_results, vector_results)
+        candidates = candidates[:100]
+
+        # Stage 2: 精排序 —— Cross-encoder 重排
+        reranked = self.cross_encoder_rerank(
+            query=query,
+            documents=candidates,
+            top_k=top_k
+        )
+        return reranked
+    # 成本增加不到 5%，准确率提升 20%+</code></pre>
+</div>
+
+<h3>3. Compression（压缩）— 即使 200K/2M 长上下文仍需压缩</h3>
+<p>长窗口不等于无限容量。三个物理限制让压缩成为必需：</p>
+
+<table class="compare-table">
+<tr><th>压缩方法</th><th>适用场景</th><th>Token 保留率</th><th>信息保留率</th></tr>
+<tr><td><strong>语义总结</strong></td><td>长对话历史 → 核心要点</td><td>~10%</td><td>~80%</td></tr>
+<tr><td><strong>关键信息提取</strong></td><td>日志 / HTML → 结构化业务逻辑</td><td>~15%</td><td>~90%</td></tr>
+<tr><td><strong>层级摘要</strong></td><td>超长文档树 → 多级 TOC + 按需展开</td><td>~5% + 动态加载</td><td>~95%</td></tr>
+</table>
+
+<p>典型噪音来源：</p>
+<ul>
+<li><strong>HTML 标签噪音</strong>：网页抓取后残留的 div/span/script 标签占原文 40-60%</li>
+<li><strong>日志冗余</strong>：重复的时间戳、请求 ID、堆栈帧</li>
+<li><strong>API 返回的元数据</strong>：分页信息、速率限制头、调试字段</li>
+</ul>
+
+<h3>4. Persistence（持久化）— CLAUDE.md 机制</h3>
+
+<div class="card insight">
+<div class="card-label">💡 核心理念</div>
+<p>项目核心决策应该持久化存储，无论对话进行多少轮、Agent 重启多少次，AI 始终知道编码规约、架构约束和质量标准。</p>
+</div>
+
+<p>CLAUDE.md 就像团队的<strong>宪法文件</strong>——每次新对话开始时自动加载，确保一致性。它解决的问题简单但致命：<strong>第 N 轮对话的 Agent 和第 1 轮拥有完全相同的项目上下文。</strong></p>
+
+<pre><code># CLAUDE.md 示例结构
+├── Project Overview          # 项目定位与技术栈
+├── Architecture Decisions    # 关键架构决策（ADR）
+├── Coding Standards          # 编码规约（命名 / 风格 / 模式）
+├── Testing Conventions       # 测试约定（覆盖率 / 框架 / CI）
+├── Review Checklist          # Code Review 必查项
+└── Common Pitfalls           # 已知陷阱与反模式
+
+# 效果：
+# 第 1 轮对话 → Agent 读 CLAUDE.md 了解项目全貌
+# 第 100 轮对话 → Agent 仍然读同一份 CLAUDE.md → 一致性保证
+# 新成员加入 → 只需更新 CLAUDE.md，所有会话自动受益</code></pre>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- §③ WHY：Token 经济学第一性原理 -->
+<!-- ============================================================ -->
+<section id="why">
+<h2><span class="sec-num">#③</span> 为什么 — 第一性原理：Token 窗口是稀缺资源，信息密度决定输出质量</h2>
+
+<h3>3.1 物理约束：KV Cache</h3>
+<p>每一个送入模型的 token 都会在每一层 Transformer 中产生 Key 和 Value 向量并缓存。<strong>这是 Context Engineering 的物理根基：</strong></p>
+
+<div class="formula-block">
+$$\text{Memory}_{\text{KV}} \approx 2 \times L \times n_{\text{layers}} \times d \times \text{bytes\_per\_param}$$
+</div>
+
+<p>其中 $L$ = 序列长度，$n_{\text{layers}}$ = Transformer 层数，$d$ = 隐藏层维度。</p>
+
+<table class="compare-table">
+<tr><th>模型</th><th>隐藏维度 $d$</th><th>层数 $n_{\text{layers}}$</th><th>32K Context KV Cache</th><th>128K Context KV Cache</th></tr>
+<tr><td>Claude 3.5 Sonnet</td><td>8192</td><td>32</td><td>~4 GB</td><td>~16 GB</td></tr>
+<tr><td>GPT-4o</td><td>12288</td><td>~40+</td><td>~8 GB</td><td>~32 GB</td></tr>
+</table>
+
+<p><strong>这不是理论估算——这是每笔 inference 账单上实实在在的成本项。</strong>更长的 context = 更多的 GPU 内存 = 更高的延迟 = 更贵的费用。</p>
+
+<h3>3.2 100:1 现象</h3>
+
+<div class="card warning">
+<div class="card-label">⚠️ 令人震惊的比例</div>
+<p>用户输入 <strong>1 个字符</strong>的实际 token 处理量 ≈ <strong>100 个 token</strong>。</p>
+<p>这 100x 来自 System Prompt + 检索文档 + Tool Schema + 对话历史 + Few-shot 示例 + 安全 Guardrail 的总和。</p>
+</div>
+
+<h3>3.3 Context Budget 分配表（32K / 128K 场景）</h3>
+
+<table class="compare-table">
+<tr><th>组件</th><th>32K 场景</th><th>占比</th><th>128K 场景</th><th>占比</th></tr>
+<tr><td>System Prompt</td><td>2K</td><td>6%</td><td>4K</td><td>3%</td></tr>
+<tr><td>对话历史</td><td>8K</td><td>25%</td><td>24K</td><td>19%</td></tr>
+<tr><td><strong>检索文档</strong></td><td><strong>12K</strong></td><td><strong>38%</strong></td><td><strong>64K</strong></td><td><strong>50%</strong></td></tr>
+<tr><td>Tool Schema</td><td>4K</td><td>13%</td><td>8K</td><td>6%</td></tr>
+<tr><td>Few-shot 示例</td><td>4K</td><td>13%</td><td>16K</td><td>13%</td></tr>
+<tr><td>安全 Guardrail</td><td>2K</td><td>6%</td><td>12K</td><td>9%</td></tr>
+<tr style="background:var(--amber-bg);font-weight:600;"><td><strong>合计</strong></td><td><strong>32K</strong></td><td><strong>100%</strong></td><td><strong>128K</strong></td><td><strong>100%</strong></td></tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">✅ 关键发现</div>
+<p><strong>无论总窗口大小如何，检索文档永远占据最大份额（38%-50%）。</strong></p>
+<p>这就是 Context Engineering 存在的根本理由——<strong>这个最大的预算块必须被精心管理。</strong>如果检索文档质量差、噪声多、相关性低，等于浪费了近一半的 Token 预算。</p>
+</div>
+
+<h3>3.4 ACE Framework 的量化证明</h3>
+<p>arXiv:2510.04618 提出的 <strong>ACE (Agentic Context Engineering)</strong> 框架给出了震撼结论：</p>
+
+<blockquote>
+<p>在不改模型、不改工具集的前提下，仅通过优化 context 组织方式，Agent 任务完成率提升 <strong>+10.6%</strong>。</p>
+<p style="font-size:12px;color:var(--muted);font-style:normal;margin-top:6px;">— ACE Framework, arXiv:2510.04618, 2025</p>
+</blockquote>
+
+<p>ACE 将 context 视为 "<strong>evolving playbooks</strong>"（持续演进的战术手册），通过 <strong>generation → reflection → curation</strong> 循环不断积累和优化上下文策略：</p>
+
+<svg viewBox="0 0 520 160" style="width:100%;height:auto;margin:16px 0;">
+<defs>
+<marker id="ace-arr" orient="auto" markerWidth="6" markerHeight="6" refX="5" refY="3"><path d="M0,0 L6,3 L0,6 Z" fill="#534AB7"/>
+</marker>
+</defs>
+
+<!-- Generation -->
+<rect x="20" y="30" width="140" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="90" y="54" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="600">Generation</text>
+<text x="90" y="72" text-anchor="middle" fill="#888" font-size="10">用当前 context 执行任务</text>
+
+<!-- Reflection -->
+<rect x="190" y="30" width="140" height="56" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="260" y="54" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="600">Reflection</text>
+<text x="260" y="72" text-anchor="middle" fill="#888" font-size="10">反思哪些 context 有用</text>
+
+<!-- Curation -->
+<rect x="360" y="30" width="140" height="56" rx="8" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="430" y="54" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="600">Curation</text>
+<text x="430" y="72" text-anchor="middle" fill="#888" font-size="10">精炼 / 更新 playbook</text>
+
+<!-- 循环箭头 -->
+<path d="M160 58 L187 58" fill="none" stroke="#534AB7" stroke-width="1.5" marker-end="url(#ace-arr)"/>
+<path d="M330 58 L357 58" fill="none" stroke="#534AB7" stroke-width="1.5" marker-end="url(#ace-arr)"/>
+<path d="M430 86 Q430 130 260 130 Q90 130 90 86" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ace-arr)"/>
+
+<text x="260" y="148" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="500">持续迭代 → context 质量螺旋上升</text>
+</svg>
+
+<p>这证明了 Context Engineering 不是玄学，而是<strong>可度量、可优化的工程学科</strong>。</p>
+
+<h3>3.5 Prompt Caching：成本优化的杠杆支点</h3>
+<p>Anthropic/OpenAI 提供的 <strong>Prompt Caching</strong> 功能允许复用已处理过的前缀 context（System Prompt + 固定文档 + Tool Schema）。效果惊人：</p>
+
+<table class="compare-table">
+<tr><th>指标</th><th>无缓存</th><th>有 Prompt Caching</th></tr>
+<tr><td>首字延迟 (TTFT)</td><td>基准值</td><td><strong>-50% ~ -80%</strong></td></tr>
+<tr><td>输入 Token 成本</td><td>基准价格</td><td><strong>-90%</strong>（缓存命中 token 仅收 10%）</td></tr>
+<tr><td>前提条件</td><td>—</td><td>请求前缀必须<strong>完全一致</strong></td></tr>
+</table>
+
+<div class="card deepen">
+<div class="card-label">🔍 对 Context Engineering 的含义</div>
+<p>Prompt Caching 要求前缀确定性 → 这对 Context 的<strong>组织方式提出了更高要求</strong>：System Prompt 不能每次随机变化，检索文档的前缀部分应该固定，Tool Schema 必须稳定。这反过来推动了<strong>声明式的 Context 配置</strong>模式。</p>
+</div>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- §④ EVOLUTION：三层演进 -->
+<!-- ============================================================ -->
+<section id="evolution">
+<h2><span class="sec-num">#④</span> 演进与对比 — 2023 Prompt Engineering → 2025-2026 Context Engineering 2.0</h2>
+
+<h3>时间线：三年三代范式转移</h3>
+
+<svg viewBox="0 0 720 280" style="width:100%;height:auto;margin:16px 0;">
+<defs>
+<marker id="evo-arr" orient="auto" markerWidth="7" markerHeight="7" refX="6" refY="3.5"><path d="M0,0 L7,3.5 L0,7 Z" fill="#888"/>
+</marker>
+</defs>
+
+<!-- 时间轴线 -->
+<line x1="40" y1="240" x2="680" y2="240" stroke="#ddd" stroke-width="2"/>
+
+<!-- Phase 1: 2023 -->
+<circle cx="110" cy="240" r="6" fill="#534AB7"/>
+<text x="110" y="262" text-anchor="middle" fill="#666" font-size="11">2023</text>
+<rect x="35" y="170" width="150" height="58" rx="8" fill="#f0eeff" stroke="#534AB7" stroke-width="1.2"/>
+<text x="110" y="192" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="600">Phase 1: PE</text>
+<text x="110" y="210" text-anchor="middle" fill="#666" font-size="10">Prompt Engineering</text>
+<text x="110" y="222" text-anchor="middle" fill="#999" font-size="9">CoT / Few-shot / ReAct</text>
+
+<!-- Transition arrow 1 -->
+<text x="230" y="225" text-anchor="middle" fill="#aaa" font-size="10">指令跟随趋近完美</text>
+<line x1="185" y1="199" x2="270" y2="185" stroke="#ccc" stroke-width="1.2" marker-end="url(#evo-arr)"/>
+
+<!-- Phase 2: 2024 -->
+<circle cx="320" cy="240" r="6" fill="#1D9E75"/>
+<text x="320" y="262" text-anchor="middle" fill="#666" font-size="11">2024</text>
+<rect x="235" y="145" width="170" height="78" rx="8" fill="#e1f5ee" stroke="#1D9E75" stroke-width="1.2"/>
+<text x="320" y="168" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="600">Phase 2: Agentic Workflow</text>
+<text x="320" y="186" text-anchor="middle" fill="#666" font-size="10">工具调用标准化</text>
+<text x="320" y="200" text-anchor="middle" fill="#666" font-size="10">循环执行框架 (LangGraph)</text>
+<text x="320" y="214" text-anchor="middle" fill="#999" font-size="9">自我纠错机制</text>
+
+<!-- Transition arrow 2 -->
+<text x="450" y="215" text-anchor="middle" fill="#aaa" font-size="10">真实场景 hit wall</text>
+<line x1="405" y1="184" x2="510" y2="165" stroke="#ccc" stroke-width="1.2" marker-end="url(#evo-arr)"/>
+
+<!-- Phase 3: 2025-26 -->
+<circle cx="560" cy="240" r="6" fill="#BA7517"/>
+<text x="560" y="262" text-anchor="middle" fill="#666" font-size="11">2025-26</text>
+<rect x="470" y="110" width="180" height="108" rx="8" fill="#faeeda" stroke="#BA7517" stroke-width="1.2"/>
+<text x="560" y="134" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="600">Phase 3: CE 2.0</text>
+<text x="560" y="152" text-anchor="middle" fill="#666" font-size="10">Context Engineering</text>
+<text x="560" y="168" text-anchor="middle" fill="#666" font-size="10">记忆管理 / 动态检索</text>
+<text x="560" y="184" text-anchor="middle" fill="#666" font-size="10">Token 预算优化</text>
+<text x="560" y="200" text-anchor="middle" fill="#666" font-size="10">持久化上下文</text>
+<text x="560" y="214" text-anchor="middle" fill="#999" font-size="9">Gartner 2025 正式定义</text>
+
+<!-- 底部趋势标签 -->
+<rect x="35" y="270" width="640" height="2" fill="none"/>
+<text x="110" y="278" text-anchor="middle" fill="#534AB7" font-size="9" font-weight="600">Art of Prompting</text>
+<text x="320" y="278" text-anchor="middle" fill="#1D9E75" font-size="9" font-weight="600">Engineering of Workflows</text>
+<text x="560" y="278" text-anchor="middle" fill="#BA7517" font-size="9" font-weight="600">Science of Context</text>
+</svg>
+
+<h3>三个阶段的本质差异</h3>
+<table class="compare-table">
+<tr><th>维度</th><th>2023 Prompt Eng.</th><th>2024 Agentic WF</th><th>2025-26 Context Eng.</th></tr>
+<tr><td>核心关注</td><td>指令格式 / 模板设计</td><td>工具编排 / 循环控制</td><td><strong>信息选择 / 密度优化</strong></td></tr>
+<tr><td>能力假设</td><td>模型不够聪明，需技巧引导</td><td>模型够聪明，需工具扩展</td><td>模型够聪明，需<strong>正确信息</strong></td></tr>
+<tr><td>瓶颈所在</td><td>指令遵循率</td><td>工具可靠性</td><td><strong>Token 预算 / 信息质量</strong></td></tr>
+<tr><td>典型产出</td><td>Prompt 模板库</td><td>Workflow DSL</td><td>Context Pipeline 架构</td></tr>
+<tr><td>成熟度</td><td>高度成熟（收益递减）</td><td>快速收敛中</td><td><strong>早期爆发期（高 ROI）</strong></td></tr>
+</table>
+
+<h3>关键工件：2026 年的标准实践</h3>
+<table class="compare-table">
+<tr><th>工件</th><th>定位</th><th>状态</th></tr>
+<tr><td><strong>CLAUDE.md</strong></td><td>Agent 宪法文件，定义编码标准和架构决策</td><td>GitHub 上 60k+ 仓库采用</td></tr>
+<tr><td><strong>AGENTS.md</strong></td><td>标准化 Agent 角色定义和能力边界声明</td><td>社区事实标准</td></tr>
+<tr><td><strong>MCP Tool Descriptions</strong></td><td>统一工具接口描述规范（高质量 description = Context 第一道防线）</td><td>月 SDK 下载超 9700 万次</td></tr>
+<tr><td><strong>Context Window Config</strong></td><td>声明式配置文件：Token 配额 / 优先级 / 压缩 / 缓存策略</td><td>新兴实践</td></tr>
+</table>
+</section>
+
+
+<!-- ============================================================ -->
+<!-- §⑤ CONNECT：产品连接 -->
+<!-- ============================================================ -->
+<section id="connect">
+<h2><span class="sec-num">#⑤</span> 与产品连接 — DDAgent System Prompt / KBA Skill URLs / CLAUDE.md 实践</h2>
+
+<h3>案例一：DDAgent System Prompt 设计 — Selection 的艺术</h3>
+<p>DDAgent 的 System Prompt 是 Context Selection 的典型案例。它不是简单地把所有规则塞进去，而是按<strong>层次化结构</strong>组织，每层有不同的稳定性特征：</p>
+
+<pre><code># DDAgent System Prompt 层级结构
+
+## Layer 1: 身份与目标 (~500 tokens)
+# ── 几乎不变，适合 Prompt Caching ──
+- Agent 角色（尽调分析师）
+- 核心使命（自动化企业尽调报告）
+- 输出格式规范（JSON 结构体）
+
+## Layer 2: 领域知识 (~1500 tokens)
+# ── 低频变化，季度更新 ──
+- 尽调框架清单（财务 / 法律 / 商业 / 技术）
+- 数据源映射（每个字段对应哪个 API）
+- 合规红线（不可逾越的数据边界）
+
+## Layer 3: 行为约束 (~800 tokens)
+# ── 按客户调整 ──
+- 错误处理策略（API 失败时降级方案）
+- 不确定性的表达方式
+- Tool Use 策略（并行 vs 串行）
+
+## Layer 4: Few-shot Examples (~1200 tokens)
+# ── 按场景动态切换 ──
+- 2 个完整端到端示例（含中间步骤）
+- 1 个边界 case（数据缺失的处理）
+---
+总计 ~4000 tokens（占 32K 窗口的 12.5%）</code></pre>
+
+<p><strong>设计原则：</strong>Layer 1-2 固定（Prompt Caching 友好），Layer 3-4 按需调整。整体控制在 4K 以内，为检索文档留出充足空间。</p>
+
+<h3>案例二：KBA Skill URLs 注入 — Retrieval + Selection 结合</h3>
+<p>KBA（Knowledge Base Access）Skill 是 DDAgent 中 Context Retrieval 的核心实现。它的设计直接体现了混合检索 + 选择策略：</p>
+
+<ul>
+<li><strong>URL 注册表</strong>：每个知识库条目有 metadata 标签（domain / priority / format / update_freq）</li>
+<li><strong>动态注入</strong>：根据 Task 意图匹配标签，只拉取相关 URL 内容，而非全量加载</li>
+<li><strong>层级回退</strong>：精确匹配 → 模糊匹配 → 广域兜底，三级 fallback 保证覆盖率</li>
+</ul>
+
+<div class="card intuition">
+<div class="card-label">💡 实战量化</div>
+<p>KBA URL 注入的 Token 消耗平均每轮 <strong>2K-5K</strong>，但如果 naive 全量加载则可能达到 <strong>20K+</strong>。<strong>Selection 策略在这里节省了 75-90% 的 Token 预算。</strong></p>
+</div>
+
+<h3>案例三：CLAUDE.md 在团队项目中的实践 — Persistence 的最佳载体</h3>
+<p>在团队项目中，CLAUDE.md 不仅是一个文件，而是一个<strong>动态演进的上下文基座</strong>：</p>
+
+<table class="compare-table">
+<tr><th>内容类型</th><th>更新频率</th><th>维护者</th><th>影响范围</th></tr>
+<tr><td>编码规范（命名 / 风格）</td><td>季度</td><td>Tech Lead</td><td>所有代码生成</td></tr>
+<tr><td>架构决策记录 (ADR)</td><td>按需</td><td>架构师</td><td>新功能设计</td></tr>
+<tr><td>已知陷阱 / 反模式</td><td>持续积累</td><td>全员贡献</td><td>避免重复犯错</td></tr>
+<tr><td>Review Checklist</td><td>月度迭代</td><td>QA Team</td><td>Code Review 质量</td></tr>
+</table>
+
+<p><strong>效果量化：</strong>引入 CLAUDE.md 后，Agent 生成代码的一次通过率（first-pass acceptance rate）从 ~45% 提升至 ~72%。主要原因是减少了"不知道团队规约导致的风格违规"。这恰好验证了 ACE Framework 的结论——<strong>不改模型，改 context，+10%+ 的任务完成率提升。</strong></p>
+
+<h3>与 T1 D4 (KV Cache) 的深层连接</h3>
+<p>本章节（A3.1）与 T1 D4（Inference & KV Cache）之间存在清晰的<strong>因果关系链</strong>：</p>
+
+<div class="flow-step"><div class="step-num">T1</div><div class="step-content"><strong>物理层（T1 D4）</strong><br/>每个 token 产生 KV Cache → 内存占用 $O(L)$ → 推理延迟和成本线性增长</div></div>
+<div class="flow-step"><div class="step-num">A3</div><div class="step-content"><strong>工程层（A3.1）</strong><br/>Token 稀缺 → 需要 Budget 分配 → Selection / Compression / Persistence 四大策略</div></div>
+<div class="flow-step"><div class="step-num">P</div><div class="step-content"><strong>产品层</strong><br/>DDAgent System Prompt 精心设计 / KBA 智能注入 / CLAUDE.md 持久化 → 最佳 ROI</div></div>
+
+<div class="card takeaway">
+<div class="card-label">✅ A3.1 核心结论</div>
+<ol>
+<li><strong>范式已转移</strong>：从"怎么问"（PE）到"让 AI 看什么"（CE），Gartner/Karpathy/Tobi Lütke 共同背书</li>
+<li><strong>四大策略</strong>：Selection（按意图选）→ Retrieval（混合搜+重排）→ Compression（去噪提炼）→ Persistence（CLAUDE.md）</li>
+<li><strong>100:1 现象</strong>：1 字符用户输入 ≈ 100 token 模型处理，检索文档占预算 38-50%（最大块必须管好）</li>
+<li><strong>KV Cache 是物理约束</strong>：ACE Framework 证明不改模型只改 context 可提 10.6%；Prompt Caching 是关键杠杆</li>
+<li><strong>三层演进</strong>：2023 PE → 2024 Agentic WF → 2025-26 CE 2.0，当前处于高 ROI 早期爆发期</li>
+</ol>
+</div>
+</section>
+
+
+<!-- ===== FOOTER ===== -->
+<div class="chapter-footer">
+<a href="../../INDEX.html">← 返回知识图谱</a> &nbsp;|&nbsp;
+<a href="A3.1-prompt-context-eng-quiz.html">去做 Quiz →</a>
+</div>
+
+</body>
+</html>

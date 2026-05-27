@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.2 量化蒸馏 + Serving · Quiz</title>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F9F3;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDE8E0;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card:#FFFFFF;--border:#E8E8E4;--green:#1D9E75;--red:#993C1D}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.tag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px}
+.tag-t1{background:var(--purple-bg);color:var(--purple)}
+.tag-quiz{background:var(--teal-bg);color:var(--teal)}
+h1{font-size:24px;font-weight:700;margin-bottom:4px}
+.subtitle{font-size:14px;color:var(--muted)}
+.score-box{margin:20px 0;padding:16px 20px;background:var(--purple-bg);border-radius:10px;text-align:center}
+.score-box .score{font-size:36px;font-weight:700;color:var(--purple)}
+.score-box .label{font-size:13px;color:var(--purple)}
+.score-box .feedback{font-size:13px;margin-top:6px}
+.q-card{border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:16px 0;background:#fff}
+.q-card .q-id{font-size:11px;color:var(--muted);margin-bottom:4px}
+.q-card .q-text{font-size:15px;font-weight:500;margin-bottom:12px}
+.q-card .options{display:flex;flex-direction:column;gap:6px}
+.q-card .opt{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px;transition:all .15s}
+.q-card .opt:hover{border-color:var(--purple);background:var(--purple-bg)}
+.q-card .opt.selected{border-color:var(--purple);background:var(--purple-bg);font-weight:500}
+.q-card .opt.correct{border-color:var(--green);background:var(--teal-bg)}
+.q-card .opt.wrong{border-color:var(--red);background:var(--coral-bg)}
+.q-card .explain{display:none;margin-top:10px;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.6}
+.q-card .explain.show{display:block}
+.q-card .explain.correct-exp{background:var(--teal-bg);border-left:3px solid var(--green)}
+.q-card .explain.wrong-exp{background:var(--coral-bg);border-left:3px solid var(--red)}
+.q-card .explain a{color:var(--purple);text-decoration:none;font-weight:500}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-t1">T1 · LLM系统</span>
+<span class="tag tag-quiz">Quiz · 10 题</span>
+<a href="4.2-quantization-serving-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+<a href="../../INDEX.html" class="nav-link">知识图谱</a>
+</div>
+<h1>4.2 量化蒸馏 + Serving · Quiz</h1>
+<p class="subtitle">10 题 · 每节 2 题 · 点击选项即时反馈</p>
+</div>
+
+<div class="score-box">
+<div class="label">得分</div>
+<div class="score" id="score">0 / 10</div>
+<div class="feedback" id="feedback">点击选项开始答题</div>
+</div>
+
+<!-- ====== Q1 (§①) ====== -->
+<div class="q-card" data-correct="C">
+<div class="q-id">Q1 / 10 · §① 是什么</div>
+<div class="q-text">以下关于量化（Quantization）和蒸馏（Distillation）的描述，哪项最准确？</div>
+<div class="options">
+<div class="opt" onclick="checkAnswer(this)">A. 量化和蒸馏本质上是同一种技术——都是降低模型精度的方法</div>
+<div class="opt" onclick="checkAnswer(this)">B. 量化是训练一个新模型模仿老模型；蒸馏是把同一模型压成低精度版本</div>
+<div class="opt" onclick="checkAnswer(this)">C. 量化是对同一模型降低数值精度（有损压缩）；蒸馏是让小模型学习大模型的知识迁移</div>
+<div class="opt" onclick="checkAnswer(this)">D. 量化只适用于推理阶段，蒸馏只在预训练阶段有意义</div>
+</div>
+<div class="explain correct-exp"><b>正确 ✅</b> 量化 = 同一模型的有损压缩（BF16→INT4），几分钟完成不需要训练；蒸馏 = Teacher→Student 的知识迁移，需要重新训练。两者常叠加使用：先蒸馏出小模型再量化部署。</div>
+<div class="explain wrong-exp"><b>❌ A/B/D 都有问题。</b>A 把两者混为一谈——它们产物不同、流程不同。B 恰好说反了。D 也错——蒸馏也广泛用于 SFT 和任务微调阶段。</div>
+</div>
+
+<!-- ====== Q2 (§①) ====== -->
+<div class="q-card" data-correct="B">
+<div class="q-id">Q2 / 10 · §① 是什么</div>
+<div class="q-text">AWQ 方法识别"重要权重"的核心依据是什么？</div>
+<div class="options">
+<div class="opt" onclick="checkAnswer(this)">A. 权重本身的绝对值大小——绝对值大的权重更重要</div>
+<div class="opt" onclick="checkAnswer(this)">B. 权重所连接的激活值（activation）幅度——高激活通道的权重要保护</div>
+<div class="opt" onclick="checkAnswer(this)">C. Hessian 矩阵的二阶导数信息——曲率大的方向更敏感</div>
+<div class="opt" onclick="checkAnswer(this)">D. 梯度的大小——训练时梯度大的参数对输出影响更大</div>
+</div>
+<div class="explain correct-exp"><b>正确 ✅</b> AWQ 的核心洞察是 Activation-Aware：不是看权重本身有多大，而是看这个权重在推理时被"用到多少"（激活值幅度）。高激活通道的权重即使本身很小也要保留精度。这是它区别于 GPTQ 的关键设计选择。</div>
+<div class="explain wrong-exp"><b>❌ 不对。</b>A 是朴素直觉但不是 AWQ 的做法。C 描述的是 GPTQ 使用 Hessian 信息的方法。D 与后训练量化无关。</div>
+</div>
+
+<!-- ====== Q3 (§②) ====== -->
+<div class="q-card" data-correct="A">
+<div class="q-id">Q3 / 10 · §② 怎么实现</div>
+<div class="q-text">你需要在 MacBook Pro (Apple Silicon) 上本地运行一个 LLM 做开发调试，应该选哪种格式？</div>
+<div class="options">
+<div class="opt" onclick="checkAnswer(this)">A. GGUF Q4_K_M + Ollama/llama.cpp</div>
+<div class="opt" onclick="checkAnswer(this)">B. AWQ INT4 + vLLM</div>
+<div class="opt" onclick="checkAnswer(this)">C. GPTQ INT4 + TensorRT-LLM</div>
+<div class="opt" onclick="checkAnswer(this)">D. FP8 E4M3 + vLLM</div>
+</div>
+<div class="explain correct-exp"><b>正确 ✅</b> GGUF 是端侧/CPU/Apple Silicon 的通用格式，Ollama 和 llama.cpp 原生支持 Apple Silicon 加速。AWQ/GPTQ 仅支持 NVIDIA GPU，FP8 在 Ampere (RTX 3000) 上无硬件加速。</div>
+<div class="explain wrong-exp"><b>❌ 硬件不匹配。</b>B/C 都是 NVIDIA GPU-only 格式。D 在 RTX 3000 系列（无 FP8 硬件支持）上需要软件模拟，没有速度优势。</div>
+</div>
+
+<!-- ====== Q4 (§②) ====== -->
+<div class="q-card" data-correct="D">
+<div class="q-id">Q4 / 10 · §② 怎么实现</div>
+<div class="q-text">vLLM 的 PagedAttention 将 KV Cache 内存碎片从 60-80% 降低到 &lt;4%，它的核心借鉴来自操作系统的什么机制？</div>
+<div class="options">
+<div class="opt" onclick="checkAnswer(this)">A. Garbage Collection（垃圾回收）</div>
+<div class="opt" onclick="checkAnswer(this)">B. Virtual Memory / Paging（虚拟内存分页）</div>
+<div class="opt" onclick="checkAnswer(this)">C. Memory-mapped I/O（内存映射文件）</div>
+<div class="opt" onclick="checkAnswer(this)">D. Virtual Memory / Paging（虚拟内存分页）</div>
+</div>
+<div class="explain correct-exp"><b>正确 ✅</b> PagedAttention 直接借用了 OS 虚拟内存的分页思想：将 KV Cache 切成固定大小的 page（通常 16 tokens/page），通过 block table 做逻辑→物理地址映射，按需分配而非预分配连续大块。这正是 OS paging 的核心思想。</div>
+<div class="explain wrong-exp"><b>❌ 不对。</b>PagedAttention 的 "Paged" 就是指 paging（分页）。GC 是自动回收不再使用的内存，与 KV Cache 的动态增长管理问题不同。
+</div>
+</div>
+
+<!-- ====== Q5 (§③) ====== -->
+<div class="q-card" data-correct="C">
+<div class="q-id">Q5 / 10 · §③ 为什么</div>
+<div class="q-text">为什么 LLM decode 阶段的吞吐量主要受限于内存带宽而非计算能力？</div>
+<div class="options">
+<div class="opt" onclick="checkAnswer(this)">A. Decode 阶段的注意力计算复杂度是 O(n²)，计算量太大</div>
+<div class="opt" onclick="checkAnswer(this)">B. Decode 阶段需要反向传播更新参数，I/O 瓶颈明显</div>
+<div class="opt" onclick="checkAnswer(this)">C. 每个 token 只需加载全部权重做一次矩阵-向量乘法，计算少但数据搬运量大</div>
+<div class="opt" onclick="checkAnswer(this)">D. GPU 的计算单元在 decode 时处于 idle 状态等待同步</div>
+</div>
+<div class="explain correct-exp"><b>正确 ✅</b> Decode 阶段每生成一个新 token，需要把整个模型权重从显存读到计算单元（数据搬运），然后做一个 $W \times x$（矩阵×向量，计算量相对小）。所以 throughput ≈ memory_bandwidth / model_size。这就是为什么量化直接提速——模型变小 → 数据搬运量减少。</div>
+<div class="explain wrong-exp"><b>❌ 不对。</b>A 描述的是 prefill 阶段的问题（长序列 attention），不是 decode 瓶颈。B 错在 decode 不需要反向传播。D 不是根因——GPU 不是 idle，而是在等数据从显存搬过来。
+</div>
+</div>
+
+<!-- ====== Q6 (§③) ====== -->
+<div class="q-card" data-correct="B">
+<div class="q-id">Q6 / 10 · §③ 为什么</div>
+<div class="q-text">ParetoQ (2026) 研究发现的"质量悬崖"现象指的是什么？</div>
+<div class="options">
+<div class="opt" onclick="checkAnswer(this)">A. 超过 INT4 后继续降低位数会导致质量断崖式下降</div>
+<div class="opt" onclick="checkAnswer(this)">B. ≤2 bits 时模型学到根本不同的表征，不再是简单压缩而是表征改变</div>
+<div class="opt" onclick="checkAnswer(this)">C. 不同硬件平台上的量化质量差异巨大，存在跨平台悬崖</div>
+<div class="opt" onclick="checkAnswer(this)">D. 长上下文场景下 KV Cache 量化导致质量突然崩溃</div>
+</div>
+<div class="explain correct-exp"><b>正确 ✅</b> ParetoQ 发现 bit 数和准确率的关系不是平滑曲线。3-4 bits 区间量化像"压缩"（去掉冗余）；≤2 bits 时模型学到了完全不同的表征（different representations）。推论：固定预算下，大模型压到 2-bit 可能比半数参数模型用 4-bit 效果更好。</div>
+<div class="explain wrong-exp"><b>❌ 不够精确。</b>A 太笼统——质量下降确实存在，但"悬崖"特指 2bit 以下的质变（表征改变），不是简单的量变。C/D 描述的是其他问题。</div>
+</div>
+
+<!-- ====== Q7 (§④) ====== -->
+<div class="q-card" data-correct="A">
+<div class="q-id">Q7 / 10 · §④ 演进</div>
+<div class="q-text">ICLR 2026 收录了 91 篇量化论文。以下哪个方向论文数量最多？</div>
+<div class="options">
+<div class="opt" onclick="checkAnswer(this)">A. PTQ（后训练量化）— 38 篇</div>
+<div class="opt" onclick="checkAnswer(this)">B. Hardware-aware — 21 篇</div>
+<div class="opt" onclick="checkAnswer(this)">C. Mixed-precision — 20 篇</div>
+<div class="opt" onclick="checkAnswer(this)">D. KV Cache 量化 — 15 篇</div>
+</div>
+<div class="explain correct-exp"><b>正确 ✅</b> PTQ（Post-Training Quantization）以 38 篇居首，说明 INT4/GPTQ/AWQ 这条路线仍在快速进化（GPTQ 补偿改进、Hadamard 旋转后继者、结构化分析等四条支流）。Hardware-aware (21) 和 Mixed-precision (20) 分列二三位，反映硬件协同和精细化精度分配的趋势。</div>
+<div class="explain wrong-exp"><b>❌ 数量不对。</b>PTQ 以 38 篇遥遥领先，比第二名 Hardware-aware (21) 多近一倍。这说明"如何把后训练量化做得更好"仍是社区最关注的方向。
+</div>
+</div>
+
+<!-- ====== Q8 (§④) ====== -->
+<div class="q-card" data-correct="D">
+<div class="q-id">Q8 / 10 · §④ 演进</div>
+<div class="q-text">Lu &amp; Liu (arXiv:2605.23857, 2026.05) 关于知识蒸馏的实验挑战了哪个传统假设？</div>
+<div class="options">
+<div class="opt" onclick="checkAnswer(this)">A. 蒸馏总是导致学生模型的能力天花板低于教师</div>
+<div class="opt" onclick="checkAnswer(this)">B. 蒸馏只能在 SFT 阶段进行，不能在预训练阶段使用</div>
+<div class="opt" onclick="checkAnswer(this)">C. 多教师蒸馏总是优于单教师蒸馏</div>
+<div class="opt" onclick="checkAnswer(this)">D. 强 teacher 总是能带来更好的蒸馏效果</div>
+</div>
+<div class="explain correct-exp"><b>正确 ✅</b> 该研究发现 teacher 未必越强越好——push teacher 更多（更多参数或更多训练 token）可能饱和甚至反转蒸馏收益。即使是小而欠训练的 teacher，配合适当的 LM+KD loss mixing，也能改善更大的 student。这对产品意味着：不必迷信最大最强模型做 teacher。</div>
+<div class="explain wrong-exp"><b>❌ 不是该研究的发现。</b>该研究直接挑战的是"强 teacher 必然更好"这一直觉。其余选项要么是已知事实（A），要么与研究无关（B/C）。
+</div>
+</div>
+
+<!-- ====== Q9 (§⑤) ====== -->
+<div class="q-card" data-correct="C">
+<div class="q-id">Q9 / 10 · §⑤ 产品连接</div>
+<div class="q-text">Fitz 的 FXAgent 有 40 万月活、日均 250 次换汇咨询，以下哪种部署方案最合理？</div>
+<div class="options">
+<div class="opt" onclick="checkAnswer(this)">A. GGUF Q4_K_M + Ollama（本地 CPU 推理优先）</div>
+<div class="opt" onclick="checkAnswer(this)">B. GPTQ INT4 + TensorRT-LLM（编译优化峰值性能）</div>
+<div class="opt" onclick="checkAnswer(this)">C. FP8 + Speculative Decoding + vLLM（高吞吐优先）</div>
+<div class="opt" onclick="checkAnswer(this)">D. BF16 原始模型 + naive batching（质量优先不压缩）</div>
+</div>
+<div class="explain correct-exp"><b>正确 ✅</b> 高 QPS 场景（40万月活 ≈ 平均 ~13 QPS）的核心需求是 throughput。FP8 在 Hopper 上近乎无损（&lt;0.3% PPL 退化），Speculative Decoding 再提速 2-3×，vLLM continuous batching 保证高利用率。这是典型的"高并发服务端"最优组合。</div>
+<div class="explain wrong-exp"><b>❌ 方案不匹配。</b>A 的 Ollama 不适合高并发服务端。B 的 TRT-LLM 编译开销大且不够灵活。D 的 BF16 浪费了 50% 显存且没有 throughput 优势——在高 QPS 场景下成本不可接受。
+</div>
+</div>
+
+<!-- ====== Q10 (§⑤) ====== -->
+<div class="q-card" data-correct="B">
+<div class="q-id">Q10 / 10 · §⑤ 产品连接</div>
+<div class="q-text">DDAgent 需要处理 iwiki 历史 QA 数据（长上下文），以下哪项优化措施的 ROI 最高？</div>
+<div class="options">
+<div class="opt" onclick="checkAnswer(this)">A. 权重量化到 INT2（极致压缩模型体积）</div>
+<div class="opt" onclick="checkAnswer(this)">B. KV Cache 量化 + PagedAttention（解决长上下文的显存瓶颈）</div>
+<div class="opt" onclick="checkAnswer(this)">C. 使用 TensorRT-LLM 追求单请求最低延迟</div>
+<div class="opt" onclick="checkAnswer(this)">D. 用 BitNet 1.58-bit 从头训练专用小模型</div>
+</div>
+<div class="explain correct-exp"><b>正确 ✅</b> 长上下文场景下，KV Cache 才是真正的显存瓶颈。32K context 的 KV Cache 可能超过模型权重本身！KV Cache 量化（SpinQuant/QServe W4A8KV4 方案）+ PagedAttention 减少碎片，直接解决 DDAgent 的核心痛点。A 的 INT2 会严重损害长 CoT 质量。C 对 DDAgent 的长上下文多步推理帮助有限。D 从头训练的成本和时间投入远超收益。</div>
+<div class="explain wrong-exp"><b>❌ 抓错了瓶颈。</b>长上下文场景下，权重只占显存的一小部分，KV Cache 才是大头。必须对症下药。
+</div>
+</div>
+
+<script>
+let score = 0;
+let answered = 0;
+const total = 10;
+
+function checkAnswer(opt) {
+    const card = opt.closest('.q-card');
+    if (card.classList.contains('answered')) return;
+    card.classList.add('answered');
+
+    const correct = card.dataset.correct;
+    const selected = opt.textContent.charAt(0);
+    const isCorrect = selected === correct;
+
+    const opts = card.querySelectorAll('.opt');
+    opts.forEach(o => {
+        o.style.pointerEvents = 'none';
+        if (o.textContent.charAt(0) === correct) o.classList.add('correct');
+        else if (o === opt && !isCorrect) o.classList.add('wrong');
+        if (o === opt) o.classList.add('selected');
+    });
+
+    const explain = card.querySelector(isCorrect ? '.correct-exp' : '.wrong-exp');
+    explain.classList.add('show');
+
+    if (isCorrect) score++;
+    answered++;
+
+    document.getElementById('score').textContent = score + ' / ' + total;
+
+    const fb = document.getElementById('feedback');
+    if (answered === total) {
+        if (score >= 9) fb.textContent = '🎉 太棒了！' + score + '/' + total + ' —— 完全掌握';
+        else if (score >= 7) fb.textContent = '👍 不错！' + score + '/' + total + ' —— 建议回顾错题';
+        else if (score >= 5) fb.textContent = '💪 继续加油！' + score + '/' + total + ' —— 建议重读章节';
+        else fb.textContent = '📖 需要加强！' + score + '/' + total + ' —— 建议完整复习';
+    } else if (isCorrect) {
+        fb.textContent = '✅ 正确！当前 ' + score + '/' + answered;
+    } else {
+        fb.textContent = '❌ 当前 ' + score + '/' + answered;
+    }
+}
+</script>
+
+<div class="chapter-footer">
+  <a href="4.2-quantization-serving-chapter.html">← 返回章节</a>
+  <a href="../../INDEX.html">返回知识图谱</a>
+</div>
+
+</body>
+</html>

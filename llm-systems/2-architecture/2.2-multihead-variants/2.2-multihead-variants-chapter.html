@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2.2 多头变种 · GQA / MQA / MLA / FlashAttention</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F9F3;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--bg:#FAFAF8;--card:#FFF;--text:#1A1A1A;--muted:#6B6B6B;--border:#E5E5E0;--green:#1D9E75;--green-bg:#E6F9F3}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:24px 20px}
+.header{text-align:center;padding:32px 0 12px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.tag-row{display:flex;gap:6px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag.t1{background:var(--purple-bg);color:var(--purple)}
+.tag.d2{background:var(--blue-bg);color:var(--blue)}
+.tag.num{background:var(--amber-bg);color:var(--amber)}
+h1{font-size:26px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:8px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;display:inline-block;margin-top:8px}
+.nav-row{display:flex;gap:4px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.nav-item{font-size:11px;padding:3px 10px;border-radius:12px;text-decoration:none;font-weight:500}
+.nav-item.done{background:var(--teal-bg);color:var(--teal)}
+section{padding:28px 0 12px;border-top:1px solid var(--border)}
+section h2{font-size:19px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center}
+section h3{font-size:15px;font-weight:600;margin:16px 0 8px;color:var(--text)}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--teal-bg);border-color:var(--teal)}
+.card.takeaway{background:var(--amber-bg);border-color:var(--amber)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card .card-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.card p{margin:4px 0;font-size:14px}
+.diagram{margin:20px 0 8px}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th,td{border:1px solid var(--border);padding:8px 10px;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{vertical-align:top}
+code{background:#F0F0EC;padding:1px 5px;border-radius:4px;font-size:13px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.formula-block{background:#F5F5F2;padding:12px 16px;border-radius:8px;margin:12px 0;font-size:14px;overflow-x:auto}
+ul,ol{margin:8px 0 8px 20px}
+li{margin:4px 0;font-size:14px}
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.comparison .col{padding:12px;border-radius:8px}
+.comparison .col.left{background:var(--purple-bg)}
+.comparison .col.right{background:var(--teal-bg)}
+@media(max-width:600px){.comparison{grid-template-columns:1fr}}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+.chapter-footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t1">T1 · LLM 系统</span>
+    <span class="tag d2">D2 模型骨架</span>
+ <span class="tag num">第 6 章</span>
+    <a href="../../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+    <a href="2.2-multihead-variants-quiz.html" class="nav-link">Quiz →</a>
+  </div>
+  <h1>2.2 多头变种</h1>
+  <p class="subtitle">GQA · MQA · MLA · FlashAttention — 长上下文推理成本的根因</p>
+  <div class="spine-link">主线连接：MHA→MQA/GQA→MLA→Flash · 推理时KV Cache是Agent长上下文的物理瓶颈</div>
+  <div class="nav-row">
+    <a class="nav-item done" href="#is">① 是什么</a>
+    <a class="nav-item done" href="#how">② 怎么实现</a>
+    <a class="nav-item done" href="#why">③ 为什么</a>
+    <a class="nav-item done" href="#evolution">④ 演进</a>
+    <a class="nav-item done" href="#connect">⑤ 产品</a>
+  </div>
+</div>
+
+<!-- ====== 章节一览图 ====== -->
+<div class="diagram">
+<p style="font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px;">章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 340" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <defs><marker id="ov-arr22" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <!-- ① 紫 -->
+  <rect x="30" y="20" width="180" height="70" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+  <text x="120" y="46" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">① 是什么</text>
+  <text x="120" y="64" text-anchor="middle" fill="#1A1A1A" font-size="10.5">KV Cache 瓶颈直觉</text>
+  <text x="120" y="78" text-anchor="middle" fill="#1A1A1A" font-size="10.5">MHA→MQA→GQA 光谱</text>
+  <!-- arrow ①→② -->
+  <line x1="210" y1="55" x2="245" y2="55" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr22)"/>
+  <!-- ② 蓝 -->
+  <rect x="250" y="20" width="180" height="70" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+  <text x="340" y="46" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="700">② 怎么实现</text>
+  <text x="340" y="64" text-anchor="middle" fill="#1A1A1A" font-size="10.5">GQA 分组共享机制</text>
+  <text x="340" y="78" text-anchor="middle" fill="#1A1A1A" font-size="10.5">MLA 低秩压缩 · FlashAttention</text>
+  <!-- arrow ②→③ -->
+  <line x1="430" y1="55" x2="465" y2="55" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr22)"/>
+  <!-- ③ 琥珀 -->
+  <rect x="470" y="20" width="180" height="70" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+  <text x="560" y="46" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">③ 为什么</text>
+  <text x="560" y="64" text-anchor="middle" fill="#1A1A1A" font-size="10.5">显存带宽 vs 算力博弈</text>
+  <text x="560" y="78" text-anchor="middle" fill="#1A1A1A" font-size="10.5">KV Cache 是推理瓶颈</text>
+  <!-- arrow ③→④ -->
+  <line x1="560" y1="90" x2="560" y2="120" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr22)"/>
+  <!-- ④ 紫浅 -->
+  <rect x="370" y="125" width="180" height="70" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+  <text x="460" y="151" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">④ 演进格局</text>
+  <text x="460" y="169" text-anchor="middle" fill="#1A1A1A" font-size="10.5">2024-2026 行业选型</text>
+  <text x="460" y="183" text-anchor="middle" fill="#1A1A1A" font-size="10.5">FlashAttention 1→4</text>
+  <!-- arrow ④→⑤ -->
+  <line x1="370" y1="160" x2="335" y2="160" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr22)"/>
+  <!-- ⑤ 绿 -->
+  <rect x="130" y="125" width="200" height="70" rx="10" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.5"/>
+  <text x="230" y="151" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="700">⑤ 与产品连接</text>
+  <text x="230" y="169" text-anchor="middle" fill="#1A1A1A" font-size="10.5">Agent选型 · 长上下文成本</text>
+  <text x="230" y="183" text-anchor="middle" fill="#1A1A1A" font-size="10.5">DDAgent/FxAgent 实践</text>
+</svg>
+</div>
+
+<!-- ====== §① 是什么 ====== -->
+<section id="is">
+<h2><span class="sec-num">①</span> 是什么 · KV Cache 瓶颈与注意力变种光谱</h2>
+
+<div class="card intuition">
+  <div class="card-title">🍽️ 餐厅类比</div>
+  <p>想象一家餐厅：<strong>MHA</strong> 是每个服务员自带一本完整菜单（独立 K/V），服务精准但菜单堆满后厨；<strong>GQA</strong> 是每 8 个服务员共用一本菜单，后厨减负；<strong>MQA</strong> 是全店只留一本菜单，最省空间但点菜可能不够精准；<strong>MLA</strong> 是服务员只记"关键词摘要"，点菜时现场还原——极致节省，略有近似。</p>
+</div>
+
+<h3>问题起源：推理时 KV Cache 为什么是大问题？</h3>
+<p>在上一章（2.1 Attention 机制）中，我们看到了每个 Token 都要计算 Q、K、V。在<strong>自回归推理</strong>（逐 token 生成）时，已生成的所有 token 的 K 和 V 必须保留在显存中——这就是 <strong>KV Cache</strong>。问题在于：</p>
+<ul>
+  <li>每个 token 的 KV Cache 大小 = $2 \times n_{\text{kv\_heads}} \times d_{\text{head}}$（K 和 V 各一份）</li>
+  <li>序列越长、KV 头越多，显存占用线性增长</li>
+  <li>生成每个新 token 时，需要<strong>把整个 KV Cache 从显存搬到计算单元</strong>——<strong>内存带宽</strong>成为瓶颈</li>
+</ul>
+
+<div class="card warning">
+  <div class="card-title">⚠️ 关键区分</div>
+  <p>KV Cache 瓶颈的本质不是"计算量太大"，而是<strong>访存带宽不够</strong>。GPU 算力（TFLOPS）远大于显存带宽（GB/s），注意力推理在长序列时是 <strong>memory-bound</strong> 而非 compute-bound。这就是为什么减少 KV 存储量 = 减少搬数据量 = 加速推理。</p>
+</div>
+
+<h3>MHA → MQA → GQA：注意力变种光谱</h3>
+<p>理解这三种变种的最好方式是把它们看作一个<strong>光谱</strong>：从"完全独立"到"完全共享"的连续谱。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 200" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <!-- 光谱轴 -->
+  <line x1="40" y1="90" x2="640" y2="90" stroke="#888780" stroke-width="1.5"/>
+  <!-- 端点标签 -->
+  <text x="40" y="110" fill="#534AB7" font-size="12" font-weight="700">MHA</text>
+  <text x="40" y="126" fill="#6B6B6B" font-size="10">n_kv = n_heads</text>
+  <text x="340" y="110" fill="#185FA5" font-size="12" font-weight="700" text-anchor="middle">GQA</text>
+  <text x="340" y="126" fill="#6B6B6B" font-size="10" text-anchor="middle">1 &lt; n_kv &lt; n_heads</text>
+  <text x="640" y="110" fill="#1D9E75" font-size="12" font-weight="700" text-anchor="end">MQA</text>
+  <text x="640" y="126" fill="#6B6B6B" font-size="10" text-anchor="end">n_kv = 1</text>
+  <!-- 箭头标注 -->
+  <text x="340" y="45" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="600">KV Cache 递减 · 表达力递减</text>
+  <line x1="180" y1="50" x2="500" y2="50" stroke="#BA7517" stroke-width="1" marker-end="url(#ov-arr22)"/>
+  <!-- 示意圆点 -->
+  <circle cx="80" cy="90" r="6" fill="#534AB7"/>
+  <circle cx="140" cy="90" r="6" fill="#534AB7"/>
+  <circle cx="200" cy="90" r="6" fill="#534AB7"/>
+  <circle cx="260" cy="90" r="6" fill="#185FA5"/>
+  <circle cx="340" cy="90" r="6" fill="#185FA5"/>
+  <circle cx="640" cy="90" r="6" fill="#1D9E75"/>
+  <!-- 底部说明 -->
+  <text x="120" y="165" text-anchor="middle" fill="#6B6B6B" font-size="10">每头独立 K/V</text>
+  <text x="340" y="165" text-anchor="middle" fill="#6B6B6B" font-size="10">分组共享 K/V</text>
+  <text x="580" y="165" text-anchor="middle" fill="#6B6B6B" font-size="10">全头共享 K/V</text>
+</svg>
+</div>
+
+<p><strong>MHA（Multi-Head Attention）</strong>：每个查询头有独立的 K、V 投影。表达力最强，但 KV Cache 最大。</p>
+<p><strong>MQA（Multi-Query Attention）</strong>：所有查询头共享同一组 K、V。KV Cache 最小，但注意力模式多样性大幅下降，可能损失质量（Shazeer 2019）。</p>
+<p><strong>GQA（Grouped-Query Attention）</strong>：折中——将 $n_q$ 个查询头分成 $g$ 组，每组共享一对 K/V 头。$g=1$ 等价于 MQA，$g=n_q$ 等价于 MHA（Ainslie et al. 2023, arxiv 2305.13245）。</p>
+
+<div class="card takeaway">
+  <div class="card-title">📌 Takeaway</div>
+  <p>GQA 的本质是在"表达力"和"推理效率"之间找一个<strong>可控的平衡点</strong>。组数 $g$ 就是这个旋钮——旋向 MHA 端更准，旋向 MQA 端更快。2024-2026 年几乎所有开源大模型都选择了 GQA，因为它是"最简单的效率增益"。</p>
+</div>
+</section>
+
+<!-- ====== §② 怎么实现 ====== -->
+<section id="how">
+<h2><span class="sec-num">②</span> 怎么实现 · GQA 分组机制、MLA 低秩压缩与 FlashAttention</h2>
+
+<h3>GQA：分组共享的具体实现</h3>
+<p>以 Qwen2.5-7B 为例：28 个查询头分成 4 组（$g=4$），每组 7 个查询头共享 1 对 K/V 头。具体计算过程：</p>
+<ol>
+  <li>输入 $\mathbf{X} \in \mathbb{R}^{n \times d}$ 分别乘以 $\mathbf{W}_Q \in \mathbb{R}^{d \times n_q d_h}$、$\mathbf{W}_K \in \mathbb{R}^{d \times g d_h}$、$\mathbf{W}_V \in \mathbb{R}^{d \times g d_h}$</li>
+  <li>将 $\mathbf{Q}$ reshape 为 $(n, n_q, d_h)$，$\mathbf{K}, \mathbf{V}$ reshape 为 $(n, g, d_h)$</li>
+  <li>对 $\mathbf{K}, \mathbf{V}$ 执行 <code>repeat_kv</code>：沿 head 维度复制 $n_q/g$ 次，变成 $(n, n_q, d_h)$</li>
+  <li>按标准 MHA 公式计算注意力</li>
+</ol>
+
+<div class="formula-block">
+$$\text{GQA: } \quad \mathbf{K}_i = \mathbf{K}_{\lfloor i \cdot g / n_q \rfloor}, \quad \mathbf{V}_i = \mathbf{V}_{\lfloor i \cdot g / n_q \rfloor}$$
+$$\text{KV Cache 节省比} = \frac{n_q - g}{n_q} = 1 - \frac{g}{n_q}$$
+</div>
+
+<p>Qwen2.5-7B 的节省比：$1 - 4/28 = 85.7\%$。Llama 3 8B（32 查询头 / 8 KV 头）：$1 - 8/32 = 75\%$。</p>
+
+<h3>MLA：低秩压缩 KV Cache</h3>
+<p>MLA（Multi-head Latent Attention）由 DeepSeek-V2 提出（arxiv 2405.04434 / 2024-05），思路完全不同——不是"减少头数"，而是<strong>把 K/V 压缩到一个低维隐空间</strong>。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 220" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <defs><marker id="how-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <!-- MHA path -->
+  <rect x="20" y="20" width="120" height="50" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.2"/>
+  <text x="80" y="42" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">MHA/GQA</text>
+  <text x="80" y="58" text-anchor="middle" fill="#1A1A1A" font-size="10">缓存完整 K + V</text>
+  <line x1="140" y1="45" x2="175" y2="45" stroke="#888780" stroke-width="1" marker-end="url(#how-arr)"/>
+  <rect x="180" y="20" width="182" height="50" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+  <text x="271" y="42" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="700">KV Cache</text>
+  <text x="271" y="58" text-anchor="middle" fill="#1A1A1A" font-size="10">$2 \times g \times d_h$ per token</text>
+  <!-- MLA path -->
+  <rect x="20" y="110" width="120" height="50" rx="8" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.2"/>
+  <text x="80" y="132" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">MLA</text>
+  <text x="80" y="148" text-anchor="middle" fill="#1A1A1A" font-size="10">压缩到隐向量 c</text>
+  <line x1="140" y1="135" x2="175" y2="135" stroke="#888780" stroke-width="1" marker-end="url(#how-arr)"/>
+  <rect x="180" y="110" width="130" height="50" rx="8" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.2"/>
+  <text x="245" y="127" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">Latent Cache</text>
+  <text x="245" y="143" text-anchor="middle" fill="#1A1A1A" font-size="10">$d_c$ per token</text>
+  <text x="245" y="156" text-anchor="middle" fill="#BA7517" font-size="9.5">($d_c \ll 2 g d_h$)</text>
+  <!-- 推理还原 -->
+  <line x1="310" y1="135" x2="345" y2="135" stroke="#888780" stroke-width="1" marker-end="url(#how-arr)"/>
+  <rect x="350" y="110" width="130" height="50" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.2"/>
+  <text x="415" y="132" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="700">还原 K/V</text>
+  <text x="415" y="148" text-anchor="middle" fill="#1A1A1A" font-size="10">$c \times W_{up} \to K, V$</text>
+  <!-- 压缩率对比 -->
+  <rect x="520" y="40" width="140" height="90" rx="8" fill="#F5F5F2" stroke="#E5E5E0" stroke-width="1"/>
+  <text x="590" y="62" text-anchor="middle" fill="#534AB7" font-size="10" font-weight="600">DeepSeek-V2 压缩率</text>
+  <text x="590" y="80" text-anchor="middle" fill="#1A1A1A" font-size="10">KV Cache 减少 93.3%</text>
+  <text x="590" y="96" text-anchor="middle" fill="#1A1A1A" font-size="10">推理吞吐 5.76x 提升</text>
+  <text x="590" y="112" text-anchor="middle" fill="#6B6B6B" font-size="9">vs MHA DeepSeek 67B</text>
+</svg>
+</div>
+
+<p>MLA 的核心操作：</p>
+<div class="formula-block">
+$$\text{压缩:} \quad \mathbf{c}_t = W_{\text{down}} \mathbf{h}_t \in \mathbb{R}^{d_c} \quad (d_c \ll n_h \cdot d_h)$$
+$$\text{还原:} \quad \mathbf{k}_t = W_{\text{uk}} \mathbf{c}_t, \quad \mathbf{v}_t = W_{\text{uv}} \mathbf{c}_t$$
+$$\text{推理时只缓存 } \mathbf{c}_t \text{，不缓存 } \mathbf{k}_t, \mathbf{v}_t$$
+</div>
+
+<p>MLA 还有一个巧妙设计：<strong>矩阵吸收</strong>（matrix absorption）。在推理时，$W_{\text{uk}}$ 可以"吸收"到 $\mathbf{W}_Q$ 中，$W_{\text{uv}}$ 可以"吸收"到输出投影中，从而避免显式还原 K/V 带来的额外计算开销。</p>
+
+<div class="card intuition">
+  <div class="card-title">🧊 冰箱类比</div>
+  <p>GQA 是"少放几本菜单进冰箱"——减少副本数量。MLA 是"把菜单内容压缩成摘要再放进冰箱"——用低维表示替代完整信息，需要时解压还原。摘要占的空间远小于原始菜单，这就是 MLA 压缩率更高的原因。</p>
+</div>
+
+<h3>FlashAttention：消除中间矩阵的显存炸弹</h3>
+<p>上面讨论的 GQA/MLA 解决的是<strong>KV Cache 的存储问题</strong>，但 Attention 计算本身还有一个显存炸弹：$n \times n$ 的注意力矩阵 $\mathbf{S} = \mathbf{Q}\mathbf{K}^T$。对于 $n=128\text{K}$，这个矩阵有 $128\text{K} \times 128\text{K} = 16\text{G}$ 个元素——训练时根本放不进显存。</p>
+
+<p>FlashAttention（Dao et al. 2022）的核心思想：<strong>分块计算 + 在线 Softmax</strong>，永远不在 HBM 中存储完整的 $n \times n$ 注意力矩阵。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 190" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <defs><marker id="how-arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <!-- 标准Attention -->
+  <rect x="20" y="20" width="200" height="145" rx="8" fill="#FDEEE8" stroke="#993C1D" stroke-width="1.2"/>
+  <text x="120" y="42" text-anchor="middle" fill="#993C1D" font-size="11" font-weight="700">标准 Attention</text>
+  <text x="120" y="60" text-anchor="middle" fill="#1A1A1A" font-size="10">1. Q×K → S (n×n 写入HBM)</text>
+  <text x="120" y="76" text-anchor="middle" fill="#1A1A1A" font-size="10">2. Softmax(S) 写回HBM</text>
+  <text x="120" y="92" text-anchor="middle" fill="#1A1A1A" font-size="10">3. Softmax(S)×V → O</text>
+  <text x="120" y="115" text-anchor="middle" fill="#993C1D" font-size="10" font-weight="600">内存 O(n²) · HBM 读写 3 次</text>
+  <text x="120" y="135" text-anchor="middle" fill="#6B6B6B" font-size="9">n=128K 时 ~16G 元素</text>
+  <!-- 箭头 -->
+  <line x1="230" y1="92" x2="260" y2="92" stroke="#888780" stroke-width="1.5" marker-end="url(#how-arr2)"/>
+  <text x="245" y="82" text-anchor="middle" fill="#1D9E75" font-size="10" font-weight="600">优化</text>
+  <!-- FlashAttention -->
+  <rect x="265" y="20" width="210" height="145" rx="8" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.2"/>
+  <text x="370" y="42" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">FlashAttention</text>
+  <text x="370" y="60" text-anchor="middle" fill="#1A1A1A" font-size="10">1. 分块: Q,K,V 切成 tile</text>
+  <text x="370" y="76" text-anchor="middle" fill="#1A1A1A" font-size="10">2. 每个 tile 在 SRAM 算</text>
+  <text x="370" y="92" text-anchor="middle" fill="#1A1A1A" font-size="10">3. 在线 Softmax 累积</text>
+  <text x="370" y="115" text-anchor="middle" fill="#1D9E75" font-size="10" font-weight="600">内存 O(n) · HBM 读写 1 次</text>
+  <text x="370" y="135" text-anchor="middle" fill="#6B6B6B" font-size="9">速度 2-4x · 内存 5%-20%</text>
+  <!-- 关键创新 -->
+  <rect x="500" y="35" width="160" height="70" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+  <text x="580" y="55" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="700">关键: 在线 Softmax</text>
+  <text x="580" y="72" text-anchor="middle" fill="#1A1A1A" font-size="9.5">逐 tile 更新 running max</text>
+  <text x="580" y="87" text-anchor="middle" fill="#1A1A1A" font-size="9.5">+ running sum，无需全量</text>
+</svg>
+</div>
+
+<div class="formula-block">
+$$\text{在线 Softmax: } \quad \mathbf{o}_i = \frac{\sum_{j=1}^{i} e^{m_i - m_j} \cdot \ell_j \cdot \mathbf{o}_j + e^{s_i - m_i} \cdot \mathbf{v}_i}{\ell_i}$$
+$$\text{其中 } m_i = \max(m_{i-1}, s_i), \quad \ell_i = e^{m_i - m_{i-1}}\ell_{i-1} + e^{s_i - m_i}$$
+</div>
+
+<p>在线 Softmax 的直觉：你不需要看到所有分数才能算 softmax——可以逐块更新"当前最大值"和"当前总和"，每来一个新的 tile 就修正之前的输出。数学上保证和标准 Softmax 结果<strong>完全一致</strong>。</p>
+
+<div class="card takeaway">
+  <div class="card-title">📌 Takeaway</div>
+  <p>GQA 减少的是<strong>推理时 KV Cache 的存储量和搬移量</strong>；MLA 用低秩压缩进一步压缩 KV Cache；FlashAttention 减少的是<strong>训练/推理时注意力矩阵本身的显存占用和 HBM 读写</strong>。三者解决不同层面的问题，可以叠加使用。</p>
+</div>
+</section>
+
+<!-- ====== §③ 为什么 ====== -->
+<section id="why">
+<h2><span class="sec-num">③</span> 为什么 · 显存带宽博弈与设计取舍的第一性原理</h2>
+
+<div class="card intuition">
+  <div class="card-title">🏗️ 高速公路类比</div>
+  <p>GPU 是一个超大城市，计算单元（Tensor Core）是市中心的高效工厂，显存（HBM）是远郊仓库。GPU 的"计算速度"远超"运货速度"——工厂 1 秒能加工 1000 件货，但卡车 1 秒只能运 100 件。所以瓶颈不在工厂，而在路上。<strong>减少运输量</strong>（KV Cache / 注意力矩阵）比<strong>提升工厂速度</strong>更关键。</p>
+</div>
+
+<h3>第一性原理：推理时的算力-带宽博弈</h3>
+<p>GPU 推理有两种瓶颈模式：</p>
+
+<table>
+<tr><th>模式</th><th>瓶颈</th><th>典型场景</th><th>解法方向</th></tr>
+<tr><td><strong>Compute-bound</strong></td><td>算力不够</td><td>大 batch 训练、短序列推理</td><td>更多算力 / 更优算法</td></tr>
+<tr><td><strong>Memory-bound</strong></td><td>带宽不够</td><td>小 batch 自回归生成、长上下文</td><td>减少数据搬运</td></tr>
+</table>
+
+<p>自回归生成（Agent 的典型场景：逐 token 输出）几乎是纯 memory-bound。每生成 1 个 token，需要把<strong>整个 KV Cache</strong> 从 HBM 读到 SRAM，计算量却只有一个 token 的 Q 与所有 KV 的点积。这意味着：</p>
+
+<div class="formula-block">
+$$\text{推理延迟} \approx \frac{\text{KV Cache 大小}}{\text{HBM 带宽}} \quad (\text{memory-bound 时})$$
+$$\text{所以} \quad \text{减少 KV Cache} \propto \text{减少推理延迟}$$
+</div>
+
+<h3>为什么 GQA 成为行业共识？</h3>
+<p>从第一性原理看，GQA 的成功有三个条件同时成立：</p>
+<ol>
+  <li><strong>问题真实存在</strong>：长上下文推理时 KV Cache 确实是 memory-bound 瓶颈</li>
+  <li><strong>方案足够简单</strong>：只改 KV 头数，不需要自定义 kernel，FlashAttention 原生支持</li>
+  <li><strong>损失可接受</strong>：GQA 论文（arxiv 2305.13245）实验表明，GQA 在速度接近 MQA 的同时，质量接近 MHA</li>
+</ol>
+
+<p>这三个条件缺一不可。MQA 满足 1 和 2，但不满足 3；MLA 满足 1 和 3，但不满足 2（需自定义 kernel、训练复杂度高）。GQA 恰好坐落在甜蜜点。</p>
+
+<h3>MLA 的取舍：极致压缩的代价</h3>
+<p>MLA 比 GQA 压缩率更高（93.3% vs ~75-86%），但代价是：</p>
+<ul>
+  <li><strong>实现复杂</strong>：7 个投影矩阵（vs MHA 的 3 个），需要自定义推理 kernel</li>
+  <li><strong>训练调参难</strong>：隐向量维度 $d_c$、RoPE 兼容性等需要仔细设计</li>
+  <li><strong>生态不成熟</strong>：Hugging Face / vLLM 对 MLA 的支持不如 GQA 完善</li>
+</ul>
+
+<p>但 DeepSeek-V2/V3 用 MLA + MoE 的组合拳证明了其工程可行性——236B 总参数 / 21B 激活，128K 上下文，推理成本仅为同等性能模型的数十分之一。</p>
+
+<h3>FlashAttention 的本质：用计算换带宽</h3>
+<p>FlashAttention 的"分块+在线 Softmax"看似增加了计算（分块后矩阵乘法更碎、还有重计算），实际上是用<strong>少量额外计算</strong>换来<strong>大量 HBM 读写减少</strong>。在 memory-bound 场景下，这个交换总是划算的：</p>
+<div class="formula-block">
+$$\text{FlashAttention: } \underbrace{O(N^2 d)}_{\text{计算量不变}} \text{ vs } \underbrace{O(N^2)}_{\text{HBM 读写} \to O(N)}$$
+$$\text{代价: 分块边界处的重计算} \ll \text{收益: HBM 读写减少数十倍}$$
+</div>
+
+<div class="card takeaway">
+  <div class="card-title">📌 Takeaway</div>
+  <p>所有注意力变种的本质都是在回答同一个问题：<strong>如何在"信息完整性"和"搬移成本"之间取舍？</strong> MHA 保完整但贵，GQA 用分组共享减量，MLA 用压缩进一步减量，FlashAttention 用分块避免存中间结果。理解了 memory-bound 这个第一性原理，这些设计取舍就不需要死记了。</p>
+</div>
+</section>
+
+<!-- ====== §④ 演进与对比 ====== -->
+<section id="evolution">
+<h2><span class="sec-num">④</span> 演进与对比 · 2024-2026 行业选型与 FlashAttention 四代</h2>
+
+<h3>行业选型对比（2024-2026）</h3>
+<table>
+<tr><th>模型</th><th>注意力类型</th><th>Q头 / KV头</th><th>KV Cache 压缩</th><th>备注</th></tr>
+<tr><td>Llama 3 8B</td><td>GQA</td><td>32 / 8</td><td>75%</td><td>Meta 全系列统一 GQA</td></tr>
+<tr><td>Llama 3 70B</td><td>GQA</td><td>64 / 8</td><td>87.5%</td><td>大模型 GQA 收益更显著</td></tr>
+<tr><td>Llama 4 Maverick</td><td>GQA + MoE</td><td>—</td><td>—</td><td>仍用 GQA，未转向 MLA</td></tr>
+<tr><td>Qwen2.5-7B</td><td>GQA</td><td>28 / 4</td><td>85.7%</td><td>阿里全系列 GQA</td></tr>
+<tr><td>Qwen3 235B-A22B</td><td>GQA + MoE</td><td>—</td><td>—</td><td>MoE 模型仍用 GQA</td></tr>
+<tr><td>Qwen3.5</td><td>GQA + DeltaNet 交替</td><td>—</td><td>—</td><td>3:1 交替，混搭趋势</td></tr>
+<tr><td>DeepSeek-V2/V3</td><td>MLA + MoE</td><td>—</td><td>93.3%</td><td>MLA 先驱，236B/21B</td></tr>
+<tr><td>DeepSeek-R1</td><td>MLA + MoE</td><td>—</td><td>93.3%</td><td>沿用 V3 架构</td></tr>
+<tr><td>Kimi K2</td><td>MLA + MoE</td><td>—</td><td>—</td><td>跟随 DeepSeek MLA</td></tr>
+<tr><td>Gemma 3 27B</td><td>GQA</td><td>—</td><td>—</td><td>Google 选择 GQA</td></tr>
+<tr><td>Mistral Small 3.1</td><td>GQA</td><td>—</td><td>—</td><td>欧洲选择 GQA</td></tr>
+<tr><td>MiniMax M2.5</td><td>GQA</td><td>—</td><td>—</td><td>2026 年仍保持经典 GQA</td></tr>
+<tr><td>Sarvam 30B / 105B</td><td>GQA / MLA</td><td>—</td><td>—</td><td>小模型用 GQA，大模型切 MLA</td></tr>
+</table>
+
+<div class="diagram">
+<svg viewBox="0 0 680 280" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <defs><marker id="evo-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <!-- 时间轴 -->
+  <line x1="40" y1="140" x2="640" y2="140" stroke="#888780" stroke-width="1.5"/>
+  <!-- 2024 -->
+  <rect x="60" y="30" width="8" height="110" rx="4" fill="#534AB7"/>
+  <text x="64" y="22" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">2024</text>
+  <text x="64" y="160" text-anchor="middle" fill="#6B6B6B" font-size="9">Llama 3 全系 GQA</text>
+  <text x="64" y="172" text-anchor="middle" fill="#6B6B6B" font-size="9">DeepSeek-V2 MLA</text>
+  <!-- 2025 H1 -->
+  <rect x="190" y="50" width="8" height="90" rx="4" fill="#185FA5"/>
+  <text x="194" y="42" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="700">2025 H1</text>
+  <text x="194" y="160" text-anchor="middle" fill="#6B6B6B" font-size="9">Qwen3 全系 GQA</text>
+  <text x="194" y="172" text-anchor="middle" fill="#6B6B6B" font-size="9">DeepSeek-V3 MLA+MoE</text>
+  <!-- 2025 H2 -->
+  <rect x="340" y="40" width="8" height="100" rx="4" fill="#1D9E75"/>
+  <text x="344" y="32" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="700">2025 H2</text>
+  <text x="344" y="160" text-anchor="middle" fill="#6B6B6B" font-size="9">Llama 4 GQA+MoE</text>
+  <text x="344" y="172" text-anchor="middle" fill="#6B6B6B" font-size="9">Kimi K2 追随 MLA</text>
+  <!-- 2026 -->
+  <rect x="490" y="30" width="8" height="110" rx="4" fill="#BA7517"/>
+  <text x="494" y="22" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">2026</text>
+  <text x="494" y="160" text-anchor="middle" fill="#6B6B6B" font-size="9">Qwen3.5 DeltaNet混搭</text>
+  <text x="494" y="172" text-anchor="middle" fill="#6B6B6B" font-size="9">Kimi Linear 线性注意力</text>
+  <!-- 趋势标注 -->
+  <rect x="120" y="200" width="440" height="55" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+  <text x="340" y="220" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="600">2026 趋势：注意力不可能全程在线 → 混搭替代</text>
+  <text x="340" y="238" text-anchor="middle" fill="#1A1A1A" font-size="10">GQA 仍是多数模型标配 · MLA 在超大规模 MoE 中验证 · 线性注意力/SSM 开始混搭</text>
+</svg>
+</div>
+
+<h3>FlashAttention 四代演进</h3>
+<table>
+<tr><th>版本</th><th>年份</th><th>目标 GPU</th><th>核心创新</th><th>性能</th></tr>
+<tr><td>FA-1</td><td>2022</td><td>Ampere (A100)</td><td>分块 Tiling + 在线 Softmax</td><td>2-4x 加速，5-20% 内存</td></tr>
+<tr><td>FA-2</td><td>2023</td><td>Ampere (A100)</td><td>优化并行 / work partition</td><td>~225 TFLOPs/s (72% 利用率)</td></tr>
+<tr><td>FA-3</td><td>2024</td><td>Hopper (H100)</td><td>Warp 专门化 + 异步 TMA + FP8</td><td>~740 TFLOPs/s (75%); FP8 ~1.2 PFLOPs</td></tr>
+<tr><td>FA-4</td><td>2026.03</td><td>Blackwell (B200)</td><td>软件指数近似 + 条件 Softmax 重缩放 + 2-CTA MMA + TMEM</td><td>~1605 TFLOPs/s (71%)，比 cuDNN 快 1.3x</td></tr>
+</table>
+
+<p>FlashAttention 的演进反映了硬件趋势：<strong>非对称扩展</strong>——Tensor Core 越来越快，但 SFU（特殊函数单元）和共享内存带宽增长缓慢。FA-3/FA-4 的核心优化都是在"绕开"这些瓶颈：</p>
+<ul>
+  <li>FA-3 用 Warp 专门化让数据搬运和计算<strong>重叠</strong></li>
+  <li>FA-4 用多项式近似在普通 CUDA Core 上算 $e^x$，绕开 SFU 瓶颈；用条件重缩放减少 90% 的 Softmax 修正操作</li>
+</ul>
+
+<div class="card warning">
+  <div class="card-title">⚠️ 2026 发现：BF16 下 FlashAttention 可能导致 Loss 爆炸</div>
+  <p>清华大学 2026.03 发现：在 BF16 低精度训练中，FlashAttention 的在线 Softmax 存在系统性数值偏置，可能导致训练后期 Loss 突然爆炸。修复方法是对在线 Softmax 做极小修改。这提醒我们：性能优化不是免费的，数值稳定性是需要持续关注的工程约束。</p>
+</div>
+
+<h3>MHA2MLA：迁移框架（arxiv 2502.14837 / ACL 2025）</h3>
+<p>复旦 NLP 实验室提出 MHA2MLA 框架，可以将任意 MHA/GQA 模型（如 Llama）迁移到 MLA 架构：</p>
+<ul>
+  <li>用 <strong>Partial-RoPE</strong> 解决 MLA 与 RoPE 的兼容性问题</li>
+  <li>用 <strong>联合 SVD 低秩近似</strong> 对齐 KV Cache 对象</li>
+  <li>仅需 0.3%-0.6% 预训练数据微调，Llama2-7B KV Cache 减少 92.19%，LongBench 仅掉 0.5%</li>
+</ul>
+
+<div class="card takeaway">
+  <div class="card-title">📌 Takeaway</div>
+  <p>2024-2026 的行业格局：<strong>GQA 是多数模型的选择</strong>（简单可靠），<strong>MLA 是超大规模 MoE 的选择</strong>（极致压缩），2026 年开始出现<strong>混搭趋势</strong>（线性注意力 / SSM 替代部分 Attention 层）。FlashAttention 已成为所有方案的基础设施层，从 A100 到 B200 持续适配。这不是"谁替代谁"的故事，而是"不同规模选不同方案"的光谱。</p>
+</div>
+</section>
+
+<!-- ====== §⑤ 与产品连接 ====== -->
+<section id="connect">
+<h2><span class="sec-num">⑤</span> 与产品连接 · Agent 长上下文场景的选型决策</h2>
+
+<div class="card intuition">
+  <div class="card-title">🎯 Agent 场景的 KV Cache 直觉</div>
+  <p>想象 DDAgent 做尽调：用户上传一份 200 页的尽调报告（~50K tokens），Agent 逐段分析、逐项填表。每生成一个字段，都要"回顾"整个文档。KV Cache 50K tokens × 每层 × 多层 = 海量显存。<strong>如果 KV 头太多，推理就卡在"搬数据"上而不是"算"上。</strong></p>
+</div>
+
+<h3>DDAgent · 长文档尽调的推理瓶颈</h3>
+<p>DDAgent 的 Dispatcher v2.0 架构中，子 Agent 处理尽调文档时：</p>
+<ul>
+  <li>输入：尽调报告 30K-80K tokens + 子 Agent Prompt + 工具输出</li>
+  <li>输出：逐字段填写，每个字段需 attention 到文档相关段落</li>
+  <li><strong>推理瓶颈</strong>：自回归阶段每步都要读整个 KV Cache，上下文越长越慢</li>
+</ul>
+
+<p>如果底层模型用 GQA（如 Qwen2.5），KV Cache 比 MHA 小 85%，意味着：</p>
+<ul>
+  <li>同样 GPU 可以服务更多并发请求</li>
+  <li>同样上下文长度推理延迟更低</li>
+  <li>可以支持更长的上下文窗口</li>
+</ul>
+
+<h3>FxAgent · 高频换汇咨询的延迟敏感</h3>
+<p>FxAgent 日均 250 次换汇咨询，40 万月活。用户问"今天用人民币买 1000 港币汇率多少"，需要：</p>
+<ul>
+  <li>加载实时汇率数据 + 用户历史上下文</li>
+  <li>生成个性化建议（含风险提示）</li>
+  <li><strong>延迟要求</strong>：金融咨询场景对首 token 延迟（TTFT）极度敏感</li>
+</ul>
+
+<p>FxAgent 的上下文通常较短（2K-8K），KV Cache 不是主要瓶颈。<strong>FlashAttention 的训练加速</strong>（更快微调汇率理解模型）和<strong>GQA 的推理加速</strong>（减少 TTFT）才是核心收益。</p>
+
+<h3>Agent 选型决策框架</h3>
+<table>
+<tr><th>场景</th><th>上下文长度</th><th>瓶颈</th><th>推荐方案</th><th>原因</th></tr>
+<tr><td>DDAgent 尽调</td><td>30K-80K</td><td>Memory-bound</td><td>GQA 或 MLA</td><td>减少 KV Cache = 减少延迟</td></tr>
+<tr><td>FxAgent 换汇</td><td>2K-8K</td><td>TTFT</td><td>GQA</td><td>简单可靠，FlashAttention 支持</td></tr>
+<tr><td>KBA 知识问答</td><td>4K-16K</td><td>吞吐量</td><td>GQA</td><td>批量查询需高吞吐</td></tr>
+<tr><td>TRSAgent 邮件</td><td>2K-10K</td><td>批量处理</td><td>GQA + FA</td><td>邮件批处理需效率</td></tr>
+<tr><td>未来：100K+ Agent</td><td>100K+</td><td>极限 memory-bound</td><td>MLA + 量化</td><td>极致压缩 + KV Cache 量化</td></tr>
+</table>
+
+<h3>为什么我们目前不选 MLA？</h3>
+<p>虽然 MLA 压缩率更高，但以 DDAgent/KBA/FxAgent 当前的上下文长度（2K-80K），GQA 已经足够：</p>
+<ol>
+  <li><strong>实现成本</strong>：MLA 需自定义推理 kernel，GQA 被 vLLM / Hugging Face 原生支持</li>
+  <li><strong>模型生态</strong>：Qwen / Llama 全系列支持 GQA，MLA 仅 DeepSeek 系列原生支持</li>
+  <li><strong>运维复杂度</strong>：GQA 几乎零配置，MLA 需要调 $d_c$ 和 RoPE 兼容性</li>
+</ol>
+
+<p>但如果未来 Agent 上下文突破 200K，MLA + MoE 的组合（DeepSeek-V3 路线）将成为必要选项。MHA2MLA 框架（arxiv 2502.14837 / ACL 2025）使得迁移成本可控——仅需 0.3%-0.6% 数据微调。</p>
+
+<h3>FlashAttention 对 Agent 的实际影响</h3>
+<p>FlashAttention 对 Agent 的价值主要在<strong>训练/微调侧</strong>：</p>
+<ul>
+  <li>DDAgent 子 Agent 微调：FlashAttention 使长文档训练速度提升 2-4x</li>
+  <li>KBA 知识库构建：Embedding 模型训练加速</li>
+  <li>推理侧：FlashAttention 减少 KV 读写次数，间接降低推理延迟（尤其 prefill 阶段）</li>
+</ul>
+
+<div class="card takeaway">
+  <div class="card-title">📌 Takeaway</div>
+  <p>对于当前 2K-80K 上下文的 Agent，<strong>GQA + FlashAttention</strong> 是性价比最高的组合。MLA 是面向 200K+ 上下文的未来选项，MHA2MLA 框架使迁移路径清晰。选型的核心判断：<strong>上下文长度 × 并发量</strong>——越长越多，越需要更强的 KV 压缩。</p>
+</div>
+</section>
+
+<div class="chapter-footer">
+  <a href="../../../INDEX.html">← 返回知识图谱</a>
+  <a href="2.2-multihead-variants-quiz.html">📝 去做 Quiz（10 题）→</a>
+</div>
+
+</body>
+</html>

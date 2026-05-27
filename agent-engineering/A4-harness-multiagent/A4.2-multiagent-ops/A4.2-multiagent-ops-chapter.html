@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>T2 A4.2 · Multi-Agent 编排 &middot; AgentOps 可观测性</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card-bg:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--teal-bg);color:#0F6E56}
+.tag-chapter{background:var(--purple-bg);color:var(--purple)}
+.tag-status{background:var(--amber-bg);color:var(--amber)}
+h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:4px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.progress-nav{display:flex;gap:4px;margin:16px 0 0;flex-wrap:wrap}
+.progress-nav a{font-size:11px;padding:3px 8px;border-radius:8px;text-decoration:none;background:var(--purple-bg);color:var(--purple);font-weight:500}
+.progress-nav a.done{background:var(--teal-bg);color:var(--teal)}
+section{margin-top:36px;padding-top:20px;border-top:1px solid #E8E8E4}
+section h2{font-size:20px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;padding:2px 8px;border-radius:8px}
+h3{font-size:16px;font-weight:600;margin:16px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--amber-bg);border-color:var(--amber)}
+.card.takeaway{background:var(--teal-bg);border-color:var(--teal)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card.deepen{background:var(--blue-bg);border-color:var(--blue)}
+.card.insight{background:var(--purple-bg);border-color:var(--purple)}
+.card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.card.intuition .card-label{color:var(--amber)}
+.card.takeaway .card-label{color:var(--teal)}
+.card.warning .card-label{color:var(--coral)}
+.card.deepen .card-label{color:var(--blue)}
+.card.insight .card-label{color:var(--purple)}
+.diagram{margin:20px 0}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid #E0E0DC;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{background:#fff}
+code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;background:#F0F0EC;padding:1px 4px;border-radius:3px}
+.spine-link{font-size:12px;color:var(--coral);background:var(--coral-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+pre{background:#F7F6F3;border:1px solid #E8E8E4;border-radius:8px;padding:14px 18px;margin:14px 0;font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;line-height:1.8;overflow-x:auto}
+ul,ol{padding-left:20px}
+li{margin-bottom:4px}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+.example-box{border-left:3px solid var(--purple);background:#fafafa;padding:14px 18px;margin:14px 0;border-radius:0 8px 8px 0}
+.example-box .example-label{font-size:11px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.compare-table{margin:16px 0}
+.compare-table th{background:linear-gradient(135deg,var(--purple),#6B5CE7);color:#fff}
+.compare-table td:first-child{font-weight:500}
+.flow-step{display:flex;gap:12px;align-items:flex-start;margin:10px 0}
+.step-num{min-width:28px;height:28px;background:var(--purple);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.step-content{flex:1;padding-top:3px}
+.pattern-card{border-radius:10px;padding:16px 18px;margin:14px 0;border:1.5px solid}
+.pattern-supervisor{background:#EEEDFE;border-color:var(--purple)}
+.pattern-pipeline{background:#E6F1FB;border-color:var(--blue)}
+.pattern-debate{background:#FDEEE8;border-color:var(--coral)}
+.pattern-swarm{background:#FAEEDA;border-color:var(--amber)}
+.pattern-title{font-size:15px;font-weight:700;margin-bottom:6px}
+.pattern-sub{font-size:11px;color:var(--muted);margin-bottom:8px}
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">T2 Agent 工程</span>
+<span class="tag tag-chapter">A4 Harness 工程</span>
+<span class="tag tag-status">✅ 完成</span>
+<a href="../../INDEX.html" class="nav-link" style="margin-left:auto;">&larr; 知识图谱</a>
+<a href="A4.2-multiagent-ops-quiz.html" class="nav-link">Quiz &middot; 10 题 &rarr;</a>
+</div>
+<h1>A4.2 Multi-Agent 编排 &middot; AgentOps 可观测性</h1>
+<p class="subtitle">从单兵作战到军团协同 — Agent 生产级部署的最后一公里</p>
+<div class="spine-link">🔗 主线连接：系统扩展 → 从 Demo 到 Production 的工程跨越（问题 8 下半部）</div>
+<!-- 5 节进度导航 -->
+<div class="progress-nav">
+<a href="#is" class="done">① 是什么</a>
+<a href="#how" class="done">② 怎么实现</a>
+<a href="#why" class="done">③ 为什么</a>
+<a href="#evolution" class="done">④ 演进</a>
+<a href="#connect" class="done">⑤ 产品</a>
+</div>
+</div>
+
+<!-- ===== 章节一览图 ===== -->
+<div class="diagram">
+<p>章节一览 &middot; 5 节脉络速览：四大编排模式 + AgentOps 可观测性</p>
+<svg viewBox="0 0 680 320" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs>
+<marker id="ov-arr42" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+
+<!-- ① 紫 - 是什么 -->
+<rect x="20" y="30" width="120" height="56" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="80" y="52" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">① 是什么</text>
+<text x="80" y="70" text-anchor="middle" fill="#534AB7" font-size="9">三场景驱动 Multi-Agent</text>
+
+<!-- ② 蓝 - 怎么实现 -->
+<rect x="165" y="30" width="120" height="56" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="225" y="52" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="700">② 怎么实现</text>
+<text x="225" y="70" text-anchor="middle" fill="#185FA5" font-size="9">四大编排模式</text>
+
+<!-- ③ 琥珀 - 为什么 -->
+<rect x="310" y="30" width="120" height="56" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="370" y="52" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">③ 为什么</text>
+<text x="370" y="70" text-anchor="middle" fill="#BA7517" font-size="9">分布式失败 + LLM 非确定</text>
+
+<!-- ④ 紫 - 演进 -->
+<rect x="455" y="30" width="120" height="56" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="515" y="52" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">④ 演进</text>
+<text x="515" y="70" text-anchor="middle" fill="#534AB7" font-size="9">AgentOps 成 Discipline</text>
+
+<!-- ⑤ 绿 - 产品连接 -->
+<rect x="230" y="118" width="220" height="56" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="340" y="140" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="700">⑤ 产品连接</text>
+<text x="340" y="158" text-anchor="middle" fill="#1D9E75" font-size="9">DDAgent / EvalAgent / KBA 三产品映射</text>
+
+<!-- 四大编排模式核心图 -->
+<text x="340" y="205" text-anchor="middle" fill="#333" font-size="13" font-weight="700">四大编排模式速览</text>
+
+<!-- Supervisor -->
+<rect x="25" y="225" width="145" height="72" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="97" y="248" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">Supervisor</text>
+<text x="97" y="265" text-anchor="middle" fill="#534AB7" font-size="9">项目经理分配任务</text>
+<text x="97" y="282" text-anchor="middle" fill="#534AB7" font-size="9">DDAgent = 此模式 ★</text>
+
+<!-- Pipeline -->
+<rect x="185" y="225" width="145" height="72" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="257" y="248" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="700">Pipeline</text>
+<text x="257" y="265" text-anchor="middle" fill="#185FA5" font-size="9">工厂装配线 / Unix pipe</text>
+<text x="257" y="282" text-anchor="middle" fill="#185FA5" font-size="9">KBA = 此模式</text>
+
+<!-- Debate -->
+<rect x="345" y="225" width="145" height="72" rx="8" fill="#FDEEE8" stroke="#993C1D" stroke-width="1.5"/>
+<text x="417" y="248" text-anchor="middle" fill="#993C1D" font-size="12" font-weight="700">Debate / Judge</text>
+<text x="417" y="265" text-anchor="middle" fill="#993C1D" font-size="9">多模型独立判断 + 仲裁</text>
+<text x="417" y="282" text-anchor="middle" fill="#993C1D" font-size="9">EvalAgent = 此模式 ★</text>
+
+<!-- Swarm -->
+<rect x="505" y="225" width="150" height="72" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="580" y="248" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">Swarm 蜂群</text>
+<text x="580" y="265" text-anchor="middle" fill="#BA7517" font-size="9">共享状态动态认领</text>
+<text x="580" y="282" text-anchor="middle" fill="#BA7517" font-size="9">最灵活最难调试</text>
+
+<!-- 箭头连线 -->
+<line x1="140" y1="58" x2="163" y2="58" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr42)"/>
+<line x1="285" y1="58" x2="308" y2="58" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr42)"/>
+<line x1="430" y1="58" x2="453" y2="58" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr42)"/>
+<line x1="515" y1="88" x2="380" y2="116" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr42)"/>
+<line x1="300" y1="176" x2="180" y2="223" stroke="#ccc" stroke-width="1" stroke-dasharray="3"/>
+<line x1="380" y1="176" x2="380" y2="223" stroke="#ccc" stroke-width="1" stroke-dasharray="3"/>
+<line x1="400" y1="176" x2="480" y2="223" stroke="#ccc" stroke-width="1" stroke-dasharray="3"/>
+<line x1="420" y1="160" x2="550" y2="223" stroke="#ccc" stroke-width="1" stroke-dasharray="3"/>
+</svg>
+</div>
+
+<!-- ============================================ -->
+<!-- §① 是什么：Multi-Agent 直觉与三场景 -->
+<!-- ============================================ -->
+<section id="is">
+<h2><span class="sec-num">①</span> 是什么：Multi-Agent = "一个人干不了"</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>单 Agent 就像一个全能型程序员——能写前端也能写后端、能查 Bug 也能做 Code Review。但当你要<strong>同时审查 50 个文件</strong>、需要<strong>不同领域的专业知识</strong>、或者希望<strong>两个人独立判断同一个问题</strong>时——一个人的时间和认知带宽不够用了。Multi-Agent 就是把一个超级个体拆成一个团队，各司其职。</p>
+</div>
+
+<h3>1. 为什么需要 Multi-Agent？三场景</h3>
+
+<table class="compare-table">
+<tr><th>场景</th><th>问题</th><th>Multi-Agent 解法</th><th>收益</th></tr>
+<tr><td><strong>并行加速</strong></td><td>审查 50 个代码文件，单 Agent 顺序处理需 50 步</td><td>50 个 Subagent 同时跑，每个负责 1 个文件</td><td>速度 2x+；线性扩展</td></tr>
+<tr><td><strong>专业分工</strong></td><td>研究任务需要搜索、写作、审查三种不同能力</td><td>搜索 Agent / 写作 Agent / 审查 Agent 各自用不同 Prompt 甚至不同模型</td><td>质量更高（专家 vs 通才）</td></tr>
+<tr><td><strong>交叉验证</strong></td><td>高风险决策不能容忍单点失误</td><td>两个 Agent 独立判断 + Judge Agent 仲裁最终结果</td><td>准确率 +15~30%</td></tr>
+</table>
+
+<div class="card insight">
+<div class="card-label">核心洞察</div>
+<p>Multi-Agent 不是为了"更多 Agent 更好"，而是解决三个具体瓶颈：<strong>时间瓶颈</strong>（并行）、<strong>能力瓶颈</strong>（分工）、<strong>可靠性瓶颈</strong>（验证）。如果你的任务没有触及这三个瓶颈之一，加 Agent 只会增加复杂度和成本。</p>
+</div>
+
+<h3>2. Subagent 时代背景</h3>
+<p>2025–2026 年，行业进入明确的 <strong>"Subagent Era"</strong>：</p>
+
+<table>
+<tr><th>里程碑</th><th>时间</th><th>意义</th></tr>
+<tr><td><strong>Claude Code 子代理</strong></td><td>2025-02</td><td>Anthropic 首次将子代理作为标准能力内置到 CLI 工具中</td></tr>
+<tr><td><strong>GPT-5.4 mini/nano</strong></td><td>2026</td><td>OpenAI 明确设计为 subagent 使用：nano($0.20/M)、mini($0.60/M)</td></tr>
+<tr><td><strong>Anthropic multi-agent research system</strong></td><td>2025-06</td><td>LeadResearcher + Subagents 并行搜索 + CitationAgent 的完整架构</td></tr>
+</table>
+
+<p>这个时代的分层模型选型策略已经清晰：</p>
+
+<svg viewBox="0 0 680 170" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<text x="340" y="22" text-anchor="middle" fill="#333" font-size="13" font-weight="700">Subagent 时代分层模型选型</text>
+
+<!-- Orchestrator 层 -->
+<rect x="240" y="38" width="200" height="44" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+<text x="340" y="57" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">Orchestrator（编排者）</text>
+<text x="340" y="74" text-anchor="middle" fill="#534AB7" font-size="10">GPT-5.4 / Claude Opus 4.6 — 规划+协调+最终判断</text>
+
+<!-- General 层 -->
+<rect x="140" y="98" width="175" height="40" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="227" y="117" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="600">General Subagent</text>
+<text x="227" y="132" text-anchor="middle" fill="#185FA5" font-size="9">GPT-5.4 mini / Sonnet 4.6 ($0.60/M)</text>
+
+<!-- Lightweight 层 -->
+<rect x="365" y="98" width="175" height="40" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="452" y="117" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="600">Lightweight Subagent</text>
+<text x="452" y="132" text-anchor="middle" fill="#BA7517" font-size="9">GPT-5.4 nano / Haiku ($0.20/M)</text>
+
+<!-- 连线 -->
+<line x1="310" y1="82" x2="250" y2="96" stroke="#888780" stroke-width="1"/>
+<line x1="370" y1="82" x2="430" y2="96" stroke="#888780" stroke-width="1"/>
+</svg>
+
+<h3>3. Subagent 三大硬约束（Anthropic 设计原则）</h3>
+<p>Anthropic 从 Claude Code 到 multi-agent research system 的实践中，提炼出三条不可逾越的设计红线：</p>
+
+<div class="pattern-card pattern-warning">
+<div class="card warning" style="border:none;padding:0;margin:0;">
+<div class="card-label">⚠️ Anthropic Subagent 设计三约束</div>
+</div>
+</div>
+
+<div class="flow-step">
+<div class="step-num">1</div>
+<div class="step-content"><strong>子 Agent 之间不能直接通信</strong> — 所有流量必须经父 Agent 中转。原因：防止子 Agent 形成隐式共识或信息茧房；父 Agent 保持全局可见性和控制权。</div>
+</div>
+<div class="flow-step">
+<div class="step-num">2</div>
+<div class="step-content"><strong>子 Agent 不能再生成新 Agent</strong> — 防止无限嵌套。原因：嵌套 Agent 会指数级放大成本和调试难度；深度控制在 1 层（父→子），不允许孙代。</div>
+</div>
+<div class="flow-step">
+<div class="step-num">3</div>
+<div class="step-content"><strong>跑完只返回最终输出</strong> — 不带中间思考过程。原因：隔离（减少上下文污染）、压缩（节省 Token）、并行（多个子 Agent 结果可同时汇总）。</div>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>Multi-Agent 的动机来自三个真实场景：并行加速（时间瓶颈）、专业分工（能力瓶颈）、交叉验证（可靠性瓶颈）。Subagent 时代已到来——GPT-5.4 nano/mini 和 Claude Haiku/Sonnet 明确为 subagent 设计。Anthropic 的三大硬约束是生产级实践的红线：禁止子间直通、禁止递归生成、只返回最终结果。</p>
+</div>
+</section>
+
+<!-- ============================================ -->
+<!-- §② 怎么实现：四大编排模式 -->
+<!-- ============================================ -->
+<section id="how">
+<h2><span class="sec-num">②</span> 怎么实现：四大编排模式 + 通信原语</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>四种编排方式就像四种组织架构：<strong>Supervisor</strong>= 项目经理制（一人分配多人执行）；<strong>Pipeline</strong>= 流水线（工厂装配线）；<strong>Debate</strong>= 陪审团制度（多方独立判断后仲裁）；<strong>Swarm</strong>= 自组织团队（共享看板，谁有空谁认领）。没有最好的模式，只有最适合场景的模式。</p>
+</div>
+
+<h3>1. Supervisor + Specialists（监督者 + 专家组）— 最常用！</h3>
+
+<div class="pattern-card pattern-supervisor">
+<div class="pattern-title">Supervisor + Specialists</div>
+<div class="pattern-sub">类比：项目经理分配任务 | 适用：通用任务分解、客服升级、研究工作流 | DDAgent = 此模式</div>
+
+<svg viewBox="0 0 620 140" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<!-- 用户请求 -->
+<rect x="10" y="52" width="90" height="36" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="55" y="74" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="600">用户请求</text>
+
+<!-- Supervisor -->
+<rect x="130" y="42" width="110" height="56" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+<text x="185" y="65" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">Supervisor</text>
+<text x="185" y="82" text-anchor="middle" fill="#534AB7" font-size="9">分解任务 + 路由</text>
+
+<!-- Specialists -->
+<rect x="280" y="20" width="90" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="325" y="43" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">Specialist A</text>
+
+<rect x="280" y="62" width="90" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="325" y="85" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">Specialist B</text>
+
+<rect x="280" y="104" width="90" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="325" y="127" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">Specialist C</text>
+
+<!-- 汇总 -->
+<rect x="410" y="52" width="90" height="36" rx="6" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1"/>
+<text x="455" y="74" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="600">汇总输出</text>
+
+<!-- 最终输出 -->
+<rect x="530" y="52" width="80" height="36" rx="6" fill="#FDEEE8" stroke="#993C1D" stroke-width="1"/>
+<text x="570" y="74" text-anchor="middle" fill="#993C1D" font-size="11" font-weight="600">Final Output</text>
+
+<!-- 箭头 -->
+<line x1="100" y1="70" x2="128" y2="70" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr42)"/>
+<line x1="240" y1="62" x2="278" y2="38" stroke="#888780" stroke-width="1" marker-end="url(#ov-arr42)"/>
+<line x1="240" y1="70" x2="278" y2="80" stroke="#888780" stroke-width="1" marker-end="url(#ov-arr42)"/>
+<line x1="240" y1="78" x2="278" y2="122" stroke="#888780" stroke-width="1" marker-end="url(#ov-arr42)"/>
+<line x1="370" y1="38" x2="408" y2="64" stroke="#888780" stroke-width="1" marker-end="url(#ov-arr42)"/>
+<line x1="370" y1="80" x2="408" y2="74" stroke="#888780" stroke-width="1" marker-end="url(#ov-arr42)"/>
+<line x1="370" y1="122" x2="408" y2="78" stroke="#888780" stroke-width="1" marker-end="url(#ov-arr42)"/>
+<line x1="500" y1="70" x2="528" y2="70" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr42)"/>
+</svg>
+</div>
+
+<ul>
+<li><strong>关键设计要点</strong>：Supervisor 用小快模型做路由决策（省成本），Specialist 按领域选模型甚至不同 Provider</li>
+<li><strong>实现框架</strong>：LangGraph <code>supervisor pattern</code> / CrewAI <code>hierarchical</code> / AutoGen</li>
+<li><strong>风险</strong>：Supervisor 成为单点故障和瓶颈；任务分解质量决定上限</li>
+</ul>
+
+<h3>2. Pipeline（流水线）— 工厂装配线</h3>
+
+<div class="pattern-card pattern-pipeline">
+<div class="pattern-title">Pipeline（流水线）</div>
+<div class="pattern-sub">类比：Unix pipe | 适用：文档处理、内容管道、数据 Enrichment | KBA = 此模式</div>
+
+<svg viewBox="0 0 620 90" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<rect x="10" y="32" width="70" height="26" rx="5" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="45" y="49" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">Input</text>
+
+<text x="95" y="49" text-anchor="middle" fill="#888780" font-size="16">→</text>
+
+<rect x="115" y="27" width="90" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+<text x="160" y="49" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">Researcher</text>
+
+<text x="220" y="49" text-anchor="middle" fill="#888780" font-size="16">→</text>
+
+<rect x="240" y="27" width="90" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+<text x="285" y="49" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">Summarizer</text>
+
+<text x="345" y="49" text-anchor="middle" fill="#888780" font-size="16">→</text>
+
+<rect x="365" y="27" width="90" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+<text x="410" y="49" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">FactChecker</text>
+
+<text x="470" y="49" text-anchor="middle" fill="#888780" font-size="16">→</text>
+
+<rect x="490" y="27" width="85" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+<text x="532" y="49" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">Formatter</text>
+
+<text x="588" y="49" text-anchor="middle" fill="#888780" font-size="16">→</text>
+
+<rect x="598" y="32" width="18" height="26" rx="5" fill="#1D9E75" stroke="#1D9E75" stroke-width="1"/>
+</svg>
+</div>
+
+<ul>
+<li><strong>优势</strong>：简单可调试；每步输入输出清晰；易于插入中间件（如 FactChecker）</li>
+<li><strong>劣势</strong>：严格顺序不能跳过；一步失败全链路级联；无法利用并行</li>
+<li><strong>适用信号</strong>：你的数据处理有明确阶段划分，且每阶段依赖前一阶段输出</li>
+</ul>
+
+<h3>3. Debate / Negotiator（辩论 + 仲裁）— 最小多 Agent</h3>
+
+<div class="pattern-card pattern-debate">
+<div class="pattern-title">Debate / Judge（辩论仲裁）</div>
+<div class="pattern-sub">类比：陪审团制度 | 适用：高风险决策、Code Review、事实验证 | EvalAgent = 此模式</div>
+
+<svg viewBox="0 0 620 140" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<!-- Input -->
+<rect x="10" y="60" width="70" height="26" rx="5" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="45" y="77" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">Input</text>
+
+<!-- 分叉线 -->
+<line x1="80" y1="73" x2="105" y2="73" stroke="#888780" stroke-width="1.2"/>
+
+<!-- 分叉点 -->
+<circle cx="110" cy="73" r="4" fill="#888780"/>
+
+<!-- Agent A -->
+<line x1="114" y1="73" x2="114" y2="30" stroke="#888780" stroke-width="1"/>
+<line x1="114" y1="30" x2="140" y2="30" stroke="#888780" stroke-width="1" marker-end="url(#ov-arr42)"/>
+<rect x="140" y="14" width="115" height="32" rx="6" fill="#FDEEE8" stroke="#993C1D" stroke-width="1"/>
+<text x="197" y="35" text-anchor="middle" fill="#993C1D" font-size="10" font-weight="600">Agent A: GPT-4o</text>
+
+<!-- Agent B -->
+<line x1="114" y1="73" x2="140" y2="73" stroke="#888780" stroke-width="1" marker-end="url(#ov-arr42)"/>
+<rect x="140" y="57" width="115" height="32" rx="6" fill="#FDEEE8" stroke="#993C1D" stroke-width="1"/>
+<text x="197" y="78" text-anchor="middle" fill="#993C1D" font-size="10" font-weight="600">Agent B: Claude</text>
+
+<!-- Agent C -->
+<line x1="114" y1="73" x2="114" y2="116" stroke="#888780" stroke-width="1"/>
+<line x1="114" y1="116" x2="140" y2="116" stroke="#888780" stroke-width="1" marker-end="url(#ov-arr42)"/>
+<rect x="140" y="100" width="115" height="32" rx="6" fill="#FDEEE8" stroke="#993C1D" stroke-width="1"/>
+<text x="197" y="121" text-anchor="middle" fill="#993C1D" font-size="10" font-weight="600">Agent C: Gemini</text>
+
+<!-- 汇聚到 Judge -->
+<line x1="255" y1="30" x2="295" y2="65" stroke="#888780" stroke-width="1"/>
+<line x1="255" y1="73" x2="295" y2="73" stroke="#888780" stroke-width="1"/>
+<line x1="255" y1="116" x2="295" y2="81" stroke="#888780" stroke-width="1"/>
+
+<!-- Judge -->
+<rect x="295" y="48" width="110" height="50" rx="8" fill="#E6F7F1" stroke="#1D9E75" stroke-width="2"/>
+<text x="350" y="69" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="700">Judge</text>
+<text x="350" y="86" text-anchor="middle" fill="#1D9E75" font-size="9">评分+仲裁</text>
+
+<!-- Output -->
+<line x1="405" y1="73" x2="450" y2="73" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr42)"/>
+<rect x="450" y="60" width="90" height="26" rx="5" fill="#1D9E75" stroke="#1D9E75" stroke-width="1"/>
+<text x="495" y="77" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">Output</text>
+
+<!-- 效果标注 -->
+<text x="560" y="60" fill="#993C1D" font-size="9" font-weight="600">准确率</text>
+<text x="560" y="76" fill="#993C1D" font-size="14" font-weight="700">+15~30%</text>
+<text x="560" y="94" fill="#888780" font-size="9">Token 成本 4-6x</text>
+</svg>
+</div>
+
+<ul>
+<li><strong>最小配置</strong>：两个 Agent 即可（A + B + Judge = 3 角色，但 A/B 可同模型）</li>
+<li><strong>关键设计</strong>：辩论者用<strong>不同模型</strong>减少相关失败（correlated failure）；Judge 必须有<strong>明确评分标准</strong>，不能靠"感觉"仲裁</li>
+<li><strong>效果</strong>：准确率提升 15–30%，但 token 成本增加 4–6 倍</li>
+</ul>
+
+<h3>4. Swarm（蜂群）— 自组织动态协作</h3>
+
+<div class="pattern-card pattern-swarm">
+<div class="pattern-title">Swarm（蜂群）</div>
+<div class="pattern-sub">类比：敏捷开发站会看板 | 适用：独立视角有帮助的开放任务 | OpenAI Swarm 极简实现</div>
+
+<svg viewBox="0 0 620 130" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<!-- 共享状态/消息总线 -->
+<rect x="210" y="8" width="200" height="28" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5" stroke-dasharray="4"/>
+<text x="310" y="26" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">共享状态 / 消息总线</text>
+
+<!-- Agents 围绕总线 -->
+<rect x="30" y="50" width="90" height="36" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="75" y="72" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">Agent 1</text>
+
+<rect x="150" y="50" width="90" height="36" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="195" y="72" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">Agent 2</text>
+
+<rect x="380" y="50" width="90" height="36" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="425" y="72" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">Agent N</text>
+
+<rect x="500" y="50" width="90" height="36" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="545" y="72" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">Agent N+1</text>
+
+<!-- 双向箭头连接总线 -->
+<line x1="75" y1="50" x2="260" y2="38" stroke="#BA7517" stroke-width="0.8" stroke-dasharray="3"/>
+<line x1="195" y1="50" x2="280" y2="38" stroke="#BA7517" stroke-width="0.8" stroke-dasharray="3"/>
+<line x1="425" y1="50" x2="340" y2="38" stroke="#BA7517" stroke-width="0.8" stroke-dasharray="3"/>
+<line x1="545" y1="50" x2="360" y2="38" stroke="#BA7517" stroke-width="0.8" stroke-dasharray="3"/>
+
+<!-- 底部说明 -->
+<text x="310" y="108" text-anchor="middle" fill="#333" font-size="11" font-weight="600">动态认领任务 + 广播结果</text>
+<text x="310" y="124" text-anchor="middle" fill="#888780" font-size="9">最灵活 · 最难调试 · 通信开销可能主导成本</text>
+</svg>
+</div>
+
+<ul>
+<li><strong>代表实现</strong>：OpenAI Swarm（极简 API：<code>agent.run()</code> + <code>handoff()</code>）</li>
+<li><strong>优势</strong>：天然容错（某 Agent 失败不影响全局）；适合探索性任务</li>
+<li><strong>致命问题</strong>：通信开销可能超过推理成本；调试噩梦（谁改了共享状态？）；最容易陷入反模式</li>
+</ul>
+
+<h3>5. 反模式：turion.ai 生产教训</h3>
+
+<div class="card warning">
+<div class="card-label">⛔ 生产级反模式（血的教训）</div>
+<table style="margin-top:8px;">
+<tr><th>反模式</th><th>症状</th><th>代价</th></tr>
+<tr><td>Fully-emergent crews</td><td>"五个 Agent 自己商量着办"，无 Supervisor</td><td>无限循环讨论 / 输出垃圾 / $40+ 单次运行</td></tr>
+<tr><td>Peer-to-peer equal agents</td><td>所有 Agent 平等，无层级</td><td>比有 Supervisor 慢 ~10 倍</td></tr>
+<tr><td>Unbounded tool chaining</td><td>允许 Agent 无限调用工具</td><td>200 次调用 / 第 40 步进入循环 / $40</td></tr>
+<tr><td>One model does everything</td><td>所有角色用同一大模型</td><td>成本堆叠；未利用 subagent 价格梯度</td></tr>
+</table>
+</div>
+
+<h3>6. 编排模式选择指南</h3>
+
+<table class="compare-table">
+<tr><th>维度</th><th>Supervisor</th><th>Pipeline</th><th>Debate</th><th>Swarm</th></tr>
+<tr><td>复杂度</td><td>中等</td><td>低</td><td>中等</td><td>高</td></tr>
+<tr><td>调试难度</td><td>低</td><td>最低</td><td>中等</td><td>极高</td></tr>
+<tr><td>成本效率</td><td>高（按需路由）</td><td>高</td><td>低（4-6x）</td><td>不确定</td></tr>
+<tr><td>容错能力</td><td>中</td><td>低（级联失败）</td><td>高</td><td>高</td></tr>
+<tr><td>推荐优先级</td><td>★★★★★ 首选</td><td>★★★☆☆</td><td>★★★☆☆ 高风险场景</td><td>★★☆☆☆ 实验性</td></tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>四大编排模式各有适用场景。<strong>Supervisor 是默认首选</strong>（覆盖面最广、可控性最好、DDAgent/KBA/EvalAgent 都是其变体）。Pipeline 适合确定性流程。Debate 用在高风险决策（准确率 +15-30% 但贵 4-6x）。Swarm 最灵活但也最危险——生产环境中慎用。牢记 turion.ai 的四条反模式：不要让 Agent "自己商量"、不要 P2P 平等、限制工具链深度、分层选模型。</p>
+</div>
+</section>
+
+<!-- ============================================ -->
+<!-- §③ 为什么：第一性原理 -->
+<!-- ============================================ -->
+<section id="why">
+<h2><span class="sec-num">③</span> 为什么：分布式系统 × LLM 非确定性 = 难度 10x</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>单 Agent 调试就像排查一个函数的 bug——输入确定时输出也确定（大部分时候）。Multi-Agent 调试就像排查<strong>分布式系统 + 随机数种子每次都变</strong>的组合体：进程 A 给了进程 B 一个"差不多对"的消息（LLM 非确定性），进程 B 基于这个消息做了个"合理但不正确"的决定，进程 C 收到的已经是二阶误差了。这不是 debug，这是破案。</p>
+</div>
+
+<h3>1. 第一性原理：两层不确定性叠加</h3>
+<p>Multi-Agent 系统的困难来源于<strong>两层不确定性的乘法效应</strong>：</p>
+
+<svg viewBox="0 0 680 200" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<text x="340" y="22" text-anchor="middle" fill="#333" font-size="13" font-weight="700">Multi-Agent 困难来源：两层不确定性叠加</text>
+
+<!-- 左侧：分布式系统 -->
+<rect x="30" y="42" width="190" height="140" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="125" y="66" text-anchor="middle" fill="#185FA5" font-size="13" font-weight="700">分布式系统失败模式</text>
+<text x="125" y="88" text-anchor="middle" fill="#185FA5" font-size="10">网络分区 / 消息丢失 / 时序错乱</text>
+<text x="125" y="106" text-anchor="middle" fill="#185FA5" font-size="10">部分失败 / 级联故障 / 脑裂</text>
+<text x="125" y="124" text-anchor="middle" fill="#185FA5" font-size="10">竞态条件 / 死锁 / 活锁</text>
+<text x="125" y="148" text-anchor="middle" fill="#185FA5" font-size="10">状态不一致 / 最终一致性难题</text>
+<text x="125" y="170" text-anchor="middle" fill="#185FA5" font-size="9" font-style="italic">传统分布式系统的全部问题</text>
+
+<!-- 中间：× -->
+<text x="340" y="120" text-anchor="middle" fill="#993C1D" font-size="36" font-weight="700">×</text>
+
+<!-- 右侧：LLM 非确定性 -->
+<rect x="410" y="42" width="240" height="140" rx="10" fill="#FDEEE8" stroke="#993C1D" stroke-width="1.5"/>
+<text x="530" y="66" text-anchor="middle" fill="#993C1D" font-size="13" font-weight="700">LLM 非确定性</text>
+<text x="530" y="88" text-anchor="middle" fill="#993C1D" font-size="10">相同输入 → 不同输出（temperature > 0）</text>
+<text x="530" y="106" text-anchor="middle" fill="#993C1D" font-size="10">幻觉（Hallucination）：编造不存在的事实</text>
+<text x="530" y="124" text-anchor="middle" fill="#993C1D" font-size="10">指令跟随不稳定：有时遵循有时忽略</text>
+<text x="530" y="142" text-anchor="middle" fill="#993C1D" font-size="10">长上下文衰减：越靠后的指令被忽略概率越高</text>
+<text x="530" y="162" text-anchor="middle" fill="#993C1D" font-size="10">Token budget 导致信息截断</text>
+<text x="530" y="178" text-anchor="middle" fill="#993C1D" font-size="9" font-style="italic">LLM 特有的非确定性行为</text>
+</svg>
+
+<p>$$\text{Multi-Agent 复杂度} \approx \text{分布式系统复杂度} \times \text{LLM 非确定性}$$</p>
+
+<p>这不是简单的加法——两种不确定性<strong>互相放大</strong>。网络延迟导致超时重试 → 重试触发 LLM 重复生成 → 重复内容被下游误判为确认 → 级联错误。</p>
+
+<h3>2. 具体失败模式清单</h3>
+
+<table>
+<tr><th>失败模式</th><th>描述</th><th>典型症状</th><th>对策</th></tr>
+<tr><td><strong>消息语义漂移</strong></td><td>A 说"检查一下" → B 理解为"修复它"</td><td>过度修改 / 范围蔓延</td><td>结构化通信协议（JSON Schema 强约束）</td></tr>
+<tr><td><strong>循环共识</strong></td><td>Agent 间反复确认直到 Token 耗尽</td><td>$40+/次 / 无限循环</td><td>最大轮次限制 + 超时机制</td></tr>
+<tr><td><strong>错误传播放大</strong></td><td>上游 Agent 的小误差 → 下游被放大</td><td>输出质量断崖下跌</td><td>每个节点独立验证（Debate/Judge）</td></tr>
+<tr><td><strong>资源饥饿</strong></td><td>某 Agent 占用过多 Token/时间预算</td><td>其他 Agent 来不及执行</td><td>Budget capping + 公平调度</td></tr>
+<tr><td><strong>状态竞争</strong></td><td>两个 Agent 同时修改共享状态</td><td>后者覆盖前者 / 数据损坏</td><td>锁机制 / 乐观并发控制</td></tr>
+</table>
+
+<h3>3. 为什么 AgentOps 不是可选而是必须</h3>
+
+<div class="example-box">
+<div class="example-label">核心论断</div>
+<p><strong>AgentOps ≠ APM</strong>。传统的应用性能监控（APM）能看到 HTTP 追踪、数据库查询、缓存命中——但它看不到 Agent 系统的核心问题：</p>
+<ul>
+<li>APM 看不到<strong>推理链路</strong>：模型为什么做出某个决策</li>
+<li>APM 看不到<strong>工具调用失败</strong>的语义影响（HTTP 200 但返回了垃圾）</li>
+<li>APM 看不到<strong>Token 消耗</strong>与质量的关联（花了 $10 但产出值 $1）</li>
+<li>APM 没有<strong>Evaluation 维度</strong>（这个回答对不对？）</li>
+</ul>
+<p>AgentOps 是专门为 Agentic 系统设计的可观测性 discipline——它继承 APM 的 tracing 能力，但增加了 LLM 特有的 evaluation、token economics、routing decision 等维度。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>Multi-Agent 的本质困难是<strong>分布式系统失败模式和 LLM 非确定性的乘法效应</strong>。五种常见失败模式：消息语义漂移、循环共识、错误传播放大、资源饥饿、状态竞争。这解释了为什么 AgentOps 不是"锦上添花"而是"生存必需"——没有可观测性，你连问题出在哪都不知道，更谈不上修复。</p>
+</div>
+</section>
+
+<!-- ============================================ -->
+<!-- §④ 演进：AgentOps 成为 Discipline -->
+<!-- ============================================ -->
+<section id="evolution">
+<h2><span class="sec-num">④</span> 演进格局：AutoGen → Swarm → AgentOps Discipline</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>从 AutoGen（微软 2023，第一个主流 Multi-Agent 框架）到 Swarm（OpenAI 2025，极简 handoff API）到 Claude Code subagent（Anthropic 内置能力）再到 Anthropic 多 Agent 研究（2025-06 学术系统），行业在三年内完成了从"玩具 demo"到"生产级 discipline"的跨越。AgentOps 就像当年的 DevOps——一开始是"有人盯着日志就行"，现在是一整套方法论+工具链+成熟度模型。</p>
+</div>
+
+<h3>1. 关键演进节点</h3>
+
+<table>
+<tr><th>时间</th><th>里程碑</th><th>意义</th></tr>
+<tr><td>2023-09</td><td>Microsoft AutoGA 发布</td><td>首个 mainstream Multi-Agent 框架；Conversation-driven 协作</td></tr>
+<tr><td>2024</td><td>CrewAI / LangGraph supervisor pattern</td><td>Supervisor 模式成为事实标准</td></tr>
+<tr><td>2025-02</td><td>Claude Code 子代理能力</td><td>Subagent 从框架特性变为模型原生能力</td></tr>
+<tr><td>2025-06</td><td>Anthropic multi-agent research system</td><td>LeadResearcher + 并行 Subagents + CitationAgent 学术范式</td></tr>
+<tr><td>2025</td><td>OpenAI Swarm 发布</td><td>极简 API（run + handoff）；降低 Multi-Agent 入门门槛</td></tr>
+<tr><td>2025-06</td><td>OTel GenAI SIG 成立</td><td>标准化 Agent 可观测性的 semantic conventions</td></tr>
+<tr><td>2026-01</td><td>ClickHouse 收购 Langfuse（$400M Series D）</td><td>AgentOps 工具链获得资本背书；市场验证</td></tr>
+<tr><td>2026</td><td>Red Hat Summit 2026: 6 大 Agentic Metrics</td><td>企业级 Agent 监控指标体系成型</td></tr>
+</table>
+
+<h3>2. AgentOps 三支柱</h3>
+
+<table class="compare-table">
+<tr><th>支柱</th><th>传统含义（APM）</th><th>AgentOps 特殊含义</th></tr>
+<tr><td><strong>Trace</strong></td><td>HTTP 请求追踪、DB 查询耗时</td><td>完整推理链路：Prompt → RAG → 推理 → 工具调用 → 整合（12+ span）</td></tr>
+<tr><td><strong>Metric</strong></td><td>QPS、P95 延迟、错误率</td><td>Token 用量 / Tool 成功率 / Routing 决策 / Guardrail 触发率</td></tr>
+<tr><td><strong>Evaluation</strong></td><td>单元测试、集成测试</td><td>LLM-as-Judge / 准确率 / 一致性（持续跑，不只是 CI）</td></tr>
+</table>
+
+<h3>3. AgentOps 成熟度模型</h3>
+
+<table class="compare-table">
+<tr><th>Level</th><th>名称</th><th>能力特征</th></tr>
+<tr><td><strong>L1</strong></td><td>Ad-hoc（临时）</td><td>基本日志；手动 debug；无自动化 eval</td></tr>
+<tr><td><strong>L2</strong></td><td>Reactive（响应式）</td><td>结构化 Tracing（OTel span）；错误告警；手动质量调查</td></tr>
+<tr><td><strong>L3</strong></td><td>Proactive（主动式）</td><td>OTel GenAI Semantic Conventions；CI 自动 eval 回归检测</td></tr>
+<tr><td><strong>L4</strong></td><td>Optimized（优化态）</td><td>持续生产 eval 循环；自动反馈到 prompt tuning；闭环优化</td></tr>
+</table>
+
+<h3>4. 六大 Agentic Metrics（Red Hat Summit 2026）</h3>
+
+<div class="card deepen">
+<div class="card-label">Red Hat Summit 2026 定义</div>
+<p>企业级 Agent 系统必须监控的六大指标：</p>
+<ol>
+<li><strong>Request Rate</strong> — Agent 请求吞吐量</li>
+<li><strong>Latency P95</strong> — 端到端延迟分布</li>
+<li><strong>Token Usage</strong> — 总 Token 消耗及成本</li>
+<li><strong>Inference Latency</strong> — 模型推理耗时（不含工具调用）</li>
+<li><strong>Tool Call Success Rate</strong> — 工具调用成功率（含语义层面）</li>
+<li><strong>Agent Routing</strong> — Supervisor 路由决策分布（是否均衡、是否有异常偏斜）</li>
+</ol>
+</div>
+
+<h3>5. 生产基础设施形状</h3>
+
+<pre>[User]
+  │
+  ▼
+[API Gateway + Auth] ───────────── 认证 / 限流 / 路由
+  │
+  ▼
+[Orchestrator: Temporal / LangGraph] ── 工作流引擎 / 状态机
+  ├── [Supervisor] ─── 任务分解 / 路由决策
+  ├── [Agent Pool] ──── Subagent 实例管理 / 扩缩容
+  ├── [Tool Registry: MCP] ── 工具注册 / 发现 / 权限
+  │
+  ├─ [Shared State: Redis / PG] ── 共享状态 / 消息队列
+  ├─ [Context Store] ────────── RAG / 向量库 / 文档索引
+  ├─ [LLM Gateway: LiteLLM] ─── 模型路由 / fallback / Budget 控制
+  │
+  └─ [Observability Stack]
+       ├── [Tracing: OTel + Langfuse] ──── 全链路追踪
+       ├── [Metrics: Prometheus + Grafana] ── 6 大指标看板
+       └─ [Eval: MLflow / CI Pipeline] ──── 持续评估循环</pre>
+
+<h3>6. 市场数据</h3>
+
+<table>
+<tr><th>指标</th><th>数据</th><th>来源</th></tr>
+<tr><td>市场规模</td><td>$18 亿(2025) → $26 亿(2026)，45% CAGR 至 2034</td><td>行业分析报告</td></tr>
+<tr><td>重大收购</td><td>ClickHouse 收购 Langfuse（$400M Series D，2026-01）</td><td>公开交易</td></tr>
+<tr><td>标准化</td><td>OTel GenAI SIG 已 finalize agent semantic conventions</td><td>OpenTelemetry 社区</td></tr>
+</table>
+
+<div class="card insight">
+<div class="card-label">关键发现</div>
+<p>ClickHouse 以 $400M Series D 收购 Langfuse 是 AgentOps 领域的<strong>标志性事件</strong>——这意味着 Agent 可观测性不再是开源项目的附属功能，而是一个独立的、资本认可的赛道。Langfuse 的核心卖点恰好对应 AgentOps 三支柱：LLM Tracing（Trace）、Cost Analytics（Metric）、Dataset-based Evaluation（Eval）。OTel GenAI SIG 的 semantic conventions finalization 则意味着行业标准正在形成——未来所有 Agent 框架都将输出统一的 trace 格式。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>2023–2026 三年间，Multi-Agent 从 AutoGen 玩具框架进化为 AgentOps 生产级 discipline。AgentOps ≠ APM——它在 Trace（12+ span 推理链路）、Metric（Token/Tool/Routing）、Evaluation（持续 LLM-as-Judge）三个维度远超传统监控。成熟度模型从 L1（手动日志）到 L4（闭环优化）。市场以 45% CAGR 增长至 2034，Langfuse $400M 收购标志着资本认可。生产基础设施 = Orchestrator + Agent Pool + Tool Registry + Shared State + LLM Gateway + Observability Stack 六件套。</p>
+</div>
+</section>
+
+<!-- ============================================ -->
+<!-- §⑤ 与产品连接：DDAgent / EvalAgent / KBA 映射 -->
+<!-- ============================================ -->
+<section id="connect">
+<h2><span class="sec-num">⑤</span> 与产品连接：三大产品的编排模式映射</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>理论再漂亮也要落地。我们的三个产品——DDAgent、EvalAgent、KBA——分别对应三种不同的编排模式。把它们放到一起看，就像拿着教科书对照实际工程：DDAgent 是教科书级的 Supervisor 模式、EvalAgent 是 Debate/Judge 模式的工业实现、KBA 则是经典的 Pipeline。</p>
+</div>
+
+<h3>1. DDAgent = Supervisor 模式实例（已在线运行！）</h3>
+
+<div class="pattern-card pattern-supervisor">
+<div class="pattern-title">DDAgent → Supervisor + Specialists 映射</div>
+
+<svg viewBox="0 0 620 150" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<!-- 用户请求 -->
+<rect x="10" y="58" width="80" height="34" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="50" y="79" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">用户汇款请求</text>
+
+<!-- Dispatcher = Supervisor -->
+<rect x="115" y="46" width="115" height="58" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+<text x="172" y="68" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">Dispatcher</text>
+<text x="172" y="83" text-anchor="middle" fill="#534AB7" font-size="9">= Supervisor</text>
+<text x="172" y="96" text-anchor="middle" fill="#534AB7" font-size="8">解析 task_type → 路由</text>
+
+<!-- 银行子Agents = Specialists -->
+<rect x="255" y="18" width="82" height="32" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="296" y="38" text-anchor="middle" fill="#185FA5" font-size="9" font-weight="600">银行A子Agent</text>
+
+<rect x="255" y="56" width="82" height="32" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="296" y="76" text-anchor="middle" fill="#185FA5" font-size="9" font-weight="600">银行B子Agent</text>
+
+<rect x="255" y="94" width="82" height="32" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="296" y="114" text-anchor="middle" fill="#185FA5" font-size="9" font-weight="600">银行N子Agent</text>
+
+<!-- Auditor = Reflect/Eval -->
+<rect x="360" y="50" width="95" height="50" rx="8" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="407" y="71" text-anchor="middle" fill="#1D9E75" font-size="10" font-weight="700">Auditor</text>
+<text x="407" y="87" text-anchor="middle" fill="#1D9E75" font-size="9">= Reflect/Eval</text>
+<text x="407" y="98" text-anchor="middle" fill="#1D9E75" font-size="8">只标不改</text>
+
+<!-- 最终输出 -->
+<rect x="485" y="58" width="80" height="34" rx="6" fill="#1D9E75" stroke="#1D9E75" stroke-width="1"/>
+<text x="525" y="79" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">汇款结果</text>
+
+<!-- 数据指标框 -->
+<rect x="480" y="108" width="130" height="36" rx="6" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1" stroke-dasharray="3"/>
+<text x="545" y="123" text-anchor="middle" fill="#1D9E75" font-size="9" font-weight="600">83%预填 / 95%准确 / 100%路由</text>
+<text x="545" y="136" text-anchor="middle" fill="#1D9E75" font-size="8">生产数据</text>
+
+<!-- 箭头 -->
+<line x1="90" y1="75" x2="113" y2="75" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr42)"/>
+<line x1="230" y1="62" x2="253" y2="34" stroke="#888780" stroke-width="0.8" marker-end="url(#ov-arr42)"/>
+<line x1="230" y1="75" x2="253" y2="72" stroke="#888780" stroke-width="0.8" marker-end="url(#ov-arr42)"/>
+<line x1="230" y1="88" x2="253" y2="110" stroke="#888780" stroke-width="0.8" marker-end="url(#ov-arr42)"/>
+<line x1="337" y1="34" x2="358" y2="62" stroke="#888780" stroke-width="0.8"/>
+<line x1="337" y1="72" x2="358" y2="74" stroke="#888780" stroke-width="0.8"/>
+<line x1="337" y1="110" x2="358" y2="88" stroke="#888780" stroke-width="0.8"/>
+<line x1="455" y1="75" x2="483" y2="75" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr42)"/>
+</svg>
+</div>
+
+<table>
+<tr><th>组件</th><th>DDAgent 实现</th><th>对应编排概念</th></tr>
+<tr><td>Supervisor</td><td>Dispatcher（解析 task_type → 路由到对应银行子 Agent）</td><td>任务分解 + 路由决策</td></tr>
+<tr><td>Specialists</td><td>各银行专用子 Agent（各自持有银行 API 工具和知识库）</td><td>领域专业化</td></tr>
+<tr><td>Reflect/Eval</td><td>Auditor（审核结果，只标不改）</td><td>Gate 质量门槛</td></tr>
+<tr><td>数据</td><td>83% 字段预填 / 95% 准确率 / 100% 路由成功率</td><td>生产验证</td></tr>
+</table>
+
+<h3>2. EvalAgent = Debate / Judge 模式实例</h3>
+
+<div class="pattern-card pattern-debate">
+<div class="pattern-title">EvalAgent → Debate/Judge 三路裁判映射</div>
+
+<svg viewBox="0 0 620 140" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<!-- 被测 Agent -->
+<rect x="10" y="54" width="90" height="32" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="55" y="74" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">被测 Agent</text>
+
+<!-- 三路 Judge -->
+<rect x="140" y="14" width="130" height="38" rx="6" fill="#FDEEE8" stroke="#993C1D" stroke-width="1.2"/>
+<text x="205" y="32" text-anchor="middle" fill="#993C1D" font-size="10" font-weight="700">Rule Judge</text>
+<text x="205" y="46" text-anchor="middle" fill="#993C1D" font-size="9">P0 一票否决</text>
+
+<rect x="140" y="56" width="130" height="38" rx="6" fill="#FDEEE8" stroke="#993C1D" stroke-width="1.2"/>
+<text x="205" y="74" text-anchor="middle" fill="#993C1D" font-size="10" font-weight="700">LLM Judge</text>
+<text x="205" y="88" text-anchor="middle" fill="#993C1D" font-size="9">五维评分</text>
+
+<rect x="140" y="98" width="130" height="38" rx="6" fill="#FDEEE8" stroke="#993C1D" stroke-width="1.2"/>
+<text x="205" y="116" text-anchor="middle" fill="#993C1D" font-size="10" font-weight="700">Diff Judge</text>
+<text x="205" y="130" text-anchor="middle" fill="#993C1D" font-size="9">版本对比</text>
+
+<!-- 报告聚合 = Judge 仲裁 -->
+<rect x="310" y="50" width="120" height="40" rx="8" fill="#E6F7F1" stroke="#1D9E75" stroke-width="2"/>
+<text x="370" y="68" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">报告聚合</text>
+<text x="370" y="83" text-anchor="middle" fill="#1D9E75" font-size="9">= Judge 仲裁</text>
+
+<!-- Output -->
+<rect x="460" y="54" width="90" height="32" rx="6" fill="#1D9E75" stroke="#1D9E75" stroke-width="1"/>
+<text x="505" y="74" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">评测报告</text>
+
+<!-- 箭头 -->
+<line x1="100" y1="70" x2="138" y2="70" stroke="#888780" stroke-width="1"/>
+<line x1="270" y1="33" x2="308" y2="63" stroke="#888780" stroke-width="0.8"/>
+<line x1="270" y1="75" x2="308" y2="72" stroke="#888780" stroke-width="0.8"/>
+<line x1="270" y1="117" x2="308" y2="80" stroke="#888780" stroke-width="0.8"/>
+<line x1="430" y1="70" x2="458" y2="70" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr42)"/>
+</svg>
+</div>
+
+<p>EvalAgent 是 Debate 模式的<strong>工业级变体</strong>——不是两个 Agent 争论，而是三种互补的评判方法汇聚：</p>
+<ul>
+<li><strong>Rule Judge</strong>：确定性规则（行为测试 P0 一票否决）——零容忍的安全/合规门</li>
+<li><strong>LLM Judge</strong>：大模型五维评分（能力测试）——主观但有标准的质量评估</li>
+<li><strong>Diff Judge</strong>：版本对比（期望 vs 实际）——回归检测</li>
+<li><strong>报告聚合</strong> = Judge 仲裁层：综合三路判分生成最终 MD+JSON 报告</li>
+</ul>
+
+<h3>3. KBA = Pipeline 模式实例</h3>
+
+<div class="pattern-card pattern-pipeline">
+<div class="pattern-title">KBA → Pipeline 四阶段映射</div>
+
+<svg viewBox="0 0 620 90" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<rect x="10" y="32" width="70" height="26" rx="5" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="45" y="49" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">原始文档</text>
+
+<text x="95" y="49" text-anchor="middle" fill="#888780" font-size="16">→</text>
+
+<rect x="115" y="27" width="85" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+<text x="157" y="49" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">format Skill</text>
+
+<text x="215" y="49" text-anchor="middle" fill="#888780" font-size="16">→</text>
+
+<rect x="235" y="27" width="85" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+<text x="277" y="49" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">atom Skill</text>
+
+<text x="335" y="49" text-anchor="middle" fill="#888780" font-size="16">→</text>
+
+<rect x="355" y="27" width="85" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+<text x="397" y="49" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">hqa Skill</text>
+
+<text x="455" y="49" text-anchor="middle" fill="#888780" font-size="16">→</text>
+
+<rect x="475" y="27" width="85" height="36" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+<text x="517" y="49" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">topic Skill</text>
+
+<text x="575" y="49" text-anchor="middle" fill="#888780" font-size="16">→</text>
+
+<rect x="585" y="32" width="28" height="26" rx="5" fill="#1D9E75" stroke="#1D9E75" stroke-width="1"/>
+</svg>
+</div>
+
+<p>KBA 是 Pipeline 模式的教科书案例——四个 Skill 串行处理，每阶段的输出是下一阶段的输入：</p>
+<table>
+<tr><th>Stage</th><th>Skill</th><th>职责</th><th>Pipeline 定位</th></tr>
+<tr><td>S1</td><td>format</td><td>格式转换（PDF/HTML/Word → Markdown）</td><td>数据准备</td></tr>
+<tr><td>S2</td><td>atom</td><td>原子化切分（文档 → 知识原子）</td><td>结构化</td></tr>
+<tr><td>S3</td><td>hqa</td><td>高质量问答提取</td><td>内容提取</td></tr>
+<tr><td>S4</td><td>topic</td><td>主题分类与归档</td><td>输出整理</td></tr>
+</table>
+
+<h3>4. 三产品编排模式总览</h3>
+
+<table class="compare-table">
+<tr><th>产品</th><th>编排模式</th><th>核心特点</th><th>AgentOps 关注点</th></tr>
+<tr><td><strong>DDAgent</strong></td><td>Supervisor + Specialists</td><td>Dispatcher 路由 / 银行子Agent专业化 / Auditor Gate</td><td>Routing 分布 / Token per specialist / Auditor 通过率</td></tr>
+<tr><td><strong>EvalAgent</strong></td><td>Debate / Judge（三路裁判变体）</td><td>Rule+LLM+Diff 三路独立评判 / 报告聚合=仲裁</td><td>Judge 一致性 / 判分分布 / False Positive/Negative</td></tr>
+<tr><td><strong>KBA</strong></td><td>Pipeline（四阶段串行）</td><td>format→atom→hqa→topic 逐阶段加工</td><td>每阶段 latency / 级联失败率 / 吞吐量</td></tr>
+</table>
+
+<div class="card warning">
+<div class="card-label">警惕</div>
+<p>不要因为 DDAgent 用了 Supervisor 模式就认为它是"最优解"。每种模式都有其最佳适用场景——如果 DDAgent 未来需要加入事实验证环节（比如跨银行金额一致性检查），可以考虑在 Specialist 之后插入一层轻量 Debate。编排模式可以组合使用。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>三大产品完美映射了三种核心编排模式：<strong>DDAgent = Supervisor</strong>（Dispatcher 路由 + 银行子 Agent + Auditor 审核，83%/95%/100% 数据验证了该模式的工程可行性）；<strong>EvalAgent = Debate/Judge 变体</strong>（Rule+LLM+Diff 三路独立裁判 + 报告聚合仲裁）；<strong>KBA = Pipeline</strong>（format→atom→hqa→topic 四 Skill 串行流水线）。理论到实践的映射不仅验证了编排模式的有效性，也为未来的架构演化提供了清晰的参照系。</p>
+</div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<div class="chapter-footer">
+<a href="../../INDEX.html">&larr; 返回知识图谱</a>
+<a href="A4.2-multiagent-ops-quiz.html">去做 Quiz（10 题）&rarr;</a>
+</div>
+
+</body>
+</html>

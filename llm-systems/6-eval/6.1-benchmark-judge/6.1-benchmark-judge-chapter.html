@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6.1 Benchmark · LLM-as-Judge — 如何判断模型和Agent好不好</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F9F3;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--pink:#993556;--pink-bg:#FBEAF0;--bg:#FAFAF8;--card:#FFF;--text:#1A1A1A;--muted:#6B6B6B;--border:#E5E5E0;--green:#1D9E75;--green-bg:#E6F9F3}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:24px 20px}
+.header{text-align:center;padding:32px 0 12px;border-bottom:1px solid var(--border);margin-bottom:8px}
+.tag-row{display:flex;gap:6px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag.t1{background:var(--purple-bg);color:var(--purple)}
+.tag.d6{background:var(--pink-bg);color:var(--pink)}
+.tag.num{background:var(--amber-bg);color:var(--amber)}
+h1{font-size:26px;font-weight:700;margin-bottom:4px;letter-spacing:-0.5px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:8px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;display:inline-block;margin-top:8px}
+.nav-row{display:flex;gap:4px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+.nav-item{font-size:11px;padding:3px 10px;border-radius:12px;text-decoration:none;font-weight:500}
+.nav-item.done{background:var(--teal-bg);color:var(--teal)}
+section{padding:28px 0 12px;border-top:1px solid var(--border)}
+section h2{font-size:19px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center}
+section h3{font-size:15px;font-weight:600;margin:16px 0 8px;color:var(--text)}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--teal-bg);border-color:var(--teal)}
+.card.takeaway{background:var(--amber-bg);border-color:var(--amber)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card.pink{background:var(--pink-bg);border-color:var(--pink)}
+.card .card-title{font-size:13px;font-weight:600;margin-bottom:4px}
+.card p{margin:4px 0;font-size:14px}
+.diagram{margin:20px 0 8px}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th,td{border:1px solid var(--border);padding:8px 10px;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{vertical-align:top}
+code{background:#F0F0EC;padding:1px 5px;border-radius:4px;font-size:13px;font-family:"SF Mono",Menlo,Consolas,monospace}
+.formula-block{background:#F5F5F2;padding:12px 16px;border-radius:8px;margin:12px 0;font-size:14px;overflow-x:auto}
+ul,ol{margin:8px 0 8px 20px}
+li{margin:4px 0;font-size:14px}
+.comparison{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+.comparison .col{padding:12px;border-radius:8px}
+.comparison .col.left{background:var(--purple-bg)}
+.comparison .col.right{background:var(--teal-bg)}
+@media(max-width:600px){.comparison{grid-template-columns:1fr}}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:8px;font-weight:500}
+.badge.sota{background:var(--teal-bg);color:var(--teal)}
+.badge.retired{background:var(--coral-bg);color:var(--coral)}
+.badge.new{background:var(--pink-bg);color:var(--pink)}
+.dim-tag{display:inline-block;font-size:10px;padding:2px 6px;border-radius:4px;background:#f0eeea;color:var(--muted);margin:1px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+.chapter-footer a:hover{text-decoration:underline}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t1">T1 · LLM 系统</span>
+    <span class="tag d6">D6 评测对齐</span>
+    <span class="tag num">第 13 章</span>
+    <a href="../../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+    <a href="6.1-benchmark-judge-quiz.html" class="nav-link">Quiz →</a>
+  </div>
+  <h1>6.1 Benchmark 与 LLM-as-Judge</h1>
+  <p class="subtitle">从 MMLU 到 Agent 评测 — 模型和 Agent 好不好用怎么判断</p>
+  <div class="spine-link">主线连接：评测是产品经理判断模型能力的唯一通用语言 → Agent 工程化的度量基础</div>
+  <div class="nav-row">
+    <a class="nav-item done" href="#is">① 是什么</a>
+    <a class="nav-item done" href="#how">② 怎么实现</a>
+    <a class="nav-item done" href="#why">③ 为什么</a>
+    <a class="nav-item done" href="#evolution">④ 演进</a>
+    <a class="nav-item done" href="#connect">⑤ 产品</a>
+  </div>
+</div>
+
+<!-- ====== 章节一览图 ====== -->
+<div class="diagram">
+<p style="font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px;">章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 340" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <defs><marker id="ov-arr61" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#B8B7AE" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+  <!-- ① 粉色 - 是什么 -->
+  <rect x="30" y="40" width="110" height="54" rx="8" fill="#FBEAF0" stroke="#993556" stroke-width="1.5"/>
+  <text x="85" y="62" text-anchor="middle" fill="#993556" font-size="13" font-weight="600">① 是什么</text>
+  <text x="85" y="80" text-anchor="middle" fill="#993556" font-size="10">Benchmark vs Judge</text>
+
+  <!-- ② 蓝色 - 怎么实现 -->
+  <rect x="180" y="40" width="120" height="54" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+  <text x="240" y="62" text-anchor="middle" fill="#185FA5" font-size="13" font-weight="600">② 怎么实现</text>
+  <text x="240" y="80" text-anchor="middle" fill="#185FA5" font-size="10">三层架构+Judge偏差</text>
+
+  <!-- ③ 琥珀 - 为什么 -->
+  <rect x="340" y="40" width="110" height="54" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+  <text x="395" y="62" text-anchor="middle" fill="#BA7517" font-size="13" font-weight="600">③ 为什么</text>
+  <text x="395" y="80" text-anchor="middle" fill="#BA7517" font-size="10">评测的第一性原理</text>
+
+  <!-- ④ 紫色 - 演进 -->
+  <rect x="490" y="40" width="110" height="54" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+  <text x="545" y="62" text-anchor="middle" fill="#534AB7" font-size="13" font-weight="600">④ 演进</text>
+  <text x="545" y="80" text-anchor="middle" fill="#534AB7" font-size="10">2024-2026 评测格局</text>
+
+  <!-- ⑤ 绿色 - 产品连接 (下排居中) -->
+  <rect x="260" y="160" width="160" height="54" rx="8" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.5"/>
+  <text x="340" y="182" text-anchor="middle" fill="#1D9E75" font-size="13" font-weight="600">⑤ 与产品连接</text>
+  <text x="340" y="200" text-anchor="middle" fill="#1D9E75" font-size="10">Fitz 三层 Agent 评测体系</text>
+
+  <!-- 上排箭头 -->
+  <line x1="140" y1="67" x2="175" y2="67" stroke="#B8B7AE" stroke-width="1.5" marker-end="url(#ov-arr61)"/>
+  <line x1="300" y1="67" x2="335" y2="67" stroke="#B8B7AE" stroke-width="1.5" marker-end="url(#ov-arr61)"/>
+  <line x1="450" y1="67" x2="485" y2="67" stroke="#B8B7AE" stroke-width="1.5" marker-end="url(#ov-arr61)"/>
+
+  <!-- 下排箭头 (从④到⑤) -->
+  <path d="M545 94 Q545 130 420 155" fill="none" stroke="#B8B7AE" stroke-width="1.5" marker-end="url(#ov-arr61)"/>
+  <!-- 从①到⑤的弧线 -->
+  <path d="M85 94 Q85 140 255 162" fill="none" stroke="#B8B7AE" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#ov-arr61)"/>
+
+  <!-- 底部关键概念标签 -->
+  <text x="85" y="250" text-anchor="middle" fill="#6B6B6B" font-size="11">六大评测维度</text>
+  <rect x="35" y="260" width="100" height="22" rx="4" fill="#EEEDFE"/>
+  <text x="85" y="275" text-anchor="middle" fill="#534AB7" font-size="10">MMLU / GPQA / Arena</text>
+
+  <text x="265" y="250" text-anchor="middle" fill="#6B6B6B" font-size="11">LLM Judge 偏差</text>
+  <rect x="200" y="260" width="130" height="22" rx="4" fill="#FDEEE8"/>
+  <text x="265" y="275" text-anchor="middle" fill="#993C1D" font-size="10">位置·长度·自我偏好</text>
+
+  <text x="430" y="250" text-anchor="middle" fill="#6B6B6B" font-size="11">Agent 评测新范式</text>
+  <rect x="370" y="260" width="120" height="22" rx="4" fill="#E6F9F3"/>
+  <text x="430" y="275" text-anchor="middle" fill="#1D9E75" font-size="10">SWE-bench Pro / WebArena</text>
+
+  <text x="580" y="250" text-anchor="middle" fill="#6B6B6B" font-size="11">生产级评测</text>
+  <rect x="525" y="260" width="110" height="22" rx="4" fill="#FAEEDA"/>
+  <text x="580" y-y="275" text-anchor="middle" fill="#BA7517" font-size="10">CI/CD + DeepEval</text>
+
+  <!-- 最底部: Fitz 项目映射 -->
+  <text x="340" y="315" text-anchor="middle" fill="#993556" font-size="11" font-weight="500">DDAgent L1接受率 / BAAgent 准确率 / TRSAgent 分类率</text>
+</svg>
+</div>
+
+<!-- ============================================================ -->
+<section id="is">
+<h2><span class="sec-num">1</span> 是什么 —— 从考试分数到系统度量</h2>
+
+<div class="card intuition">
+  <div class="card-title">🍽️ 餐厅评审类比</div>
+  <p>你开了一家餐厅，怎么知道厨师好不好？<br>
+  <strong>传统方法</strong>：请米其林评委来打分（= 公开 Benchmark）<br>
+  <strong>你的方法</strong>：自己每天试菜 + 让顾客填反馈表（= 自建评测 + LLM-as-Judge）<br>
+  <strong>关键洞察</strong>：米其林高分不等于你的顾客满意 — 同理，MMLU 高分不等于你的 Agent 在跨境支付场景好用。</p>
+</div>
+
+<h3>Benchmark 是什么？</h3>
+<p>Benchmark（基准测试）就是给大模型出的<strong>"标准化考试"</strong>——一组预先设计好的问题，用统一的标准打分，让不同模型可以公平比较。</p>
+
+<p>但 2024-2026 年行业的一个核心认知转变是：<strong>Benchmark 分数 ≠ 你的场景表现</strong>。就像 SAT 高分不保证能做好一份具体工作一样。</p>
+
+<table>
+<tr><th>维度</th><th>代表 Benchmark</th><th>测什么</th><th>天花板状态</th></tr>
+<tr><td>综合知识</td><td>MMLU / C-Eval</td><td>57 学科选择题</td><td>Top 模型 90%+,差距缩小</td></tr>
+<tr><td>深度推理</td><td>GPQA Diamond</td><td>博士级物理/化学/生物</td><td>GPT-5.4 领先(93%),人类65%</td></tr>
+<tr><td>数学竞赛</td><td>AIME / MATH-500</td><td>高难度数学推理</td><td>o3/DeepSeek R1 接近满分</td></tr>
+<tr><td>基础代码</td><td>HumanEval</td><td>164 道 Python 函数补全</td><td>94%+,已饱和</td></tr>
+<tr><td>工程代码</td><td>SWE-bench Verified / Pro</td><td>真实 GitHub Bug 修复</td><td>SWE-v 已退役,SWE-Pro 64%</td></tr>
+<tr><td>真实体验</td><td>Chatbot Arena (Arena AI)</td><td>人类盲评 ELO 排名</td><td>最贴近用户,最难刷</td></tr>
+<tr><td>多轮对话</td><td>MT-Bench / AlpacaEval 2.0</td><td>多轮对话质量 1-10 分</td><td>GPT-5.4 达 9.5</td></tr>
+<tr><td>事实性</td><td>TruthfulQA</td><td>事实准确性(反幻觉)</td><td>91%(GPT-5)</td></tr>
+</table>
+
+<div class="card warning">
+  <div class="card-title">⚠️ SWE-bench 退役的启示（2026.03 OpenAI 官宣）</div>
+  <p>SWE-bench Verified 曾是 AI 编程 Agent 的"高考"，但 2026 年 3 月 OpenAI Frontier Evals 团队正式宣布退役它。<strong>三大原因</strong>：<br>
+  ① <strong>数据污染</strong>：模型在预训练中见过考题（背题），分数虚高至 80.9%<br>
+  ② <strong>天花板效应</strong>：6 个月只涨 6%，已无法区分模型能力<br>
+  ③ <strong>测试缺陷</strong>：59.4% 测试用例存在过宽或过窄问题<br>
+  <strong>替代方案</strong>：→ SWE-bench Pro（Scale AI, 1865 题,抗污染,企业级复杂度）+ SWE-bench-Live（每月更新动态题库）</p>
+</div>
+
+<h3>LLM-as-Judge 又是什么？</h3>
+<p>当模型的输出不是选择题而是自由文本时（比如客服回复、尽调报告、换汇建议），传统"标准答案匹配"完全失效。这时业界采用 <strong>LLM-as-Judge</strong>：</p>
+
+<div class="comparison">
+<div class="col left">
+  <p style="font-weight:600;color:var(--purple);font-size:14px;margin-bottom:8px;">📝 传统评测</p>
+  <ul style="font-size:13px">
+    <li>BLEU / ROUGE 文本重叠度</li>
+    <li>精确答案匹配</li>
+    <li>人工标注（慢、贵、不可扩展）</li>
+  </ul>
+  <p style="font-size:12px;color:var(--muted);margin-top:8px;">❌ 对生成式输出相关性低</p>
+</div>
+<div class="col right">
+  <p style="font-weight:600;color:var(--teal);font-size:14px;margin-bottom:8px;">⚖️ LLM-as-Judge</p>
+  <ul style="font-size:13px">
+    <li>用更强的 LLM 评判输出质量</li>
+    <li>多维度评分(忠实/相关/完整/无害)</li>
+    <li>API 一调用即出结果</li>
+  </ul>
+  <p style="font-size:12px;color:var(--muted);margin-top:8px;">✅ 与人类评分一致性达 85%（高于两人间一致率）</p>
+</div>
+</div>
+
+<div class="card takeaway">
+  <div class="card-title">💡 PM 视角的核心命题</div>
+  <p>作为管理 5 个生产级 Agent 的 PM，你需要回答的不是"GPT-4 比 GPT-3.5 强多少"，而是：<br>
+  <code>DDAgent 尽调预填率 83% → 这个数字可信吗？用什么方式测的？<br>
+  TRSAgent 分类准确 92.2% → 在哪些邮件类型上会崩？<br>
+  FxAgent 采纳率 98-99.75% → 用户"满意"是因为真的好还是因为没得选？</code></p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="how">
+<h2><span class="sec-num">2</span> 怎么实现 —— 从规则引擎到 LLM Judge 再到持续评测</h2>
+
+<h3>2.1 Agent 评测三层架构（2026 行业共识）</h3>
+<p>棱镜空间（pengjiyuan.github.io）总结的 Agent 评测三层架构已成为 2026 年工程实践的标准框架：</p>
+
+<div class="diagram">
+<p style="font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px;">Agent 评测三层架构</p>
+<svg viewBox="0 0 680 220" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <defs><marker id="arr61a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+  <!-- 第一层: 规则引擎 -->
+  <rect x="30" y="20" width="180" height="70" rx="8" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.5"/>
+  <text x="120" y="44" text-anchor="middle" fill="#1D9E75" font-size="14" font-weight="600">L1 规则引擎</text>
+  <text x="120" y="62" text-anchor="middle" fill="#1D9E75" font-size="10">确定性边界检测</text>
+  <text x="120" y="78" text-anchor="middle" fill="#6B6B6B" font-size="9">JSON格式 · 禁止词 · 延迟阈值</text>
+
+  <!-- 第二层: LLM-as-Judge -->
+  <rect x="250" y="20" width="180" height="70" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+  <text x="340" y="44" text-anchor="middle" fill="#534AB7" font-size="14" font-weight="600">L2 LLM-as-Judge</text>
+  <text x="340" y="62" text-anchor="middle" fill="#534AB7" font-size="10">主观质量多维评分</text>
+  <text x="340" y="78" text-anchor="middle" fill="#6B6B6B" font-size="9">忠实度 · 相关性 · 完整性</text>
+
+  <!-- 第三层: 持续评测 -->
+  <rect x="470" y="20" width="180" height="70" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+  <text x="560" y="44" text-anchor="middle" fill="#BA7517" font-size="14" font-weight="600">L3 持续评测</text>
+  <text x="560" y="62" text-anchor="middle" fill="#BA7517" font-size="10">CI/CD + 生产监控</text>
+  <text x="560" y="78" text-anchor="middle" fill="#6B6B6B" font-size="9">DeepEval · 回归集 · 趋势追踪</text>
+
+  <!-- 层间箭头 -->
+  <line x1="210" y1="55" x2="245" y2="55" stroke="#B8B7AE" stroke-width="1.5" marker-end="url(#arr61a)"/>
+  <line x1="430" y1="55" x2="465" y2="55" stroke="#B8B7AE" stroke-width="1.5" marker-end="url(#arr61a)"/>
+
+  <!-- 底部: 适用场景 -->
+  <rect x="30" y="115" width="180" height="50" rx="6" fill="#f5f5f2" stroke="#e5e5e0"/>
+  <text x="120" y="135" text-anchor="middle" fill="#6B6B6B" font-size="10" font-weight="600">适用: 格式合规 · 安全边界</text>
+  <text x="120" y="152" text-anchor="middle" fill="#999" font-size="9">成本低 · 零方差 · 100%可复现</text>
+
+  <rect x="250" y="115" width="180" height="50" rx="6" fill="#f5f5f2" stroke="#e5e5e0"/>
+  <text x="340" y="135" text-anchor="middle" fill="#6B6B6B" font-size="10" font-weight="600">适用: 文本质量 · 多维评估</text>
+  <text x="340" y="152" text-anchor="middle" fill="#999" font-size="9">有方差 · 需校准 · 可扩展</text>
+
+  <rect x="470" y="115" width="180" height="50" rx="6" fill="#f5f5f2" stroke="#e5e5e0"/>
+  <text x="560" y="135" text-anchor="middle" fill="#6B6B6B" font-size="10" font-weight="600">适用: 回归防护 · 趋势发现</text>
+  <text x="560" y="152" text-anchor="middle" fill="#999" font-size="9">生产级 · 自动化 · 可告警</text>
+
+  <!-- 底部关键指标 -->
+  <line x1="30" y1="185" x2="650" y2="185" stroke="#e5e5e0" stroke-width="1" stroke-dasharray="4,4"/>
+  <text x="120" y="205" text-anchor="middle" fill="#1D9E75" font-size="10" font-weight="500">速度: ms级</text>
+  <text x="340" y="205" text-anchor="middle" fill="#534AB7" font-size="10" font-weight="500">精度: 85%=人机一致</text>
+  <text x="560" y="205" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="500">覆盖: 全生命周期</text>
+</svg>
+</div>
+
+<h3>2.2 LLM-as-Judge 的两种模式</h3>
+
+<div class="comparison">
+<div class="col left">
+  <p style="font-weight:600;color:var(--purple);font-size:14px;">📊 单输出评分 (Single-output)</p>
+  <p style="font-size:13px;margin:8px 0;">给一个输出打绝对分数</p>
+  <ul style="font-size:12px">
+    <li><strong>G-Eval</strong>: 用 LLM 生成评分+CoT理由 (Liu et al., EMNLP 2023)</li>
+    <li>支持 reference-based 和 referenceless</li>
+    <li>适合: 需要绝对分数上报的场景</li>
+  </ul>
+  <p style="font-size:11px;color:var(--muted);margin-top:6px;">⚠️ 绝对分数校准困难</p>
+</div>
+<div class="col right">
+  <p style="font-weight:600;color:var(--teal);font-size:14px;">⚔️ 成对比较 (Pairwise)</p>
+  <p style="font-size:13px;margin:8px 0;">A vs B 选出更优者（Arena模式）</p>
+  <ul style="font-size:12px">
+    <li><strong>Arena G-Eval</strong>: 自动化成对比较</li>
+    <li>无需校准绝对分数</li>
+    <li>适合: 模型选型 / A/B Test</li>
+  </ul>
+  <p style="font-size:11px;color:var(--muted);margin-top:6px;">✅ 相对排序比绝对分更可靠</p>
+</div>
+</div>
+
+<h3>2.3 Judge 的已知偏差与缓解策略</h3>
+<p>LLM-as-Judge 不是银牌。Jason Wei（前 Google Brain）的核心观点：<strong>一致性(agreement) > 准确性(accuracy)</strong>——只要每次评分稳定，系统性偏差可以通过校准修正。</p>
+
+<table>
+<tr><th>偏差类型</th><th>表现</th><th>缓解策略</th></tr>
+<tr><td><span class="dim-tag">位置偏差</span> Position Bias</td><td>成对比较时倾向选择先出现的选项</td><td>交换位置跑两次(A在前+B在前),取综合结果</td></tr>
+<tr><td><span class="dim-tag">自我偏好</span> Self-Preference</td><td>GPT-4 给 GPT-4 生成的答案更高分</td><td>使用第三方模型做 Judge（如用 Claude 评 GPT 输出）</td></tr>
+<tr><td><span class="dim-tag">长度偏差</span> Verbosity Bias</td><td>更长回答倾向于获得更高分</td><td>在 prompt 中明确要求忽略长度因素</td></tr>
+<tr><td><span class="dim-tag">风格偏差</span> Style Bias</td><td>Judge 偏好与自身风格相似的输出</td><td>Few-shot 示例锚定评分标准</td></tr>
+<tr><td><span class="dim-tag">能力上限</span></td><td>Weak Judge 无法评价 Strong Agent</td><td>Judge 模型必须 ≥ 被评测模型能力</td></tr>
+</table>
+
+<div class="card intuition">
+  <div class="card-title">🎯 G-Eval 最佳实践（Confident.ai 推广）</div>
+  <p>一个可靠的 LLM Judge 评测 prompt 必须包含四要素：<br>
+  ① <strong>清晰的评分维度定义</strong>（如"回复是否准确?是否有帮助?"）<br>
+  ② <strong>明确的评分粒度</strong>（建议 1-5 分制，避免 binary 判断）<br>
+  ③ <strong>Few-shot 参考示例</strong>（3-5 个有人类标注的参考答案）<br>
+  ④ <strong>CoT 评分理由</strong>（要求 Judge 先解释再打分）</p>
+</div>
+
+<h3>2.4 Agent 评测 vs LLM 评测的本质差异</h3>
+<p>Agent 评测远比 LLM 评测复杂。Curio（2026.04）的对比框架揭示了量级的差异：</p>
+
+<table>
+<tr><th>评测维度</th><th>传统 LLM 评测</th><th>Agent 评测</th><th>差距</th></tr>
+<tr><td>平均任务步数</td><td>1 步</td><td>8-35 步</td><td>8-35x</td></tr>
+<tr><td>环境交互次数</td><td>0</td><td>10-100+</td><td>N/A</td></tr>
+<tr><td>评估粒度</td><td>最终答案</td><td>过程+结果</td><td>复合评分</td></tr>
+<tr><td>可靠性要求</td><td>单次准确率</td><td>端到端成功率</td><td>指数级差异</td></tr>
+<tr><td>成本考量</td><td>通常忽略</td><td>核心指标</td><td>百倍差异</td></tr>
+<tr><td>工具调用</td><td>不支持</td><td>核心能力</td><td>N/A</td></tr>
+<tr><td>错误恢复</td><td>不适用</td><td>关键指标</td><td>N/A</td></tr>
+</table>
+
+<h3>2.5 主流 Agent Benchmark 一览（2026）</h3>
+
+<table>
+<tr><th>Benchmark</th><th>领域</th><th>任务数</th><th>核心指标</th><th>现状</th></tr>
+<tr><td>SWE-bench Pro</td><td>软件工程</td><td>1865 (41 repos)</td><td>Pass@1 解决率</td><td>Claude Opus4.7 领先 64.3%</td></tr>
+<tr><td>SWE-bench-Live</td><td>软件工程</td><td>月更 ~50题/月</td><td>解决率</td><td>防污染动态题库</td></tr>
+<tr><td>WebArena</td><td>Web自动化</td><td>多类别</td><td>完成率+步数+错误恢复</td><td>浏览器真实环境</td></tr>
+<tr><td>AgentBench</td><td>多域</td><td>OS/DB/KG/家居</td><td>容器化成功率</td><td>多环境综合</td></tr>
+<tr><td>OS-World</td><td>操作系统</td><td>Ubuntu/Windows/macOS</td><td>效率(步数)+成功率</td><td>真实 OS 任务</td></tr>
+<tr><td>ToolBench</td><td>工具调用</td><td>单工具/多工具/长链</td><td>调用正确率</td><td>Function calling 专项</td></tr>
+<tr><td>Terminal-Bench 2.0</td><td>终端操作</td><td>89 个真实多步任务</td><td>任务完成率</td><td>EvalScope 支持</td></tr>
+</table>
+</section>
+
+<!-- ============================================================ -->
+<section id="why">
+<h2><span class="sec-num">3</span> 为什么 —— 评测的第一性原理</h2>
+
+<h3>3.1 为什么需要评测？</h3>
+<p>Mason AI Lab（2026-03）一句话点透了本质：<strong>"你不跑测试就不该上线"</strong>。但更深层的理由有三个：</p>
+
+<div class="card pink">
+  <div class="card-title">理由一：模型是非确定性的</div>
+  <p>同一个输入，模型可能给出不同输出。没有评测 = 在老虎机上押注。"AI 客服的回答好吗？""感觉还行"这不是工程语言。<br>
+  <code>工程语言是：Faithfulness 97.2%, Relevancy 89.5%, 比上月提升 3.1pp</code></p>
+</div>
+
+<div class="card intuition">
+  <div class="card-title">理由二：Benchmark 会饱和，但场景不会</div>
+  <p>HumanEval 94% 已饱和（所有顶级模型都会写 Python 函数），但这不代表你的 <strong>代码审查 Agent</strong> 能在生产环境用好。Benchmark 考的是"会不会"，场景评测考的是"能不能稳定做到"。</p>
+</div>
+
+<div class="card takeaway">
+  <div class="card-title">理由三：评测驱动迭代方向</div>
+  <p>没有量化指标就无法判断优化是否有效。TRSAgent 从 72.8% 提升到 92.2%（+19.4pp），这个数字背后的每一步迭代都需要评测数据支撑——否则你只是在"感觉变好了"。</p>
+</div>
+
+<h3>3.2 为什么 LLM-as-Judge 成为默认方案？</h3>
+
+<p>回顾评测方法的演进，可以看到一条清晰的淘汰链路：</p>
+
+<div class="diagram">
+<p style="font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px;">评测方法演进：从 n-gram 到 LLM Judge</p>
+<svg viewBox="0 0 680 200" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visual">
+  <defs><marker id="arr61b" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#B8B7AE" stroke-width="1.5" stroke-linecap="round"/></marker></defs>
+
+  <!-- 时间轴 -->
+  <line x1="40" y1="150" x2="640" y2="150" stroke="#d0cec5" stroke-width="2"/>
+
+  <!-- BLEU/ROUGE -->
+  <circle cx="80" cy="150" r="6" fill="#993C1D"/>
+  <text x="80" y="130" text-anchor="middle" fill="#993C1D" font-size="12" font-weight="600">BLEU/ROUGE</text>
+  <text x="80" y="170" text-anchor="middle" fill="#6B6B6B" font-size="9">2010s n-gram重叠</text>
+  <text x="80" y="185" text-anchor="middle" fill="#993C1D" font-size="9">❌ 与人评相关性低</text>
+
+  <!-- 人工标注 -->
+  <circle cx="200" cy="150" r="6" fill="#BA7517"/>
+  <text x="200" y="130" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="600">Human Eval</text>
+  <text x="200" y="170" text-anchor="middle" fill="#6B6B6B" font-size="9">2020s 人工标注</text>
+  <text x="200" y="185" text-anchor="middle" fill="#BA7517" font-size="9">⚠️ 慢/贵/不可扩展</text>
+
+  <!-- 传统Benchmark -->
+  <circle cx="340" cy="150" r="6" fill="#185FA5"/>
+  <text x="340" y="130" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="600">Benchmark</text>
+  <text x="340" y="170" text-anchor="middle" fill="#6B6B6B" font-size="9">2023 MMLU/HumanEval</text>
+  <text x="340" y="185" text-anchor="middle" fill="#185FA5" font-size="9">✅ 标准化 但≠场景</text>
+
+  <!-- LLM-as-Judge -->
+  <circle cx="480" cy="150" r="6" fill="#534AB7"/>
+  <rect x="440" y="105" width="80" height="18" rx="9" fill="#EEEDFE"/>
+  <text x="480" y="118" text-anchor="middle" fill="#534AB7" font-size="9" font-weight="600">2024 默认方案</text>
+  <text x="480" y="130" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="600">LLM-as-Judge</text>
+  <text x="480" y="170" text-anchor="middle" fill="#6B6B6B" font-size="9">G-Eval / Arena</text>
+  <text x="480" y="185" text-anchor="middle" fill="#1D9E75" font-size="9">✅ 85%人机一致 可扩展</text>
+
+  <!-- Agent评测 -->
+  <circle cx="600" cy="150" r="6" fill="#1D9E75"/>
+  <text x="600" y="130" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="600">Agent Eval</text>
+  <text x="600" y="170" text-anchor="middle" fill="#6B6B6B" font-size="9">SWE-pro/WebArena</text>
+  <text x="600" y="185" text-anchor="middle" fill="#1D9E75" font-size="9">→ 端到端+成本+过程</text>
+
+  <!-- 连接箭头 -->
+  <line x1="88" y1="148" x2="192" y2="148" stroke="#B8B7AE" stroke-width="1.2" marker-end="url(#arr61b)"/>
+  <line x1="208" y1="148" x2="332" y2="148" stroke="#B8B7AE" stroke-width="1.2" marker-end="url(#arr61b)"/>
+  <line x1="350" y1="148" x2="472" y2="148" stroke="#B8B7AE" stroke-width="1.2" marker-end="url(#arr61b)"/>
+  <line x1="490" y1="148" x2="592" y2="148" stroke="#B8B7AE" stroke-width="1.2" marker-end="url(#arr61b)"/>
+</svg>
+</div>
+
+<h3>3.3 为什么 Agent 评测不能只看"通过率"？</h3>
+<p>SWE-bench 的评测逻辑很务实：<strong>修改通过了单元测试就算成功</strong>。但这带来一个深层问题——Agent 可能用了完全不符合工程最佳实践的解法，只要测试过了照样得分。</p>
+
+<p>这就是 2026 年 Agent 评测面临的核心张力：<strong>结果导向（好不好用）vs 过程导向（怎么做出来的）</strong>。</p>
+
+<div class="card warning">
+  <div class="card-title">🔄 Terminator-1 事件（伯克利 SkyLab, 2026.04）</div>
+  <p>伯克利团队发布的 Terminator-1 在 SWE-bench Verified 和 Terminal-Bench 上取得了高分排行榜名次——但实际解决了 <strong>0 个任务</strong>。这个极端案例暴露了当前 Agent Benchmark 的一个致命弱点：<strong>评测指标可以被 gaming</strong>。这也解释了为什么 SWE-bench Pro 要引入三阶段人工验证流程确保每个任务都可解且解法空间被约束。</p>
+</div>
+
+<h3>3.4 为什么"自建评测"才是最终答案？</h3>
+<p>Mason AI Lab 的结论直截了当：<strong>MMLU 考的是通用知识，你的客服机器人需要的是"能根据知识库准确回答"——这要用你自己的评估方式</strong>。</p>
+
+<p>对 Fitz 的项目来说，这意味着：
+<ul>
+<li><strong>DDAgent</strong>：不能只用 MMLU 衡量，需要构建"尽调报告质量"专项评测（信息提取完整性 × 事实准确性 × 格式合规性）</li>
+<li><strong>BAAgent</strong>：经营分析的评测维度应该是"数据准确率 × 有价值率 × 洞察深度"，而不是 GPQA</li>
+<li><strong>TRSAgent</strong>：邮件分类+回复的质量必须用带标注金标准的数据集做回归测试</li>
+<li><strong>FxAgent</strong>：换汇咨询的"有用性"只能由真实用户反馈+专家抽样复核来衡量</li>
+</ul></p>
+</section>
+
+<!-- ============================================================ -->
+<section id="evolution">
+<h2><span class="sec-num">4</span> 演进 —— 2024-2026 评测体系格局剧变</h2>
+
+<h3>4.1 LLM Benchmark 的军备竞赛与内卷</h3>
+<p>2024-2026 年，公开 Benchmark 经历了一个完整的生命周期：<strong>发布 → 刷榜 → 饱和 → 退役 → 替代</strong>。</p>
+
+<table>
+<tr><th>阶段</th><th>时间</th><th>标志性事件</th><th>教训</th></tr>
+<tr><td>爆发期</td><td>2023-2024</td><td>MMLU/HumanEval/SWE-bench 成为标配</td><td>Benchmark = 模型能力的通用语言</td></tr>
+<tr><td>刷榜期</td><td>2024-2025</td><td>各厂商针对 Benchmark 优化（contamination）</td><td>分数不再反映通用能力</td></tr>
+<tr><td>饱和期</td><td>2025 H2</td><td>HumanEval 94%+, SWE-v 80.9%, MMLU Top差距&lt;3%</td><td>区分度丧失</td></tr>
+<tr><td>退役潮</td><td>2026.02-03</td><td>OpenAI 官宣退役 SWE-bench Verified</td><td>承认 59.4% 测试缺陷</td></tr>
+<tr><td>新范式</td><td>2026+</td><td>SWE-bench Pro / LiveCodeBench / LiveBench</td><td>抗污染 + 动态更新 + 企业级复杂度</td></tr>
+</table>
+
+<h3>4.2 2026 年主流模型 Benchmark 表现</h3>
+<p>基于 DataLearner + Codesota + Mason AI Lab 数据汇总（2026 年 5 月最新）：</p>
+
+<table>
+<tr><th>模型</th><th>MMLU</th><th>HumanEval</th><th>MT-Bench</th><th>GPQA</th><th>备注</th></tr>
+<tr><td>GPT-5.4</td><td>~92.1</td><td>96.3</td><td>9.5</td><td>~79</td><td>综合最强</td></tr>
+<tr><td>Claude Opus 4.7</td><td>91.5</td><td>—</td><td>—</td><td>—</td><td>SWE-Pro 64.3%领先</td></tr>
+<tr><td>Gemini 3.1 Pro</td><td>92.6</td><td>94.2</td><td>9.3</td><td>—</td><td>Google 顶配</td></tr>
+<tr><td>DeepSeek V3.2</td><td>—</td><td>—</td><td>—</td><td>—</td><td>开源最强,MoE</td></tr>
+<tr><td>DeepSeek-V3.1 (思考)</td><td><tspan font-weight="600">93.40</tspan></td><td>—</td><td>—</td><td>—</td><td>MMLU SOTA</td></tr>
+<tr><td>Kimi K2.5</td><td>—</td><td>—</td><td>—</td><td>—</td><td>超长上下文</td></tr>
+<tr><td>GLM-5</td><td>49.8pts(综合)</td><td>—</td><td>—</td><td>—</td><td>国产, SWE-Pro超Opus4.6</td></tr>
+<tr><td>Llama 4 Scout</td><td>—</td><td>—</td><td>—</td><td>—</td><td>Meta 开源旗舰</td></tr>
+<tr><td>MiniMax M2.5</td><td>#1 使用量</td><td>—</td><td>—</td><td>—</td><td>Agent 能力突出</td></tr>
+</table>
+
+<h3>4.3 Chatbot Arena：最难刷的评测</h3>
+<p>Chatbot Arena（又称 Arena AI/LMSYS Arena）是人类盲评投票排名系统，采用 ELO 分数。它的不可替代性在于：<strong>你没法针对"人类喜好"做针对性优化</strong>——至少目前还不行。</p>
+
+<div class="card intuition">
+  <div class="card-title">🏆 Arena 为什么难以被 Gaming？</div>
+  <p>① <strong>动态题库</strong>：用户提交的真实问题，无法提前准备<br>
+  ② <strong>主观但集体理性</strong>：单个用户有偏好，但数千票后 ELO 收敛<br>
+  ③ <strong>匿名盲评</strong>：用户不知道哪个模型是哪个，消除了品牌偏见<br>
+  ④ <strong>长尾覆盖</strong>：涵盖各种语言/领域/风格的长尾场景</p>
+</div>
+
+<h3>4.4 开源评测框架生态（2026）</h3>
+<table>
+<tr><th>框架</th><th>定位</th><th>核心特性</th><th>维护方</th></tr>
+<tr><td><strong>DeepEval</strong></td><td>LLM-as-Judge SDK</td><td>G-Eval / Arena G-Eval / 多轮 Agent 评测 / 与 LangGraph 深度整合</td><td>Confident AI</td></tr>
+<tr><td><strong>EvalScope</strong></td><td>全栈评测平台</td><td>100+ 数据集 / Agent Evaluation Mode / Web Dashboard / TokenSpeed 性能评测 / TIR-Bench</td><td>ModelScope (阿里)</td></tr>
+<tr><td><strong>OpenAI Evals</strong></td><td>官方评测框架</td><td>内置多种评测模板(事实性/风格/安全) / LLM Judge</td><td>OpenAI</td></tr>
+<tr><td><strong>LangSmith</strong></td><td>Agent 可观测平台</td><td>Trace / Dataset / Evaluate / Annotation / 在线评测</td><td>LangChain</td></tr>
+</table>
+
+<div class="card takeaway">
+  <div class="card-title">📌 2026 评测体系的五个共识</div>
+  <ol>
+    <li><strong>Benchmark 分数不代表你的场景表现</strong>——必须建自己的评测集</li>
+    <li><strong>静态 Benchmark 必然被污染</strong>——动态更新(SWE-Live/LiveCodeBench)是趋势</li>
+    <li><strong>LLM-as-Judge 是默认方案</strong>——但需注意偏差缓解(Jason Wei 一致性优先原则)</li>
+    <li><strong>Agent 评测必须看端到端+成本</strong>——不只是"对不对"，还要看"多少钱""多久"</li>
+    <li><strong>评测必须嵌入 CI/CD</strong>——一次性评测无意义，持续回归才是工程化</li>
+  </ol>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<section id="connect">
+<h2><span class="sec-num">5</span> 与产品连接 —— Fitz 的三层 Agent 评测体系实战</h2>
+
+<h3>5.1 从理论到实践：Fitz 的五条 Agent 该怎么评测？</h3>
+<p>T1 D6 这一章的知识直接服务于一个实际问题：<strong>你管理的 5 个生产级 Agent，各自应该用什么评测体系？</strong></p>
+
+<div class="diagram">
+<p style="font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px;">Fitz 五条 Agent 评测矩阵</p>
+<svg viewBox="0 0 680 300" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+
+  <!-- 表头 -->
+  <rect x="20" y="15" width="640" height="28" rx="4" fill="#EEEDFE"/>
+  <text x="100" y="33" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="600">Agent</text>
+  <text x="230" y="33" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="600">L1 行为级</text>
+  <text x="360" y="33" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="600">L2 路由级</text>
+  <text x="500" y="33" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="600">L3 知识级</text>
+  <text x="620" y="33" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="600">Judge 方式</text>
+
+  <!-- DDAgent 行 -->
+  <rect x="20" y="48" width="95" height="46" rx="4" fill="#E6F1FB"/>
+  <text x="67" y="68" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="600">DDAgent</text>
+  <text x="67" y="84" text-anchor="middle" fill="#6B6B6B" font-size="9">尽调</text>
+  <rect x="120" y="48" width="115" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="177" y="63" text-anchor="middle" fill="#1D9E75" font-size="10">预填率 83%</text>
+  <text x="177" y="77" text-anchor="middle" fill="#1D9E75" font-size="10">接受率 95%</text>
+  <text x="177" y="89" text-anchor="middle" fill="#999" font-size="9">(BOCHK)</text>
+  <rect x="240" y="48" width="115" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="297" y="63" text-anchor="middle" fill="#BA7517" font-size="10">路由命中率 100%</text>
+  <text x="297" y="79" text-anchor="middle" fill="#999" font-size="9">Dispatcher v2.0</text>
+  <rect x="360" y="48" width="135" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="427" y="63" text-anchor="middle" fill="#993556" font-size="10">HQA 条目引用精度</text>
+  <text x="427" y="79" text-anchor="middle" fill="#999" font-size="9">86主题/443 HQA</text>
+  <rect x="500" y="48" width="115" height="46" rx="4" fill="#E6F9F3"/>
+  <text x="557" y="63" text-anchor="middle" fill="#1D9E75" font-size="10">规则+LLM Judge</text>
+  <text x="557" y="79" text-anchor="middle" fill="#999" font-size="9">格式+事实双检</text>
+
+  <!-- BAAgent 行 -->
+  <rect x="20" y="99" width="95" height="46" rx="4" fill="#E6F1FB"/>
+  <text x="67" y="119" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="600">BAAgent</text>
+  <text x="67" y="135" text-anchor="middle" fill="#6B6B6B" font-size="9">经营分析</text>
+  <rect x="120" y="99" width="115" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="177" y="114" text-anchor="middle" fill="#1D9E75" font-size="10">数据准确率 100%</text>
+  <text x="177" y="128" text-anchor="middle" fill="#1D9E75" font-size="10">有价值率 85%</text>
+  <text x="177" y="140" text-anchor="middle" fill="#999" font-size="9">(脚本强校验)</text>
+  <rect x="240" y="99" width="115" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="297" y="119" text-anchor="middle" fill="#BA7517" font-size="10">Summary→Insight</text>
+  <text x="297" y="135" text-anchor="middle" fill="#999" font-size="9">四层递进</text>
+  <rect x="360" y="99" width="135" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="427" y="114" text-anchor="middle" fill="#993556" font-size="10">业务Context护城河</text>
+  <text x="427" y="130" text-anchor="middle" fill="#999" font-size="9">三层Context验证</text>
+  <rect x="500" y="99" width="115" height="46" rx="4" fill="#E6F9F3"/>
+  <text x="557" y="114" text-anchor="middle" fill="#1D9E75" font-size="10">业务专家抽检</text>
+  <text x="557" y="130" text-anchor="middle" fill="#999" font-size="9">+数据脚本验证</text>
+
+  <!-- KBA 行 -->
+  <rect x="20" y="150" width="95" height="46" rx="4" fill="#E6F1FB"/>
+  <text x="67" y="170" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="600">KBA</text>
+  <text x="67" y="186" text-anchor="middle" fill="#6B6B6B" font-size="9">知识库</text>
+  <rect x="120" y="150" width="115" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="177" y="165" text-anchor="middle" fill="#1D9E75" font-size="10">Format→Build→Sync</text>
+  <text x="177" y="181" text-anchor="middle" fill="#999" font-size="9">流水线成功率</text>
+  <rect x="240" y="150" width="115" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="297" y="170" text-anchor="middle" fill="#BA7517" font-size="10">86主题/443 HQA</text>
+  <text x="297" y="184" text-anchor="middle" fill="#999" font-size="9">覆盖率</text>
+  <rect x="360" y="150" width="135" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="427" y="165" text-anchor="middle" fill="#993556" font-size="10">知识时效性</text>
+  <text x="427" y="181" text-anchor="middle" fill="#999" font-size="9">版本追踪</text>
+  <rect x="500" y="150" width="115" height="46" rx="4" fill="#E6F9F3"/>
+  <text x="557" y="165" text-anchor="middle" fill="#1D9E75" font-size="10">规则为主</text>
+  <text x="557" y="181" text-anchor="middle" fill="#999" font-size="9">格式+覆盖率检查</text>
+
+  <!-- FxAgent 行 -->
+  <rect x="20" y="201" width="95" height="46" rx="4" fill="#E6F1FB"/>
+  <text x="67" y="221" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="600">FxAgent</text>
+  <text x="67" y="237" text-anchor="middle" fill="#6B6B6B" font-size="9">换汇咨询</text>
+  <rect x="120" y="201" width="115" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="177" y="216" text-anchor="middle" fill="#1D9E75" font-size="10">AI采纳率 98-99.75%</text>
+  <text x="177" y="232" text-anchor="middle" fill="#999" font-size="9">40万MAU</text>
+  <rect x="240" y="201" width="115" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="297" y="221" text-anchor="middle" fill="#BA7517" font-size="10">日均250次咨询</text>
+  <text x="297" y="235" text-anchor="middle" fill="#999" font-size="9">响应延迟</text>
+  <rect x="360" y="201" width="135" height="46" rx="4" fill="#f5f5f2"/>
+  <text x="427" y="216" text-anchor="middle" fill="#993556" font-size="10">汇率准确性</text>
+  <text x="427" y="232" text-anchor="middle" fill="#999" font-size="9">实时行情校验</text>
+  <rect x="500" y="201" width="115" height="46" rx="4" fill="#E6F9F3"/>
+  <text x="557" y="216" text-anchor="middle" fill="#1D9E75" font-size="10">用户反馈+A/B</text>
+  <text x="557" y="232" text-anchor="middle" fill="#999" font-size="9">满意度调研</text>
+
+  <!-- TRSAgent 行 -->
+  <rect x="20" y="252" width="95" height="38" rx="4" fill="#E6F1FB"/>
+  <text x="67" y="270" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="600">TRSAgent</text>
+  <text x="67" y="284" text-anchor="middle" fill="#6B6B6B" font-size="9">售后邮件</text>
+  <rect x="120" y="252" width="115" height="38" rx="4" fill="#E6F9F3"/>
+  <text x="177" y="267" text-anchor="middle" fill="#1D9E75" font-size="10">分类92.2% (+19.4pp)</text>
+  <text x="177" y="282" text-anchor="middle" fill="#1D9E75" font-size="10">解决率85.9%</text>
+  <rect x="240" y="252" width="115" height="38" rx="4" fill="#f5f5f2"/>
+  <text x="297" y="270" text-anchor="middle" fill="#BA7517" font-size="10">206封测试集</text>
+  <rect x="360" y="252" width="135" height="38" rx="4" fill="#f5f5f2"/>
+  <text x="427" y="270" text-anchor="middle" fill="#993556" font-size="10">邮件意图分类精度</text>
+  <rect x="500" y="252" width="115" height="38" rx="4" fill="#E6F9F3"/>
+  <text x="557" y="270" text-anchor="middle" fill="#1D9E75" font-size="10">Claude+Python</text>
+  <text x="557" y="284" text-anchor="middle" fill="#999" font-size="9">金标准+自动</text>
+
+</svg>
+</div>
+
+<h3>5.2 三层评测体系的落地路径</h3>
+<p>Fitz 已经建立了 L1(行为级) / L2(路由级) / L3(知识级) 三层框架。本章知识的增量价值在于：</p>
+
+<div class="card pink">
+  <div class="card-title">🔧 可以立即改进的三件事</div>
+  <p><strong>① 给每个 Agent 建"金标准回归集"</strong><br>
+  TRSAgent 的 206 封测试邮件是最佳实践——其他 4 条 Agent 也应建立类似规模的金标准集，嵌入 CI/CD 每次 Prompt/模型变更时自动回归。</p>
+  <p><strong>② 引入 LLM-as-Judge 做 L3 知识级评测</strong><br>
+  DDAgent 的尽调报告质量、BAAgent 的 Insight 深度——这些主观维度用 GPT-4/Claude 做 Judge，配合 Few-shot 示例，可以达到 85%+ 人机一致性。</p>
+  <p><strong>③ 建立 Agent 专属"Live Benchmark"</strong><br>
+  参考 SWE-bench-Live 的思路，每月往测试集注入新的真实用户案例（DDAgent 新增的企业类型、FxAgent 新增的汇率品种、TRSAgent 新出现的邮件模板），防止评测集被隐性污染。</p>
+</div>
+
+<h3>5.3 评测投入的 ROI 判断框架</h3>
+<p>不是所有 Agent 都值得同等级别的评测投入。PM 需要做取舍：</p>
+
+<table>
+<tr><th>Agent</th><th>出错代价</th><th>用户可见度</th><th>推荐评测等级</th></tr>
+<tr><td><strong>TRSAgent</strong></td><td>极高（资金损失/合规风险）</td><td>高（客户直接感知）</td><td>L1+L2+L3 全套 + 金标准集 + 持续回归</td></tr>
+<tr><td><strong>DDAgent</strong></td><td>高（尽调失误→合规风险）</td><td>中（内部使用者）</td><td>L1+L2 + LLM Judge 抽检 + 月度人工审核</td></tr>
+<tr><td><strong>FxAgent</strong></td><td>中（错误汇率建议）</td><td>极高（40万 MAU）</td><td>L1 用户反馈 + L2 A/B Test + L3 汇率实时校验</td></tr>
+<tr><td><strong>BAAgent</strong></td><td>低（决策参考性质）</td><td>低（管理层小范围）</td><td>L1 数据脚本验证 + L3 专家季度审核</td></tr>
+<tr><td><strong>KBA</strong></td><td>低（知识不准确可修正）</td><td>低（内部工具）</td><td>L1 流水线成功率 + L2 覆盖率规则检查</td></tr>
+</table>
+
+<div class="card takeaway">
+  <div class="card-title">🎯 本章核心结论</div>
+  <p><strong>评测不是学术练习，是 Agent 工程化的基础设施。</strong>正如你不会不跑测试就部署代码，也不应不评测就上线 Agent。Fitz 的三层体系已经有了正确的骨架——接下来是用 LLM-as-Judge + 金标准回归集 + Live Benchmark 把骨架变成活的免疫系统。</p>
+  <p style="margin-top:6px;"><strong>主线定位</strong>：T1 D6.1 回答了"如何判断模型和Agent好不好用"——这是 T2 A4 Harness 六组件中"Evaluate 评估反馈闭环"的理论基础。没有评测就没有反馈，没有反馈就没有闭环， Harness 就缺了一条腿。</p>
+</div>
+</section>
+
+<div class="chapter-footer">
+  <a href="../../../INDEX.html">← 返回知识图谱</a>
+  <a href="6.1-benchmark-judge-quiz.html">📝 去做 Quiz（10 题）→</a>
+</div>
+
+</body>
+</html>

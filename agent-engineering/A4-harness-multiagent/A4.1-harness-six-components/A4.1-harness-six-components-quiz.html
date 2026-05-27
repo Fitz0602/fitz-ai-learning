@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz · A4.1 Harness 六组件</title>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--teal-bg);color:#0F6E56}
+.tag-chapter{background:var(--purple-bg);color:var(--purple)}
+h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted)}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.quiz-section{margin-top:28px;padding-top:16px;border-top:1px solid #E8E8E4}
+.quiz-section h2{font-size:16px;font-weight:600;margin-bottom:12px;color:var(--purple)}
+.q-card{background:#fff;border:1px solid #E8E8E4;border-radius:10px;padding:16px 18px;margin:12px 0;transition:border-color 0.2s}
+.q-card .q-id{font-size:10px;color:var(--muted);margin-bottom:4px;font-family:monospace}
+.q-card .q-text{font-size:14px;font-weight:500;margin-bottom:10px}
+.q-card .q-options{display:flex;flex-direction:column;gap:6px}
+.q-card .q-opt{padding:8px 12px;border:1px solid #E0E0DC;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.15s}
+.q-card .q-opt:hover{border-color:var(--purple);background:var(--purple-bg)}
+.q-card .q-opt.correct{background:var(--teal-bg);border-color:var(--teal);color:var(--teal);font-weight:500}
+.q-card .q-opt.wrong{background:var(--coral-bg);border-color:var(--coral);color:var(--coral);font-weight:500}
+.q-card .q-opt.disabled{pointer-events:none;opacity:0.6}
+.q-card .q-explain{display:none;margin-top:8px;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.6}
+.q-card .q-explain.show{display:block}
+.q-card .q-explain.correct-exp{background:var(--teal-bg);color:#0F6E56}
+.q-card .q-explain.wrong-exp{background:var(--coral-bg);color:#7A2F15}
+.score-box{margin-top:28px;padding:18px 20px;border-radius:10px;background:var(--purple-bg);text-align:center}
+.score-box .score-num{font-size:36px;font-weight:700;color:var(--purple)}
+.score-box .score-msg{font-size:14px;color:var(--purple);margin-top:4px}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">T2 Agent 工程</span>
+<span class="tag tag-chapter">A4.1 Quiz</span>
+<a href="A4.1-harness-six-components-chapter.html" class="nav-link">&larr; 返回章节</a>
+<a href="../../INDEX.html" class="nav-link">知识图谱</a>
+</div>
+<h1>A4.1 Harness 六组件 &middot; 10 题测验</h1>
+<p class="subtitle">每节 2 题：1 题概念辨析 + 1 题判断/应用 &middot; 点击选项即出结果</p>
+</div>
+
+<!-- §① 是什么 -->
+<div class="quiz-section">
+<h2>① 是什么 — Harness 的直觉与动机</h2>
+
+<div class="q-card" data-q="1">
+<div class="q-id">T2-A4.1-①-1</div>
+<div class="q-text">LangChain 在 TerminalBench 2.0 实验中，将 Agent 准确率从 52.8% 提升至 66.5%，他们做了什么改变？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 将 GPT-5.2-Codex 升级为 GPT-5.4</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. 仅优化 Harness（上下文中间件、验证循环、推理预算等），模型不变</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">C. 增加 Agent 数量，从单 Agent 改为三 Agent 协作</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. 更换基准测试为更简单的数据集</div>
+</div>
+<div class="q-explain">正确答案是 B。LangChain 实验的关键发现是：同一模型（GPT-5.2-Codex），仅通过优化 Harness 组件（上下文中间件、自我验证循环、推理预算分配、循环检测等），准确率提升了 13.7 个百分点，从 Top 30 升至 Top 5。这直接证明了 Harness > 模型升级。→ <a href="A4.1-harness-six-components-chapter.html#is">§①</a></div>
+</div>
+
+<div class="q-card" data-q="2">
+<div class="q-id">T2-A4.1-①-2</div>
+<div class="q-text">判断：Harness 是模型内部优化的一部分，比如 RLHF 训练过程。</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 正确 — Harness 指的是模型训练时的对齐技术</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. 错误 — Harness 是模型和应用之间的工程系统，不涉及模型训练</div>
+</div>
+<div class="q-explain">正确答案是 B。Harness 不是模型的一部分，也不是应用业务逻辑。它是模型和应用之间的"工程化支撑系统"，包含上下文、约束、工具、验证、记忆、反馈六个维度。模型训练（如 RLHF）改变模型权重，Harness 改变模型运行的"环境"。→ <a href="A4.1-harness-six-components-chapter.html#is">§①</a></div>
+</div>
+</div>
+
+<!-- §② 怎么实现 -->
+<div class="quiz-section">
+<h2>② 怎么实现 — 六组件完整解构</h2>
+
+<div class="q-card" data-q="3">
+<div class="q-id">T2-A4.1-②-1</div>
+<div class="q-text">Fitz 六组件框架中，"Scaffolding"组件的核心设计原则是什么？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 给 Agent 更多选项，让它自主选择最优路径</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. 约束解空间——更少的有效选项 = 更少的错误答案</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">C. 让 Agent 尽可能长时间运行，减少人为干预</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. 只在 Agent 犯错后才添加约束</div>
+</div>
+<div class="q-explain">正确答案是 B。Scaffolding 的设计原则是"约束解空间而非扩大它"——通过 SOP、检查清单、Linter、类型检查等方式，减少 Agent 可以走的错误路径。这不是限制能力，而是引导到正确路径。→ <a href="A4.1-harness-six-components-chapter.html#how">§②</a></div>
+</div>
+
+<div class="q-card" data-q="4">
+<div class="q-id">T2-A4.1-②-2</div>
+<div class="q-text">在行业分解对比中，Fitz 六组件框架与 OpenAI 三层分解的关键差异是什么？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. Fitz 框架少了 Memory 组件</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. Fitz 把 Goal Boundary 和 Memory 独立为顶层组件，而 OpenAI 归入"架构约束"和"生命周期管理"</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">C. Fitz 框架不包含 Feedback 组件</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. 两者完全一致，只是命名不同</div>
+</div>
+<div class="q-explain">正确答案是 B。Fitz 六组件框架与行业分解的关键差异：Goal Boundary 和 Memory 被独立为顶层组件。OpenAI 把目标归入"架构约束"、把记忆归入"生命周期管理"，但在 DDAgent 实践中，目标边界和记忆是错误最集中的地方，值得独立关注。→ <a href="A4.1-harness-six-components-chapter.html#how">§②</a></div>
+</div>
+</div>
+
+<!-- §③ 为什么 -->
+<div class="quiz-section">
+<h2>③ 为什么 — 第一性原理</h2>
+
+<div class="q-card" data-q="5">
+<div class="q-id">T2-A4.1-③-1</div>
+<div class="q-text">Harness 之所以比模型更重要，以下哪个不是理由？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 模型正在趋同，Harness 是差异化壁垒</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. 模型的推理能力已经达到了理论上限，不可能再提升</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">C. 错误在多步 Agent 轨迹中会复利，Harness 的 Gate 机制可以打断复利链</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. 模型权重不可控，但 Harness 的每个组件都可以设计和迭代</div>
+</div>
+<div class="q-explain">正确答案是 B。说"模型推理能力已到理论上限"是不对的——模型仍在持续进化。Harness 更重要的三个理由是：①模型趋同而 Harness 分化（差异化壁垒），②错误复利效应（Gate 打断链），③模型不可控但 Harness 可控。理由不是"模型不能再提升"，而是"即便模型提升，Harness 带来的增量可能更大"。→ <a href="A4.1-harness-six-components-chapter.html#why">§③</a></div>
+</div>
+
+<div class="q-card" data-q="6">
+<div class="q-id">T2-A4.1-③-2</div>
+<div class="q-text">一个 10 步 Agent 轨迹中，每步错误率 5%。如果插入 Gate 机制能检出 90% 的错误，整体成功率从约 60% 提升到约多少？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 约 70%</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. 约 95%</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">C. 约 80%</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. 约 99%</div>
+</div>
+<div class="q-explain">正确答案是 B。无 Gate：(1-0.05)^10 ≈ 60%。有 Gate：单步失败率从 5% 降至 0.5%（5% × 10% 未检出率），(1-0.005)^10 ≈ 95%。Gate 机制把复利链打断，效果从勉强及格变为高度可靠。→ <a href="A4.1-harness-six-components-chapter.html#why">§③</a></div>
+</div>
+</div>
+
+<!-- §④ 演进 -->
+<div class="quiz-section">
+<h2>④ 演进 — 三层跃迁与 2026 成词</h2>
+
+<div class="q-card" data-q="7">
+<div class="q-id">T2-A4.1-④-1</div>
+<div class="q-text">Anthropic 的三角色系统（Planner/Generator/Evaluator）中，Evaluator 的核心价值是什么？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 替代 Generator 直接编写代码</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. 在模型能力边界附近仍能带来明显增益——即使模型已经很强，独立评估仍能发现 Generator 自检遗漏的问题</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">C. 降低系统成本，因为不需要人类参与</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. 仅用于训练新的模型权重</div>
+</div>
+<div class="q-explain">正确答案是 B。Anthropic 实验的关键发现：Evaluator 在模型能力边界附近仍能带来明显增益。Generator 容易"自认为完成"（self-check bias），而独立的 Evaluator 用 Playwright 浏览器自动化进行客观评分，能发现自检遗漏。成本虽高 20 倍（$200 vs $9），但输出质量是质的飞跃。→ <a href="A4.1-harness-six-components-chapter.html#evolution">§④</a></div>
+</div>
+
+<div class="q-card" data-q="8">
+<div class="q-id">T2-A4.1-④-2</div>
+<div class="q-text">判断：Prompt Engineering、Context Engineering、Harness Engineering 三者是替代关系，后者淘汰前者。</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 正确 — Harness Engineering 出现后，不再需要 Prompt 和 Context Engineering</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. 错误 — 三者是层层递进、相互兼容的能力升维，不是替代</div>
+</div>
+<div class="q-explain">正确答案是 B。三者不是替代关系，而是层层递进、相互兼容：Prompt Engineering 是基础（意图对齐），Context Engineering 是进阶（信息供给），Harness Engineering 是全景（系统工程）。即便在 Harness Engineering 时代，写好 Prompt 和管好上下文仍然是基本功。→ <a href="A4.1-harness-six-components-chapter.html#evolution">§④</a></div>
+</div>
+</div>
+
+<!-- §⑤ 产品 -->
+<div class="quiz-section">
+<h2>⑤ 产品连接 — DDAgent Harness 逐组件审视</h2>
+
+<div class="q-card" data-q="9">
+<div class="q-id">T2-A4.1-⑤-1</div>
+<div class="q-text">用 Fitz 六组件审视 DDAgent，哪个组件是当前最大瓶颈？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. Goal Boundary — Dispatcher 路由经常出错</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">B. Feedback — Auditor 机制不够完善</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">C. Memory — 跨会话记忆薄弱，缺少案例库和程序性记忆</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. Tools — 银行工具覆盖不足</div>
+</div>
+<div class="q-explain">正确答案是 C。DDAgent 的 Memory 组件评分仅 2 星（最低），主要问题：跨会话记忆薄弱，缺少历史案例库，没有程序性记忆（相似场景自动复用最优路径）。而 Goal Boundary 和 Feedback 已达到 4 星水平。按"找瓶颈集中火力"原则，Memory 应该优先改进。→ <a href="A4.1-harness-six-components-chapter.html#connect">§⑤</a></div>
+</div>
+
+<div class="q-card" data-q="10">
+<div class="q-id">T2-A4.1-⑤-2</div>
+<div class="q-text">DDAgent 的 Auditor（只标不改）设计，体现了 Fitz 六组件中哪个组件的什么原则？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. Scaffolding 的"给 Agent 更多自由度"原则</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. Feedback 的 Gate 机制——质量门槛而非修改工具，让 Agent 自己修正</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">C. Goal Boundary 的"扩大 Agent 权限"原则</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. Memory 的"持久化状态"原则</div>
+</div>
+<div class="q-explain">正确答案是 B。DDAgent 的 Auditor "只标不改"是 Feedback 组件中 Gate 机制的典型实现：Auditor 是质量门槛（标出问题），而不是修改工具（直接改答案）。这确保了 Agent 被迫自己理解和修正错误，而不是依赖 Auditor 代劳。→ <a href="A4.1-harness-six-components-chapter.html#connect">§⑤</a></div>
+</div>
+</div>
+
+<!-- 得分区 -->
+<div class="score-box" id="scoreBox" style="display:none;">
+<div class="score-num" id="scoreNum">0/10</div>
+<div class="score-msg" id="scoreMsg"></div>
+</div>
+
+<div class="chapter-footer">
+<a href="A4.1-harness-six-components-chapter.html">&larr; 返回章节</a>
+<a href="../../INDEX.html">知识图谱</a>
+</div>
+
+<script>
+let total = 10;
+let answered = 0;
+let correct = 0;
+
+function handleAnswer(el) {
+  const card = el.closest('.q-card');
+  if (card.dataset.answered) return;
+  card.dataset.answered = 'true';
+  answered++;
+
+  const isCorrect = el.dataset.correct === 'true';
+  const explain = card.querySelector('.q-explain');
+
+  // Mark all options
+  const opts = card.querySelectorAll('.q-opt');
+  opts.forEach(opt => {
+    opt.classList.add('disabled');
+    if (opt.dataset.correct === 'true') {
+      opt.classList.add('correct');
+    }
+  });
+
+  if (isCorrect) {
+    el.classList.add('correct');
+    correct++;
+    explain.className = 'q-explain show correct-exp';
+  } else {
+    el.classList.add('wrong');
+    explain.className = 'q-explain show wrong-exp';
+  }
+
+  // Update score
+  if (answered === total) {
+    const box = document.getElementById('scoreBox');
+    const num = document.getElementById('scoreNum');
+    const msg = document.getElementById('scoreMsg');
+    box.style.display = 'block';
+    num.textContent = correct + '/' + total;
+    if (correct <= 4) msg.textContent = '建议重读章节，重点关注错误率高的部分';
+    else if (correct <= 7) msg.textContent = '掌握良好，部分概念还需加深理解';
+    else if (correct <= 9) msg.textContent = '理解扎实！可以尝试在实际项目中应用';
+    else msg.textContent = '满分！你是 Harness 工程的行家了 🎯';
+  }
+}
+</script>
+</body>
+</html>

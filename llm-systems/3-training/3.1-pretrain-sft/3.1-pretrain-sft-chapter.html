@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3.1 预训练 + SFT · T1 LLM 系统</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card-bg:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--amber-bg);color:var(--amber)}
+.tag-chapter{background:var(--blue-bg);color:var(--blue)}
+.tag-status{background:var(--teal-bg);color:var(--teal)}
+h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:4px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.progress-nav{display:flex;gap:4px;margin:16px 0 0;flex-wrap:wrap}
+.progress-nav a{font-size:11px;padding:3px 8px;border-radius:8px;text-decoration:none;background:var(--purple-bg);color:var(--purple);font-weight:500}
+.progress-nav a.done{background:var(--teal-bg);color:var(--teal)}
+section{margin-top:36px;padding-top:20px;border-top:1px solid #E8E8E4}
+section h2{font-size:20px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;padding:2px 8px;border-radius:8px}
+h3{font-size:16px;font-weight:600;margin:16px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--amber-bg);border-color:var(--amber)}
+.card.takeaway{background:var(--teal-bg);border-color:var(--teal)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.card.intuition .card-label{color:var(--amber)}
+.card.takeaway .card-label{color:var(--teal)}
+.card.warning .card-label{color:var(--coral)}
+.diagram{margin:20px 0}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid #E0E0DC;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{background:#fff}
+code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;background:#F0F0EC;padding:1px 4px;border-radius:3px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<!-- ====== HEADER ====== -->
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">D3 训练流水线</span>
+<span class="tag tag-chapter">3.1</span>
+<span class="tag tag-status">✅ 完成</span>
+<a href="../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+<a href="3.1-pretrain-sft-quiz.html" class="nav-link">Quiz →</a>
+</div>
+<h1>3.1 预训练 + SFT</h1>
+<p class="subtitle">建世界观 + 教指令格式 — 从"续写机器"到"听话助手"的第一步</p>
+<div class="spine-link">主线连接：模型如何从互联网语料学会世界知识，再被教会按指令行事</div>
+<nav class="progress-nav">
+<a href="#is" class="done">① 是什么 ✓</a>
+<a href="#how" class="done">② 怎么实现 ✓</a>
+<a href="#why" class="done">③ 为什么 ✓</a>
+<a href="#evolution" class="done">④ 演进 ✓</a>
+<a href="#connect" class="done">⑤ 与产品 ✓</a>
+</nav>
+</div>
+
+<!-- ====== 章节一览图 ====== -->
+<div class="diagram">
+<p>章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 340" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ov-arr31" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- ① 紫 -->
+<rect x="20" y="20" width="120" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="80" y="45" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">① 是什么</text>
+<text x="80" y="63" text-anchor="middle" fill="#534AB7" font-size="10">预训练+SFT直觉</text>
+<line x1="140" y1="50" x2="168" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr31)"/>
+<!-- ② 蓝 -->
+<rect x="170" y="20" width="120" height="60" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="230" y="45" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="700">② 怎么实现</text>
+<text x="230" y="63" text-anchor="middle" fill="#185FA5" font-size="10">数据+训练+LoRA</text>
+<line x1="290" y1="50" x2="318" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr31)"/>
+<!-- ③ 琥珀 -->
+<rect x="320" y="20" width="120" height="60" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="380" y="45" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">③ 为什么</text>
+<text x="380" y="63" text-anchor="middle" fill="#BA7517" font-size="10">设计取舍本质</text>
+<line x1="440" y1="50" x2="468" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr31)"/>
+<!-- ④ 紫浅 -->
+<rect x="470" y="20" width="120" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="530" y="45" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">④ 演进格局</text>
+<text x="530" y="63" text-anchor="middle" fill="#534AB7" font-size="10">2024-2026数据战</text>
+<line x1="590" y1="50" x2="618" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr31)"/>
+<!-- ⑤ 绿 -->
+<rect x="620" y="20" width="50" height="60" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="645" y="45" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="700">⑤</text>
+<text x="645" y="63" text-anchor="middle" fill="#1D9E75" font-size="10">产品</text>
+<!-- 下方展开说明 -->
+<line x1="80" y1="80" x2="80" y2="110" stroke="#534AB7" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="10" y="112" width="140" height="50" rx="8" fill="#fff" stroke="#534AB7" stroke-width="1"/>
+<text x="80" y="133" text-anchor="middle" fill="#534AB7" font-size="10">预训练=通读图书馆</text>
+<text x="80" y="149" text-anchor="middle" fill="#534AB7" font-size="10">SFT=上岗培训</text>
+
+<line x1="230" y1="80" x2="230" y2="110" stroke="#185FA5" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="155" y="112" width="150" height="50" rx="8" fill="#fff" stroke="#185FA5" stroke-width="1"/>
+<text x="230" y="133" text-anchor="middle" fill="#185FA5" font-size="10">数据配比决定能力</text>
+<text x="230" y="149" text-anchor="middle" fill="#185FA5" font-size="10">LoRA只调1%参数</text>
+
+<line x1="380" y1="80" x2="380" y2="110" stroke="#BA7517" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="305" y="112" width="150" height="50" rx="8" fill="#fff" stroke="#BA7517" stroke-width="1"/>
+<text x="380" y="133" text-anchor="middle" fill="#BA7517" font-size="10">为什么不直接SFT？</text>
+<text x="380" y="149" text-anchor="middle" fill="#BA7517" font-size="10">数据质量>数量</text>
+
+<line x1="530" y1="80" x2="530" y2="110" stroke="#534AB7" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="455" y="112" width="150" height="50" rx="8" fill="#fff" stroke="#534AB7" stroke-width="1"/>
+<text x="530" y="133" text-anchor="middle" fill="#534AB7" font-size="10">合成数据+退火</text>
+<text x="530" y="149" text-anchor="middle" fill="#534AB7" font-size="10">过训练=新常态</text>
+
+<!-- 贯穿箭头 -->
+<line x1="80" y1="175" x2="645" y2="175" stroke="#534AB7" stroke-width="1.5" marker-end="url(#ov-arr31)" stroke-dasharray="6 4"/>
+<text x="360" y="195" text-anchor="middle" fill="#534AB7" font-size="10" font-weight="700">贯穿主线：互联网语料 → 世界模型 → 指令跟随</text>
+
+<!-- 产品连接 -->
+<rect x="180" y="220" width="320" height="70" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="340" y="244" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">⑤ 产品连接：Fitz 选模型的决策框架</text>
+<text x="340" y="262" text-anchor="middle" fill="#1D9E75" font-size="10">Base vs Instruct · 领域SFT成本 · DDAgent模型选型</text>
+<text x="340" y="278" text-anchor="middle" fill="#1D9E75" font-size="10">预训练数据配比 → Agent能力天花板</text>
+</svg>
+</div>
+
+<!-- ============================================================ -->
+<!--  §① 是什么                                                     -->
+<!-- ============================================================ -->
+<section id="is">
+<h2><span class="sec-num">①</span> 是什么：预训练建世界观，SFT 教行为格式</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p><strong>预训练 = 通读整座图书馆</strong>。一个学生花了 10 年读遍图书馆里所有书——科学、历史、小说、法律、菜谱、代码……他学会了语言的规律，掌握了大量世界知识，但你让他"帮我写一封道歉信"，他可能给你续写一篇关于道歉的百科词条。</p>
+<p><strong>SFT（监督微调）= 上岗培训</strong>。公司给这个百科全书式的人一套"标准问答手册"：用户说 X，你回答 Y。几轮下来，他就知道"当助手该怎么说"了。</p>
+</div>
+
+<h3>预训练：下一个 Token 预测</h3>
+<p>预训练的核心目标极其简单——<strong>预测下一个 Token</strong>。给定一段文本的前缀，模型需要猜出下一个最可能的 Token 是什么。</p>
+
+<p>形式化地，给定文本序列 $x_1, x_2, \ldots, x_T$，预训练优化的是：</p>
+$$\mathcal{L}_{\text{pretrain}} = -\sum_{t=1}^{T} \log P(x_t \mid x_{<t}; \theta)$$
+
+<p>这个目标看起来平淡无奇，但当你在 <strong>10T+ Tokens</strong> 上优化它时，模型被迫学会：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li><strong>语言结构</strong>：语法、词法、标点用法</li>
+<li><strong>世界知识</strong>：巴黎是法国首都、E=mc²、Python 的 list comprehension</li>
+<li><strong>推理能力</strong>：如果 A>B 且 B>C，则 A>C</li>
+<li><strong>代码逻辑</strong>：函数定义、循环、递归</li>
+</ul>
+
+<p>但预训练模型有一个致命问题：它学的是<strong>"互联网平均水平的文字接龙"</strong>，而不是<strong>"对人类有帮助的回答"</strong>。你发"帮我翻译这句话"，它可能继续生成"帮我翻译这句话的方法有三种……"——因为它在训练数据里见过太多这种格式。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 220" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="is-arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- 预训练 -->
+<rect x="20" y="20" width="280" height="80" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="160" y="48" text-anchor="middle" fill="#534AB7" font-size="13" font-weight="700">预训练（Pretrain）</text>
+<text x="160" y="68" text-anchor="middle" fill="#534AB7" font-size="11">目标：预测下一个 Token</text>
+<text x="160" y="85" text-anchor="middle" fill="#534AB7" font-size="11">产出：Base Model（续写机器）</text>
+
+<line x1="310" y1="60" x2="368" y2="60" stroke="#888780" stroke-width="1.5" marker-end="url(#is-arr1)"/>
+<text x="340" y="50" text-anchor="middle" fill="#888780" font-size="9">+ 指令数据</text>
+
+<!-- SFT -->
+<rect x="370" y="20" width="280" height="80" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="510" y="48" text-anchor="middle" fill="#185FA5" font-size="13" font-weight="700">SFT（监督微调）</text>
+<text x="510" y="68" text-anchor="middle" fill="#185FA5" font-size="11">目标：学会指令-回答格式</text>
+<text x="510" y="85" text-anchor="middle" fill="#185FA5" font-size="11">产出：Instruct Model（听话助手）</text>
+
+<!-- 底部对比 -->
+<rect x="60" y="130" width="240" height="60" rx="8" fill="#fff" stroke="#534AB7" stroke-width="1"/>
+<text x="180" y="152" text-anchor="middle" fill="#534AB7" font-size="10" font-weight="700">Base Model 输出</text>
+<text x="180" y="172" text-anchor="middle" fill="#534AB7" font-size="10">"帮我翻译 → 常见翻译方法有..."</text>
+
+<rect x="380" y="130" width="240" height="60" rx="8" fill="#fff" stroke="#185FA5" stroke-width="1"/>
+<text x="500" y="152" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="700">Instruct Model 输出</text>
+<text x="500" y="172" text-anchor="middle" fill="#185FA5" font-size="10">"帮我翻译 → 这是翻译结果：..."</text>
+</svg>
+</div>
+
+<h3>SFT：从续写到对话</h3>
+<p>SFT 用<strong>指令-回答对</strong>（Instruction-Response Pairs）训练模型。每条数据长这样：</p>
+<div style="background:#F0F0EC;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:13px;">
+<code>用户：帮我解释什么是跨境支付</code><br>
+<code>助手：跨境支付是指不同国家或地区之间的资金转移……</code>
+</div>
+<p>SFT 的损失函数和预训练形式一样（都是下一个 Token 预测），但<strong>只在助手回复部分计算 loss</strong>——用户指令部分不参与梯度更新。这确保模型学的是"怎么回答"，而不是"怎么提问"。</p>
+
+<div class="card takeaway">
+<div class="card-label">核心要点</div>
+<p>预训练和 SFT 本质上做的是同一件事——预测下一个 Token。区别在于<strong>数据</strong>：预训练用无标注的互联网语料，SFT 用精心标注的指令-回答对。数据决定了行为，目标函数只是载体。</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!--  §② 怎么实现                                                    -->
+<!-- ============================================================ -->
+<section id="how">
+<h2><span class="sec-num">②</span> 怎么实现：数据配比 + 训练流程 + 高效微调</h2>
+
+<h3>预训练数据工程：决定模型能力天花板</h3>
+
+<p>2024-2026 的行业共识：<strong>数据质量 > 数据量</strong>。把 100T 垃圾 Tokens 喂进去，不如 10T 干净 Tokens。这就是为什么 Meta、DeepSeek、Qwen 的技术报告都在讲数据工程，而不是模型架构。</p>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>预训练数据配比就像<strong>食谱配方</strong>。同样的食材（算力），同样的锅（架构），谁掌握了最完美的调料比例，谁就能端出米其林级别的菜品。Llama 3.1 的配比是 50% 通用 + 25% 数学 + 17% 代码 + 8% 多语言——这个比例不是拍脑袋定的，而是反复实验的成果。</p>
+</div>
+
+<table>
+<tr><th>模型</th><th>训练 Tokens</th><th>数据配比要点</th><th>合成数据</th></tr>
+<tr><td>Llama 3.1 405B</td><td>15.6T</td><td>50% 通用 + 25% 数学 + 17% 代码 + 8% 多语言</td><td>405B 为小模型合成</td></tr>
+<tr><td>DeepSeek V3</td><td>14.8T</td><td>中英混合（未公开具体比例）</td><td>大量合成推理数据</td></tr>
+<tr><td>DeepSeek V4-Flash</td><td>32T</td><td>V3 翻倍，数据质量进一步提升</td><td>大规模 agentic 合成</td></tr>
+<tr><td>Qwen3</td><td>36T</td><td>119 种语言，多语言能力突出</td><td>部分合成</td></tr>
+<tr><td>Phi-4</td><td>未公开</td><td>~40% 训练数据为合成数据</td><td>合成数据占比最高</td></tr>
+</table>
+
+<h3>预训练数据工程五大核心机制</h3>
+
+<div class="diagram">
+<svg viewBox="0 0 680 300" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="how-arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- 5个机制 -->
+<rect x="20" y="20" width="120" height="65" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="80" y="42" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">质量过滤</text>
+<text x="80" y="58" text-anchor="middle" fill="#534AB7" font-size="9">MinHash去重</text>
+<text x="80" y="72" text-anchor="middle" fill="#534AB7" font-size="9">质量分类器</text>
+
+<line x1="145" y1="52" x2="168" y2="52" stroke="#888780" stroke-width="1" marker-end="url(#how-arr1)"/>
+
+<rect x="170" y="20" width="120" height="65" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="230" y="42" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="700">数据配比</text>
+<text x="230" y="58" text-anchor="middle" fill="#185FA5" font-size="9">通用+数学+代码</text>
+<text x="230" y="72" text-anchor="middle" fill="#185FA5" font-size="9">+多语言</text>
+
+<line x1="295" y1="52" x2="318" y2="52" stroke="#888780" stroke-width="1" marker-end="url(#how-arr1)"/>
+
+<rect x="320" y="20" width="120" height="65" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="380" y="42" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="700">合成数据</text>
+<text x="380" y="58" text-anchor="middle" fill="#BA7517" font-size="9">Phi-4 ~40%</text>
+<text x="380" y="72" text-anchor="middle" fill="#BA7517" font-size="9">大模型→小模型</text>
+
+<line x1="445" y1="52" x2="468" y2="52" stroke="#888780" stroke-width="1" marker-end="url(#how-arr1)"/>
+
+<rect x="470" y="20" width="120" height="65" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="530" y="42" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">数据退火</text>
+<text x="530" y="58" text-anchor="middle" fill="#534AB7" font-size="9">末段混入高质量</text>
+<text x="530" y="72" text-anchor="middle" fill="#534AB7" font-size="9">Cosine末段降温</text>
+
+<!-- 课程学习单独一行 -->
+<rect x="220" y="120" width="240" height="50" rx="8" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="340" y="142" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">课程学习 + 难度自适应训练</text>
+<text x="340" y="158" text-anchor="middle" fill="#1D9E75" font-size="9">EDCO(华为 ICML 2026) · 从易到难 → 当前最该学</text>
+
+<line x1="530" y1="85" x2="530" y2="112" stroke="#534AB7" stroke-width="1" stroke-dasharray="3 3"/>
+<line x1="530" y1="112" x2="460" y2="135" stroke="#1D9E75" stroke-width="1" stroke-dasharray="3 3"/>
+
+<!-- 算力公式 -->
+<rect x="100" y="200" width="480" height="70" rx="8" fill="#fff" stroke="#888780" stroke-width="1"/>
+<text x="340" y="222" text-anchor="middle" fill="#2D2D2D" font-size="12" font-weight="700">训练算力估算</text>
+<text x="340" y="244" text-anchor="middle" fill="#2D2D2D" font-size="11">FLOPs ≈ 6 × N × D</text>
+<text x="340" y="260" text-anchor="middle" fill="#888780" font-size="10">N=参数量, D=训练Tokens, 6=forward 2 + backward 4</text>
+</svg>
+</div>
+
+<h3>数据退火（Data Annealing）</h3>
+<p>这是 2024-2025 的主流工艺。训练末段（Cosine LR schedule 的尾巴），学习率降到很低，此时<strong>混入更高质量的数据</strong>（数学、代码、Wiki）：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li>Cosine 末段自然减速 → 梯度更新幅度小</li>
+<li>已学到的 representation 不会被冲散</li>
+<li>高质量数据在这个"微调窗口"精细打磨能力</li>
+<li>Llama 3 明确使用了这个策略</li>
+</ul>
+
+<h3>SFT 三种微调方法</h3>
+
+<table>
+<tr><th>方法</th><th>可训练参数</th><th>质量</th><th>硬件需求（70B）</th><th>成本</th></tr>
+<tr><td>Full Fine-Tuning</td><td>100%</td><td>基准（最高）</td><td>4-8 × H100</td><td>$1K-5K/次</td></tr>
+<tr><td>LoRA</td><td>1-10%</td><td>85-95%</td><td>1-2 × A100 80GB</td><td>$100-500/次</td></tr>
+<tr><td>QLoRA</td><td>1-10%</td><td>80-90%</td><td>1 × 24GB 消费级 GPU</td><td>$10-30/次</td></tr>
+</table>
+
+<p>LoRA 的核心思想：冻结基础模型，在每个 Transformer 层注入<strong>低秩矩阵</strong> $\Delta W = A \times B$，其中 $A \in \mathbb{R}^{d \times r}$, $B \in \mathbb{R}^{r \times d}$, $r \ll d$。可训练参数从 $d^2$ 降到 $2dr$，通常减少 90-99%。</p>
+
+$$h = W_0 x + \Delta W x = W_0 x + BAx$$
+
+<div class="card warning">
+<div class="card-label">常见误区</div>
+<p><strong>"有更多数据就更好"是错的。</strong>当前瓶颈不是数据量，而是质量 + 去重 + 多样性。SFT 数据也是如此——SmolLM2 的数据构成是 39.4% 数学 + 38.9% 代码 + 17.6% 对话 + 4.1% 指令跟随，数学和代码占比高是因为这些领域有客观正确答案，训练信号清晰。</p>
+</div>
+
+<h3>现代后训练三阶段流水线</h3>
+<p>2025-2026 行业标准已从两阶段（SFT + RLHF）升级为<strong>三阶段</strong>：</p>
+<div style="background:#F0F0EC;border-radius:8px;padding:14px 16px;margin:12px 0;font-size:13px;">
+<strong>Stage 1 SFT</strong>：指令-回答对 → 学格式与语气<br>
+<strong>Stage 2 偏好对齐</strong>：DPO/RLHF → 学"哪种回答更好"<br>
+<strong>Stage 3 RLVR</strong>：GRPO + 可验证奖励 → 学推理（下一章 3.2 详述）
+</div>
+
+<div class="card takeaway">
+<div class="card-label">核心要点</div>
+<p>预训练的决定性因素是<strong>数据配比</strong>（不是模型架构）；SFT 的决定性因素是<strong>数据质量</strong>（不是微调方法）。LoRA/QLoRA 让中小企业也能做 SFT，但 Base Model 的能力天花板是预训练决定的。</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!--  §③ 为什么                                                      -->
+<!-- ============================================================ -->
+<section id="why">
+<h2><span class="sec-num">③</span> 为什么：第一性原理看预训练与 SFT 的设计取舍</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>为什么不能跳过预训练直接 SFT？就像<strong>你不能让一个不识字的人去学写公文</strong>。SFT 教的是格式和规范，预训练给的是知识和语言能力。没有预训练打底，SFT 只能教出一个会模仿格式的空壳。</p>
+</div>
+
+<h3>为什么预训练必须是"下一个 Token 预测"？</h3>
+<p>从信息论角度看，下一个 Token 预测等价于<strong>最小化语料的交叉熵</strong>：</p>
+$$H(P_{\text{data}}, P_\theta) = -\mathbb{E}_{x \sim P_{\text{data}}}[\log P_\theta(x)]$$
+<p>当模型完美预测下一个 Token 时，它对数据分布的建模就达到了最优。这个目标的精妙之处在于：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li><strong>自监督</strong>：不需要人工标注，任何文本都是训练数据</li>
+<li><strong>可扩展</strong>：互联网上有无穷无尽的文本</li>
+<li><strong>涌现性</strong>：看似简单的目标，在大规模数据上训练后涌现出推理、翻译、编程等能力</li>
+</ul>
+
+<h3>为什么 SFT 数据只需几千到几万条？</h3>
+<p>关键理解：SFT 不是在"教新知识"，而是在<strong>解锁已有能力</strong>。预训练已经在参数里存了海量知识，SFT 只是告诉模型"当用户这样问时，你应该这样回答"。</p>
+
+<p>形式化地，设预训练模型为 $P_\theta$，SFT 学的是一个<strong>格式映射</strong> $f: \text{instruction} \rightarrow \text{format}$，而不是新的知识 $K$。这解释了为什么：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li>InstructGPT 只用了 ~13K 条 SFT 数据就有效果</li>
+<li>Llama 2 用了 ~27K 条</li>
+<li>2025 年行业经验：1-10 万条高质量 SFT 数据足够做通用 Instruct</li>
+</ul>
+
+<div class="card warning">
+<div class="card-label">关键区分</div>
+<p><strong>通用 SFT vs 领域 SFT</strong>：通用 SFT 教"怎么当助手"，几千到几万条即可；领域 SFT 教"怎么当领域专家"，需要更多领域特定数据。DDAgent 的尽调 SFT 就属于后者——需要注入尽调流程、尽调报告格式等专业知识。</p>
+</div>
+
+<h3>为什么过训练（Overtraining）是新常态？</h3>
+<p>Chinchilla（DeepMind 2022）给出了理论最优：每 1 个参数配约 20 个 Tokens。但实际趋势完全偏离：</p>
+
+<table>
+<tr><th>模型</th><th>参数量</th><th>训练 Tokens</th><th>Token/Param 比</th><th>Chinchilla 最优</th></tr>
+<tr><td>Llama 3.1 8B</td><td>8B</td><td>15T</td><td>~1875</td><td>~20</td></tr>
+<tr><td>Qwen3-0.6B</td><td>0.6B</td><td>36T</td><td>~60000</td><td>~20</td></tr>
+<tr><td>DeepSeek V4-Flash</td><td>284B</td><td>32T</td><td>~113</td><td>~20</td></tr>
+</table>
+
+<p>为什么？因为<strong>推理成本按参数量计</strong>，训练是一次性投入。一个小模型吃更多 Tokens，推理时又快又便宜，比大模型更划算。这就是"过训练"的经济学逻辑。</p>
+
+<h3>为什么 SFT 只在助手回复上计算 Loss？</h3>
+<p>如果在用户指令上也计算 Loss，模型会学到<strong>"用户会说什么"</strong>而不是<strong>"助手该怎么回答"</strong>。这会导致模型在推理时倾向于续写用户输入，而不是生成回答。形式化地：</p>
+$$\mathcal{L}_{\text{SFT}} = -\sum_{t \in \text{assistant tokens}} \log P(x_t \mid x_{<t}; \theta)$$
+
+<div class="card takeaway">
+<div class="card-label">核心要点</div>
+<p>预训练的不可替代性在于<strong>知识基础</strong>——没有预训练的 SFT 是无本之木；SFT 的高效性在于<strong>格式解锁</strong>——只需少量数据就能激活预训练中已存储的能力。过训练的经济学逻辑是：训练一次，推理无数次，所以让小模型多学比让大模型少学更划算。</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!--  §④ 演进格局                                                    -->
+<!-- ============================================================ -->
+<section id="evolution">
+<h2><span class="sec-num">④</span> 演进格局：2024-2026 数据战争</h2>
+
+<div class="diagram">
+<svg viewBox="0 0 680 280" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<!-- 时间线 -->
+<line x1="40" y1="140" x2="640" y2="140" stroke="#534AB7" stroke-width="2"/>
+<!-- 2022 -->
+<circle cx="100" cy="140" r="6" fill="#534AB7"/>
+<text x="100" y="120" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">2022</text>
+<text x="100" y="165" text-anchor="middle" fill="#534AB7" font-size="9">InstructGPT</text>
+<text x="100" y="178" text-anchor="middle" fill="#534AB7" font-size="9">SFT + RLHF 范式确立</text>
+<!-- 2023 -->
+<circle cx="230" cy="140" r="6" fill="#185FA5"/>
+<text x="230" y="120" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="700">2023</text>
+<text x="230" y="165" text-anchor="middle" fill="#185FA5" font-size="9">LoRA / QLoRA</text>
+<text x="230" y="178" text-anchor="middle" fill="#185FA5" font-size="9">SFT 民主化 · DPO 提出</text>
+<!-- 2024 -->
+<circle cx="370" cy="140" r="6" fill="#BA7517"/>
+<text x="370" y="120" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="700">2024</text>
+<text x="370" y="165" text-anchor="middle" fill="#BA7517" font-size="9">数据工程成为核心</text>
+<text x="370" y="178" text-anchor="middle" fill="#BA7517" font-size="9">Llama3 · FineWeb · 合成数据</text>
+<!-- 2025 -->
+<circle cx="510" cy="140" r="6" fill="#1D9E75"/>
+<text x="510" y="120" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">2025</text>
+<text x="510" y="165" text-anchor="middle" fill="#1D9E75" font-size="9">RLVR/GRPO 爆发</text>
+<text x="510" y="178" text-anchor="middle" fill="#1D9E75" font-size="9">后训练成主战场</text>
+<!-- 2026 -->
+<circle cx="620" cy="140" r="6" fill="#993C1D"/>
+<text x="620" y="120" text-anchor="middle" fill="#993C1D" font-size="11" font-weight="700">2026</text>
+<text x="620" y="165" text-anchor="middle" fill="#993C1D" font-size="9">数据墙逼近</text>
+<text x="620" y="178" text-anchor="middle" fill="#993C1D" font-size="9">难度自适应训练</text>
+
+<!-- 上方趋势 -->
+<rect x="60" y="30" width="200" height="40" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="160" y="52" text-anchor="middle" fill="#534AB7" font-size="10">范式：规模至上 → 数据智能</text>
+
+<rect x="380" y="30" width="240" height="40" rx="6" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1"/>
+<text x="500" y="52" text-anchor="middle" fill="#1D9E75" font-size="10">2025 分水岭：后训练 > 预训练</text>
+
+<!-- 下方趋势 -->
+<rect x="120" y="210" width="440" height="40" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="340" y="232" text-anchor="middle" fill="#BA7517" font-size="10">合成数据进入预训练主流（Phi-4 ~40%） · 过训练成标配（Qwen3-0.6B: 60K token/param）</text>
+</svg>
+</div>
+
+<h3>范式转变：规模战争 → 数据战争</h3>
+
+<p>Karpathy 在 2025 年度回顾中明确指出：</p>
+<blockquote style="border-left:3px solid var(--purple);padding:8px 16px;margin:12px 0;color:#555;font-size:14px;">
+"2025 年大语言模型能力的提升，主要源于各实验室对新阶段'存量潜力'的挖掘与释放。模型参数规模未发生显著变化，但强化学习训练的周期大幅延长。"
+</blockquote>
+
+<p>三个标志性事件宣告了"规模至上"时代终结：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li>Meta 暂停 1T 参数模型研发，转投数据策略（80% 资源）</li>
+<li>GPT-4.5 参数量与 GPT-4o 相同，优化数据后 MMLU +12.7%</li>
+<li>Claude 3.5 Sonnet 仅用 Opus 60% 的训练数据和算力，达 92% 性能</li>
+</ul>
+
+<h3>数据墙：2027 年的危机</h3>
+<p>斯坦福 HAI 2026 年白皮书警告：按当前训练消耗速度，<strong>互联网高质量英语公共文本将在 2027 Q3 耗尽</strong>，多语言文本在 2030 年前也会耗尽。应对方案：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li><strong>合成数据规模化</strong>：Phi-4 约 40% 训练数据为合成，Kimi K2 使用 agentic 合成 pipeline</li>
+<li><strong>数据质量提升</strong>：FineWeb-Edu、DCLM 等高质量 Common Crawl 子集成为开源标准</li>
+<li><strong>难度自适应训练</strong>：华为 EDCO（ICML 2026）用推理熵动态编排训练课程</li>
+</ul>
+
+<h3>后训练占比上升</h3>
+<p>Liquid AI 基准测试显示，<strong>后训练单独可改进 20-40% 性能</strong>——这个量级的提升如果靠预训练扩展，需要数量级更多的算力。Meta Llama 团队的结论更直接：Base Model vs Instruct Model 的差异不是增量改进，而是<strong>转型性差异</strong>。</p>
+
+<table>
+<tr><th>年份</th><th>训练焦点</th><th>代表技术</th><th>代表模型</th></tr>
+<tr><td>2022</td><td>RLHF + PPO</td><td>人类偏好对齐</td><td>InstructGPT / ChatGPT</td></tr>
+<tr><td>2023</td><td>LoRA SFT</td><td>参数高效微调</td><td>Llama 2 / Zephyr</td></tr>
+<tr><td>2024</td><td>中期训练</td><td>数据配比 + 合成数据</td><td>Llama 3.1 / Phi-3</td></tr>
+<tr><td>2025</td><td>RLVR + GRPO</td><td>可验证奖励 RL</td><td>DeepSeek-R1 / o1</td></tr>
+<tr><td>2026</td><td>难度自适应</td><td>EDCO / DAPO</td><td>DeepSeek V4 / Qwen3</td></tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">核心要点</div>
+<p>2024-2026 的核心叙事是<strong>从"堆规模"到"榨数据"</strong>。预训练阶段，数据配比和质量决定能力天花板；SFT 阶段，少量高质量数据即可解锁预训练能力。后训练（SFT + 偏好对齐 + RLVR）现在占模型可用能力的多数。</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!--  §⑤ 与产品连接                                                  -->
+<!-- ============================================================ -->
+<section id="connect">
+<h2><span class="sec-num">⑤</span> 与产品连接：Fitz 的模型选型决策框架</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>选模型就像<strong>招人</strong>：Base Model 是刚毕业的百科全书学霸，什么都知道但不会干活；Instruct Model 是经过入职培训的员工，能听懂指令、规范输出；领域 SFT 后的是资深专家，不仅听话还懂你的业务。</p>
+</div>
+
+<h3>决策 1：Base vs Instruct — 什么时候用哪个？</h3>
+<table>
+<tr><th>场景</th><th>选择</th><th>原因</th></tr>
+<tr><td>直接做对话/助手产品</td><td>Instruct</td><td>Base Model 不会按指令回答</td></tr>
+<tr><td>做领域 SFT 微调</td><td>Base（也可以 Instruct）</td><td>Base 更"干净"，Instruct 有残留风格</td></tr>
+<tr><td>做 Embedding / 特征提取</td><td>Base</td><td>Instruct 的对话格式会干扰向量表示</td></tr>
+<tr><td>做 RL 后训练</td><td>Instruct</td><td>RL 需要模型已有基本指令跟随能力</td></tr>
+</table>
+
+<h3>决策 2：DDAgent 的模型选型</h3>
+<p>DDAgent（尽调 Agent）的选型逻辑：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li><strong>预训练数据配比影响推理上限</strong>：Llama 3.1 的 25% 数学数据让它在尽调推理任务上有天然优势</li>
+<li><strong>领域 SFT 是必须的</strong>：通用 Instruct 模型不懂尽调流程、不知道什么是"预填率"</li>
+<li><strong>Base → 领域 SFT → 领域 RL</strong> 是 DDAgent 的实际路径</li>
+<li><strong>83% 预填率</strong>的背后：预训练给的推理能力 + SFT 给的格式能力 + 领域数据给的专业知识</li>
+</ul>
+
+<h3>决策 3：SFT 成本估算 — 产品经理需要知道的数字</h3>
+<table>
+<tr><th>场景</th><th>方法</th><th>数据量</th><th>成本估算</th><th>周期</th></tr>
+<tr><td>快速验证概念</td><td>QLoRA 7B</td><td>5K-20K 条</td><td>$10-50</td><td>2-6 小时</td></tr>
+<tr><td>中等规模 SFT</td><td>LoRA 70B</td><td>20K-100K 条</td><td>$100-500</td><td>12-48 小时</td></tr>
+<tr><td>生产级领域 SFT</td><td>Full FT 70B</td><td>50K-500K 条</td><td>$1K-5K</td><td>数天</td></tr>
+<tr><td>大规模领域 SFT</td><td>Full FT 405B</td><td>100K-1M 条</td><td>$10K+</td><td>1-2 周</td></tr>
+</table>
+
+<div class="card warning">
+<div class="card-label">产品决策陷阱</div>
+<p><strong>不要指望通用 Instruct 模型直接做领域专家。</strong>FxAgent 换汇场景的错误率从 2% 降到 0.25%，不是因为模型更聪明了，而是因为领域 SFT 注入了汇率规则、合规边界等专业知识。预训练决定推理能力，SFT 决定领域精度——两者缺一不可。</p>
+</div>
+
+<h3>预训练数据配比 → Agent 能力天花板</h3>
+<p>这是一个经常被忽略但极其重要的洞察：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li><strong>代码数据占比高 → Tool Use 能力强</strong>：Llama 3.1 的 17% 代码数据让它在函数调用、API 交互上更可靠</li>
+<li><strong>数学数据占比高 → 推理链更稳定</strong>：25% 数学数据让 DDAgent 的多步推理不容易"断链"</li>
+<li><strong>多语言占比高 → 跨境场景更友好</strong>：Qwen3 的 119 语言让 FxAgent 在多币种场景下游刃有余</li>
+</ul>
+<p>选模型时，<strong>不要只看 benchmark 分数</strong>，还要看它预训练数据的配比——这决定了 Agent 在你业务场景上的能力天花板。</p>
+
+<div class="card takeaway">
+<div class="card-label">核心要点</div>
+<p>产品决策的三层框架：(1) Base vs Instruct 取决于用途；(2) 通用 vs 领域 SFT 取决于业务精度需求；(3) 预训练数据配比决定 Agent 能力天花板。DDAgent/FxAgent/KBAgent 的成功不是靠"更大的模型"，而是靠<strong>正确的预训练基础 + 精准的领域 SFT</strong>。</p>
+</div>
+</section>
+
+<!-- ====== 底部导航 ====== -->
+<div class="chapter-footer">
+<a href="../../INDEX.html">← 返回知识图谱</a>
+<a href="3.1-pretrain-sft-quiz.html">去做 Quiz（10 题）→</a>
+</div>
+
+</body>
+</html>

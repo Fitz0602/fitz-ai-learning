@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz &middot; A4.2 Multi-Agent 编排与 AgentOps</title>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--teal-bg);color:#0F6E56}
+.tag-chapter{background:var(--purple-bg);color:var(--purple)}
+h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted)}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.quiz-section{margin-top:28px;padding-top:16px;border-top:1px solid #E8E8E4}
+.quiz-section h2{font-size:16px;font-weight:600;margin-bottom:12px;color:var(--purple)}
+.q-card{background:#fff;border:1px solid #E8E8E4;border-radius:10px;padding:16px 18px;margin:12px 0;transition:border-color 0.2s}
+.q-card .q-id{font-size:10px;color:var(--muted);margin-bottom:4px;font-family:monospace}
+.q-card .q-text{font-size:14px;font-weight:500;margin-bottom:10px}
+.q-card .q-options{display:flex;flex-direction:column;gap:6px}
+.q-card .q-opt{padding:8px 12px;border:1px solid #E0E0DC;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.15s}
+.q-card .q-opt:hover{border-color:var(--purple);background:var(--purple-bg)}
+.q-card .q-opt.correct{background:var(--teal-bg);border-color:var(--teal);color:var(--teal);font-weight:500}
+.q-card .q-opt.wrong{background:var(--coral-bg);border-color:var(--coral);color:var(--coral);font-weight:500}
+.q-card .q-opt.disabled{pointer-events:none;opacity:0.6}
+.q-card .q-explain{display:none;margin-top:8px;padding:10px 12px;border-radius:8px;font-size:12px;line-height:1.6}
+.q-card .q-explain.show{display:block}
+.q-card .q-explain.correct-exp{background:var(--teal-bg);color:#0F6E56}
+.q-card .q-explain.wrong-exp{background:var(--coral-bg);color:#7A2F15}
+.score-box{margin-top:28px;padding:18px 20px;border-radius:10px;background:var(--purple-bg);text-align:center}
+.score-box .score-num{font-size:36px;font-weight:700;color:var(--purple)}
+.score-box .score-msg{font-size:14px;color:var(--purple);margin-top:4px}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">T2 Agent 工程</span>
+<span class="tag tag-chapter">A4.2 Quiz</span>
+<a href="A4.2-multiagent-ops-chapter.html" class="nav-link">&larr; 返回章节</a>
+<a href="../../INDEX.html" class="nav-link">知识图谱</a>
+</div>
+<h1>A4.2 Multi-Agent 编排 &middot; AgentOps 可观测性 — 10 题测验</h1>
+<p class="subtitle">每节 2 题：1 题概念辨析 + 1 题判断/应用 &middot; 点击选项即出结果</p>
+</div>
+
+<!-- §① 是什么 -->
+<div class="quiz-section">
+<h2>① 是什么 — Multi-Agent 直觉与三场景</h2>
+
+<div class="q-card" data-q="1">
+<div class="q-id">T2-A4.2-①-1</div>
+<div class="q-text">以下哪个场景<strong>不构成</strong>使用 Multi-Agent 的合理动机？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 需要同时审查 50 个代码文件（并行加速）</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">B. 研究任务需要搜索、写作、审查三种不同专业能力（专业分工）</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">C. 当前单 Agent 的准确率只有 70%，希望通过多 Agent 提升到 90%</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. 高风险金融决策需要两个 Agent 独立判断后仲裁（交叉验证）</div>
+</div>
+<div class="q-explain">正确答案是 C。Multi-Agent 的三个核心动机是：并行加速（时间瓶颈）、专业分工（能力瓶颈）、交叉验证（可靠性瓶颈）。单纯因为"准确率不够"就加 Agent 是错误的——准确率不足应该先优化 Harness（如 A4.1 所述），而不是增加系统复杂度。Multi-Agent 解决的是架构层面的问题，不是模型能力问题。→ <a href="A4.2-multiagent-ops-chapter.html#is">§①</a></div>
+</div>
+
+<div class="q-card" data-q="2">
+<div class="q-id">T2-A4.2-①-2</div>
+<div class="q-text">Anthropic Subagent 设计原则中，以下哪条<strong>不是</strong>硬约束？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 子 Agent 之间不能直接通信</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">B. 子 Agent 不能再生成新 Agent（禁止嵌套）</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">C. 子 Agent 必须使用与父 Agent 相同的模型</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. 跑完只返回最终输出，不带中间思考过程</div>
+</div>
+<div class="q-explain">正确答案是 C。Anthropic 的三条硬约束是：①子间不能直通通信；②不能再生成新 Agent（防无限嵌套）；③只返回最终输出。关于模型选择——恰恰相反，Subagent 时代的核心策略就是分层选型：Orchestrator 用大模型、General 用 mini、Lightweight 用 nano。不同层级用不同模型是推荐做法而非限制。→ <a href="A4.2-multiagent-ops-chapter.html#is">§①</a></div>
+</div>
+</div>
+
+<!-- §② 怎么实现 -->
+<div class="quiz-section">
+<h2>② 怎么实现 — 四大编排模式</h2>
+
+<div class="q-card" data-q="3">
+<div class="q-id">T2-A4.2-②-1</div>
+<div class="q-text">DDAgent 使用的是哪种编排模式？它的 Dispatcher 对应该模式中的哪个角色？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. Pipeline 模式 / Formatter 角色</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. Supervisor + Specialists 模式 / Supervisor（监督者）角色</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">C. Debate 模式 / Judge（裁判）角色</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. Swarm 模式 / 消息总线协调者</div>
+</div>
+<div class="q-explain">正确答案是 B。DDAgent 是教科书级的 Supervisor + Specialists 模式实例：Dispatcher = Supervisor（解析 task_type → 路由到对应银行子 Agent），各银行专用子 Agent = Specialists，Auditor = Reflect/Eval Gate。数据验证了该模式的工程可行性：83%预填 / 95%准确率 / 100%路由成功率。→ <a href="A4.2-multiagent-ops-chapter.html#how">§②</a></div>
+</div>
+
+<div class="q-card" data-q="4">
+<div class="q-id">T2-A4.2-②-2</div>
+<div class="q-text">turion.ai 从生产实践中总结出的反模式中，哪一条的代价最严重（$40+ 单次运行）？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. Peer-to-peer equal agents（无 Supervisor）— 比 Supervisor 慢 10x</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. Fully-emergent crews + Unbounded tool chaining 组合 — 无限循环讨论 + 200 次工具调用</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">C. One model does everything — 成本堆叠但通常可控</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. Pipeline 级联失败 — 影响质量但不一定影响成本</div>
+</div>
+<div class="q-explain">正确答案是 B。Fully-emergent crews（让多个 Agent 自己商量）会导致无限循环讨论和垃圾输出，Unbounded tool chaining 允许无限调用工具导致第 40 步进入循环。两种反模式叠加时代价最为严重：$40+ 单次运行、200 次调用仍无法收敛。这是生产环境中最危险的组合。→ <a href="A4.2-multiagent-ops-chapter.html#how">§②</a></div>
+</div>
+</div>
+
+<!-- §③ 为什么 -->
+<div class="quiz-section">
+<h2>③ 为什么 — 分布式 × 非确定性 = 10x</h2>
+
+<div class="q-card" data-q="5">
+<div class="q-id">T2-A4.2-③-1</div>
+<div class="q-text">为什么说 "AgentOps ≠ APM"？以下哪个区别描述有误？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. APM 看不到推理链路（Prompt → RAG → 工具调用 → 整合），而 AgentOps 可以追踪 12+ span</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">B. APM 没有 Evaluation 维度（回答对不对），AgentOps 有 LLM-as-Judge 持续评估</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">C. APM 无法监控 Token 消耗和成本，这是 AgentOps 独有的能力</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. APM 看不到 Tool 调用的语义层面的成功/失败（HTTP 200 但返回垃圾）</div>
+</div>
+<div class="q-explain">正确答案是 C。这个选项有误导性——现代 APM 系统（尤其是 custom metrics 能力强的）理论上可以记录 Token 消耗作为自定义指标。AgentOps 和 APM 的本质区别不在"能否记录某个数值"，而在其设计目标：APM 为传统微服务设计，AgentOps 专为 LLM 推理链路+评估维度设计。真正的核心差异在 Trace（推理链路 vs HTTP 链路）、Evaluation（LLM-as-Judge vs 单元测试）、Metric 的语义深度（Routing 决策/Guardrail 触发 vs QPS/P95）。→ <a href="A4.2-multiagent-ops-chapter.html#why">§③</a></div>
+</div>
+
+<div class="q-card" data-q="6">
+<div class="q-id">T2-A4.2-③-2</div>
+<div class="q-text">判断：Multi-Agent 系统的复杂度约等于分布式系统复杂度加上 LLM 非确定性，两者是加法关系。</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 正确 — 两层不确定性简单叠加</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. 错误 — 是乘法关系，两层不确定性互相放大（如网络延迟→重试→LLM重复生成→下游误判）</div>
+</div>
+<div class="q-explain">正确答案是 B。这不是简单的加法而是乘法效应——两种不确定性互相放大。典型例子：网络延迟导致超时重试 → 重试触发 LLM 重复生成（非确定性） → 重复内容被下游 Agent 误判为确认 → 级联错误。这就是为什么 Multi-Agent 的调试难度远超普通分布式系统或单独调 LLM。→ <a href="A4.2-multiagent-ops-chapter.html#why">§③</a></div>
+</div>
+</div>
+
+<!-- §④ 演进 -->
+<div class="quiz-section">
+<h2>④ 演进 — AgentOps 成为 Discipline</h2>
+
+<div class="q-card" data-q="7">
+<div class="q-id">T2-A4.2-④-1</div>
+<div class="q-text">ClickHouse 以 $400M Series D 收购 Langfuse（2026-01），这一事件标志着什么？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. 数据库厂商开始进军 AI 训练领域</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">B. Langfuse 成为 Agent 领域的唯一可观测性工具</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">C. AgentOps 作为独立赛道获得资本认可，可观测性从开源附属功能变为商业级产品品类</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. ClickHouse 准备推出自己的大语言模型</div>
+</div>
+<div class="q-explain">正确答案是 C。Langfuse 收购事件的核心意义在于：<strong>Agent 可观测性不再是开源项目的附属功能，而是一个独立的、资本认可的赛道</strong>。Langfuse 的三支柱产品（LLM Tracing / Cost Analytics / Dataset-based Evaluation）恰好对应 AgentOps 的三大支柱。$400M Series D 说明资本市场看好这个方向。市场整体以 45% CAGR 增长至 2034 年。→ <a href="A4.2-multiagent-ops-chapter.html#evolution">§④</a></div>
+</div>
+
+<div class="q-card" data-q="8">
+<div class="q-id">T2-A4.2-④-2</div>
+<div class="q-text">Red Hat Summit 2026 定义的六大 Agentic Metrics 中，哪一个最能反映 Supervisor 模式的路由健康度？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. Token Usage — 总 Token 消耗</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">B. Inference Latency — 模型推理耗时</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">C. Agent Routing — Supervisor 路由决策分布（是否均衡、是否有异常偏斜）</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. Tool Call Success Rate — 工具调用成功率</div>
+</div>
+<div class="q-explain">正确答案是 C。<strong>Agent Routing</strong> 是六大指标中唯一专门针对编排层设计的——它监控 Supervisor 的路由决策分布是否均衡，是否有异常偏斜（比如某 Specialist 承载了 90% 的请求）。对于 DDAgent 这样的 Supervisor 模式系统，Routing 指标直接反映了 Dispatcher 的健康度。其他五个指标（Request Rate/Latency P95/Token Usage/Inference Latency/Tool Call Success Rate）更通用，不特定于路由决策。→ <a href="A4.2-multiagent-ops-chapter.html#evolution">§④</a></div>
+</div>
+</div>
+
+<!-- §⑤ 产品连接 -->
+<div class="quiz-section">
+<h2>⑤ 产品连接 — 三大产品的编排映射</h2>
+
+<div class="q-card" data-q="9">
+<div class="q-id">T2-A4.2-⑤-1</div>
+<div class="q-text">EvalAgent 的三路裁判（Rule Judge / LLM Judge / Diff Judge）对应哪种编排模式的变体？报告聚合层扮演的是什么角色？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. Supervisor 模式 / Dispatcher 角色</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">B. Pipeline 模式 / Formatter 角色</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">C. Debate/Judge 模式变体 / 报告聚合 = Judge 仲裁角色</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. Swarm 模式 / 消息总线协调者</div>
+</div>
+<div class="q-explain">正确答案是 C。EvalAgent 是 Debate/Judge 模式的工业级变体：不是两个 Agent 争论，而是三种互补评判方法（Rule=确定性一票否决 / LLM=五维评分 / Diff=版本对比）独立运作后汇聚到报告聚合层，后者扮演 Judge 仲裁角色——综合三路判分生成最终 MD+JSON 报告。这是 Debate 模式在生产中最实用的形态之一。→ <a href="A4.2-multiagent-ops-chapter.html#connect">§⑤</a></div>
+</div>
+
+<div class="q-card" data-q="10">
+<div class="q-id">T2-A4.2-⑤-2</div>
+<div class="q-text">KBA 知识库自动化系统的 format→atom→hqa→topic 四阶段处理链，属于哪种编排模式？这种模式的最大风险是什么？</div>
+<div class="q-options">
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">A. Supervisor 模式 / Supervisor 单点故障</div>
+<div class="q-opt" data-correct="true" onclick="handleAnswer(this)">B. Pipeline 模式 / 一步失败导致全链路级联</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">C. Debate 模式 / Judge 评分标准不一致</div>
+<div class="q-opt" data-correct="false" onclick="handleAnswer(this)">D. Swarm 模式 / 共享状态竞争条件</div>
+</div>
+<div class="q-explain">正确答案是 B。KBA 是经典的 Pipeline（流水线）模式实例：format（格式转换）→ atom（原子化切分）→ hqa（高质量问答提取）→ topic（主题分类），四个 Skill 串行处理，每阶段的输出是下一阶段的输入。Pipeline 模式的最大风险就是<strong>严格顺序依赖导致的级联失败</strong>——如果 format 阶段出错，后续三个阶段都会收到错误输入并放大错误。对策是在每个阶段插入验证门（FactChecker 式中间件）。→ <a href="A4.2-multiagent-ops-chapter.html#connect">§⑤</a></div>
+</div>
+</div>
+
+<!-- 得分区 -->
+<div class="score-box" id="scoreBox" style="display:none;">
+<div class="score-num" id="scoreNum">0/10</div>
+<div class="score-msg" id="scoreMsg"></div>
+</div>
+
+<div class="chapter-footer">
+<a href="A4.2-multiagent-ops-chapter.html">&larr; 返回章节</a>
+<a href="../../INDEX.html">知识图谱</a>
+</div>
+
+<script>
+let total = 10;
+let answered = 0;
+let correct = 0;
+
+function handleAnswer(el) {
+  const card = el.closest('.q-card');
+  if (card.dataset.answered) return;
+  card.dataset.answered = 'true';
+  answered++;
+
+  const isCorrect = el.dataset.correct === 'true';
+  const explain = card.querySelector('.q-explain');
+
+  // Mark all options
+  const opts = card.querySelectorAll('.q-opt');
+  opts.forEach(opt => {
+    opt.classList.add('disabled');
+    if (opt.dataset.correct === 'true') {
+      opt.classList.add('correct');
+    }
+  });
+
+  if (isCorrect) {
+    el.classList.add('correct');
+    correct++;
+    explain.className = 'q-explain show correct-exp';
+  } else {
+    el.classList.add('wrong');
+    explain.className = 'q-explain show wrong-exp';
+  }
+
+  // Update score
+  if (answered === total) {
+    const box = document.getElementById('scoreBox');
+    const num = document.getElementById('scoreNum');
+    const msg = document.getElementById('scoreMsg');
+    box.style.display = 'block';
+    num.textContent = correct + '/' + total;
+    if (correct <= 4) msg.textContent = '建议重读章节，重点关注四大编排模式和 AgentOps 三支柱';
+    else if (correct <= 7) msg.textContent = '掌握良好，部分概念（如反模式和成熟度模型）还需加深理解';
+    else if (correct <= 9) msg.textContent = '理解扎实！可以尝试在实际项目中应用 Multi-Agent 编排';
+    else msg.textContent = '满分！你是 Multi-Agent 编排和 AgentOps 的行家了 🎯';
+  }
+}
+</script>
+</body>
+</html>

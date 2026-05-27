@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>T1 1.3 · 位置编码</title>
+<style>
+:root {
+  --bg: #fafaf7;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7;
+  --purple-bg: #EEEDFE;
+  --teal: #1D9E75;
+  --teal-bg: #E1F5EE;
+  --amber: #BA7517;
+  --amber-bg: #FAEEDA;
+  --blue: #185FA5;
+  --blue-bg: #E6F1FB;
+  --coral: #993C1D;
+  --coral-bg: #FAECE7;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+  font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 32px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.tag.t1 { background: var(--purple-bg); color: var(--purple); }
+.tag.section { background: #f1f1f1; color: var(--muted); }
+.tag.time { background: var(--teal-bg); color: var(--teal); }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 22px; font-weight: 600; margin: 8px 0 4px; }
+.subtitle { color: var(--muted); font-size: 14px; }
+h2 { font-size: 18px; font-weight: 600; margin: 40px 0 12px; padding-left: 12px; border-left: 3px solid var(--purple); }
+h3 { font-size: 15px; font-weight: 600; margin: 20px 0 8px; color: #333; }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin: 16px 0; }
+.card.intuition { background: var(--blue-bg); border-color: rgba(24,95,165,0.15); }
+.card.warning { background: var(--coral-bg); border-color: rgba(153,60,29,0.15); }
+.card.deepen { background: var(--amber-bg); border-color: rgba(186,117,23,0.15); }
+.card.takeaway { background: var(--teal-bg); border-color: rgba(29,158,117,0.15); }
+.card.insight { background: var(--purple-bg); border-color: rgba(83,74,183,0.15); }
+.card-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.card.intuition .card-title { color: var(--blue); }
+.card.warning .card-title { color: var(--coral); }
+.card.deepen .card-title { color: var(--amber); }
+.card.takeaway .card-title { color: var(--teal); }
+.card.insight .card-title { color: var(--purple); }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+th { font-weight: 600; background: #f7f7f4; color: var(--muted); font-size: 13px; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: #f1f1ee; padding: 2px 6px; border-radius: 4px; color: #d63384; }
+pre { background: #2c2c2a; color: #f1efe8; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 12px; line-height: 1.55; }
+pre code { background: transparent; color: inherit; padding: 0; }
+.diagram { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin: 16px 0; }
+.math-block { background: #f7f7f4; border: 1px solid var(--border); border-radius: 8px; padding: 14px 18px; margin: 12px 0; font-family: "SF Mono", Menlo, monospace; font-size: 13px; line-height: 1.8; color: #2c2c2a; }
+.math-inline { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: #f1f1ee; padding: 1px 5px; border-radius: 3px; }
+.thinking { border-left: 3px solid var(--amber); padding: 4px 16px; margin: 16px 0; font-style: italic; color: #555; }
+.footer-actions { margin-top: 48px; padding: 20px; background: var(--purple-bg); border-radius: 10px; }
+.footer-actions h3 { margin-top: 0; color: var(--purple); }
+.footer-actions ul { padding-left: 20px; }
+.footer-actions li { margin: 6px 0; }
+.footer-actions a { color: var(--purple); font-weight: 500; white-space: nowrap; }
+strong { font-weight: 600; }
+em { color: #555; }
+.anchor-nav a { display: inline-block; padding: 4px 10px; border-radius: 14px; font-size: 12px; font-weight: 500; text-decoration: none; }
+.anchor-nav a.done { background: var(--teal-bg); color: #0F6E56; }
+.anchor-nav a.pending { background: #f1f1f1; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t1">T1 LLM 系统</span>
+    <span class="tag section">1.3 位置编码</span>
+    <span class="tag time">≈ 80 min · 进度 5/5</span>
+    <a href="../../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+    <a href="1.3-positional-encoding-quiz.html" class="nav-link">Quiz →</a>
+  </div>
+  <h1>位置编码：让模型知道 token 的顺序</h1>
+  <div class="subtitle">从"词袋"到"有序序列" · RoPE 成为事实标准的底层逻辑</div>
+
+  <div class="anchor-nav" style="display:flex;gap:8px;margin-top:16px;font-size:12px;flex-wrap:wrap;">
+    <a href="#is" class="done">① 是什么 ✓</a>
+    <a href="#how" class="done">② 怎么实现 ✓</a>
+    <a href="#why" class="done">③ 为什么 ✓</a>
+    <a href="#evolution" class="done">④ 演进 ✓</a>
+    <a href="#connect" class="done">⑤ 与产品 ✓</a>
+  </div>
+</div>
+
+<div class="diagram" style="margin:24px 0 8px;">
+<p style="font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px;">章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 340" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <defs><marker id="ov-arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect x="220" y="10" width="240" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="340" y="30" font-family="-apple-system,sans-serif" font-size="13" font-weight="500" fill="#534AB7" text-anchor="middle">① 是什么</text>
+  <text x="340" y="48" font-family="-apple-system,sans-serif" font-size="11" fill="#3C3489" text-anchor="middle">注入顺序信息 · 词袋 → 有序序列</text>
+  <line x1="340" y1="62" x2="340" y2="88" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr3)"/>
+  <rect x="220" y="92" width="240" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="340" y="112" font-family="-apple-system,sans-serif" font-size="13" font-weight="500" fill="#185FA5" text-anchor="middle">② 怎么实现</text>
+  <text x="340" y="130" font-family="-apple-system,sans-serif" font-size="11" fill="#0C447C" text-anchor="middle">Sinusoidal → 可学习 → RoPE 旋转矩阵</text>
+  <line x1="340" y1="144" x2="340" y2="170" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr3)"/>
+  <rect x="220" y="174" width="240" height="52" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="340" y="194" font-family="-apple-system,sans-serif" font-size="13" font-weight="500" fill="#BA7517" text-anchor="middle">③ 为什么</text>
+  <text x="340" y="212" font-family="-apple-system,sans-serif" font-size="11" fill="#633806" text-anchor="middle">相对位置比绝对更鲁棒 · 旋转=内积守恒</text>
+  <line x1="340" y1="226" x2="340" y2="252" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr3)"/>
+  <rect x="42" y="256" width="278" height="52" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text x="181" y="276" font-family="-apple-system,sans-serif" font-size="12" font-weight="500" fill="#534AB7" text-anchor="middle">④ 演进格局</text>
+  <text x="181" y="293" font-family="-apple-system,sans-serif" font-size="10" fill="#3C3489" text-anchor="middle">Sinusoidal→ALiBi→RoPE→RoPE2→iRoPE</text>
+  <rect x="360" y="256" width="278" height="52" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text x="499" y="276" font-family="-apple-system,sans-serif" font-size="12" font-weight="500" fill="#1D9E75" text-anchor="middle">⑤ 产品连接</text>
+  <text x="499" y="293" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">DDAgent长文档顺序感知 · 模型选型位置编码</text>
+</svg>
+</div>
+
+<!-- ====== §1 是什么 ====== -->
+<section id="is">
+<h2 style="margin-top:24px;font-size:20px;">① 是什么</h2>
+<p style="color:var(--muted);font-size:13px;margin-top:-8px;">直觉建立 + 产品视角动机 · 术语表</p>
+
+<div class="card intuition">
+  <div class="card-title">▎前置连接：从 Embedding 出发</div>
+  上一章你已经知道：每个 token 经过 Embedding 层后变成一个高维向量（如 7,168 维）。这些向量代表"语义"——"美元"和"日元"在向量空间里很近。
+  <br><br>
+  但这里有一个致命问题：<strong>Transformer 的自注意力机制是并行计算的，没有顺序感。</strong>
+  <br><br>
+  "我换了100美元" 和 "100美元换了我"，对模型来说完全一样——因为它只看到 6 个向量，不知道谁在前谁在后。
+  <br><br>
+  <strong>位置编码（Positional Encoding）</strong>就是给每个 token 注入"我在第几位"的信息，让模型能分辨顺序。
+</div>
+
+<h3>为什么 Transformer 天然没有顺序感？</h3>
+<p>这要从 1.2 章的知识推进一步。Embedding 之后，模型对每个 token 计算 Query、Key、Value 三个向量，然后所有 token 两两之间计算注意力分数——这个过程是<strong>全并行的矩阵乘法</strong>，没有任何"先后"的概念。</p>
+
+<p>类比：想象你把一封信的每个字分别写在 20 张卡片上，打乱顺序交给助手。助手只能通过每张卡片的"含义"来理解信件，根本不知道哪张先哪张后——这就是没有位置编码的 Transformer。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 180" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arr-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#993C1D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <!-- 上：有顺序感的RNN -->
+  <text x="40" y="30" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b">RNN（顺序处理）</text>
+  <rect x="40" y="40" width="80" height="36" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text x="80" y="63" font-family="-apple-system,sans-serif" font-size="12" fill="#085041" text-anchor="middle">token 1</text>
+  <path d="M122 58 L148 58" stroke="#1D9E75" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <rect x="150" y="40" width="80" height="36" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text x="190" y="63" font-family="-apple-system,sans-serif" font-size="12" fill="#085041" text-anchor="middle">token 2</text>
+  <path d="M232 58 L258 58" stroke="#1D9E75" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <rect x="260" y="40" width="80" height="36" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text x="300" y="63" font-family="-apple-system,sans-serif" font-size="12" fill="#085041" text-anchor="middle">token 3</text>
+  <text x="370" y="65" font-family="-apple-system,sans-serif" font-size="12" fill="#6b6b6b">→ 天然有序，但不能并行</text>
+  <!-- 下：并行的Transformer -->
+  <text x="40" y="110" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b">Transformer（并行，无顺序）</text>
+  <rect x="40" y="120" width="80" height="36" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="80" y="143" font-family="-apple-system,sans-serif" font-size="12" fill="#26215C" text-anchor="middle">token 1</text>
+  <rect x="150" y="120" width="80" height="36" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="190" y="143" font-family="-apple-system,sans-serif" font-size="12" fill="#26215C" text-anchor="middle">token 2</text>
+  <rect x="260" y="120" width="80" height="36" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="300" y="143" font-family="-apple-system,sans-serif" font-size="12" fill="#26215C" text-anchor="middle">token 3</text>
+  <!-- 双向箭头 -->
+  <path d="M122 138 L148 138" stroke="#534AB7" stroke-width="1" stroke-dasharray="4,3" fill="none"/>
+  <path d="M232 138 L258 138" stroke="#534AB7" stroke-width="1" stroke-dasharray="4,3" fill="none"/>
+  <text x="370" y="145" font-family="-apple-system,sans-serif" font-size="12" fill="#993C1D">← 并行快，但无顺序感</text>
+</svg>
+<p style="font-size:12px;color:var(--muted);margin:8px 0 0;">图 1：RNN vs Transformer 的顺序感对比</p>
+</div>
+
+<h3>位置编码的核心任务</h3>
+<p>在 Embedding 向量上叠加位置信息，让同一个 token（如"换"）在第 1 位和第 5 位时，其进入注意力层的向量有所不同——从而让模型能感知"谁在前面"。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 140" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <!-- Token IDs -->
+  <text x="40" y="25" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b" font-weight="500">流程：文本 → 位置感知向量</text>
+  <!-- 步骤1 -->
+  <rect x="40" y="38" width="100" height="44" rx="8" fill="#f7f7f4" stroke="rgba(0,0,0,0.1)" stroke-width="0.5"/>
+  <text x="90" y="56" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b" text-anchor="middle">输入文本</text>
+  <text x="90" y="73" font-family="-apple-system,sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle" font-weight="500">"我 换 100"</text>
+  <!-- 箭头 -->
+  <path d="M142 60 L168 60" stroke="#534AB7" stroke-width="1.5" fill="none" marker-end="url(#arr2)"/>
+  <!-- 步骤2 -->
+  <rect x="170" y="38" width="110" height="44" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="225" y="56" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">Token Embedding</text>
+  <text x="225" y="73" font-family="-apple-system,sans-serif" font-size="12" fill="#26215C" text-anchor="middle">e₁, e₂, e₃</text>
+  <!-- 箭头 -->
+  <path d="M282 60 L308 60" stroke="#534AB7" stroke-width="1.5" fill="none" marker-end="url(#arr2)"/>
+  <!-- 步骤3 -->
+  <rect x="310" y="38" width="110" height="44" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="365" y="56" font-family="-apple-system,sans-serif" font-size="11" fill="#BA7517" text-anchor="middle">位置编码</text>
+  <text x="365" y="73" font-family="-apple-system,sans-serif" font-size="12" fill="#633806" text-anchor="middle">p₁, p₂, p₃</text>
+  <!-- 加号 -->
+  <text x="434" y="65" font-family="-apple-system,sans-serif" font-size="18" fill="#534AB7" text-anchor="middle">+</text>
+  <!-- 箭头 -->
+  <path d="M446 60 L472 60" stroke="#534AB7" stroke-width="1.5" fill="none" marker-end="url(#arr2)"/>
+  <!-- 步骤4 -->
+  <rect x="474" y="38" width="130" height="44" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text x="539" y="56" font-family="-apple-system,sans-serif" font-size="11" fill="#1D9E75" text-anchor="middle">位置感知向量</text>
+  <text x="539" y="73" font-family="-apple-system,sans-serif" font-size="12" fill="#04342C" text-anchor="middle">e₁+p₁, e₂+p₂, e₃+p₃</text>
+  <!-- 注：绝大多数方案是加法 -->
+  <text x="40" y="110" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b">注：绝大多数方案是"加法叠加"（Token Embedding + Position Embedding），RoPE 是旋转乘法，略有不同（见②节）</text>
+</svg>
+<p style="font-size:12px;color:var(--muted);margin:8px 0 0;">图 2：位置编码的输入/输出流程</p>
+</div>
+
+<h3>术语速查</h3>
+<table>
+<tr><th>术语</th><th>一句话定义</th><th>类比</th></tr>
+<tr><td><strong>绝对位置编码</strong></td><td>给每个位置分配固定向量，告诉模型"你在第 k 位"</td><td>座位号牌（永久固定在椅子上）</td></tr>
+<tr><td><strong>相对位置编码</strong></td><td>告诉模型"这两个 token 之间距离多远"</td><td>相对位置——"你在我左边 3 排"</td></tr>
+<tr><td><strong>RoPE</strong></td><td>旋转位置编码，用复数旋转把绝对位置转换为相对位置效果</td><td>表盘上的指针，绝对角度不同但差值（相对距离）可读</td></tr>
+<tr><td><strong>ALiBi</strong></td><td>在注意力分数上直接减去随距离增长的惩罚值</td><td>电话通话质量随距离衰减</td></tr>
+<tr><td><strong>NoPE</strong></td><td>该层完全不注入位置信息，依赖因果掩码隐式学习</td><td>没有号码牌，只靠物品本身识别</td></tr>
+<tr><td><strong>YaRN</strong></td><td>针对 RoPE 的长度外推改进方案（Yet Another RoPE eNhancement）</td><td>把原有尺子拉长，使刻度不失真</td></tr>
+<tr><td><strong>上下文外推</strong></td><td>训练时只见过 4K 长度，推理时能用 128K</td><td>只背过 4000 题，但考了 12 万题都能做</td></tr>
+</table>
+
+</section>
+
+<!-- ====== §2 怎么实现 ====== -->
+<section id="how">
+<h2>② 怎么实现</h2>
+<p style="color:var(--muted);font-size:13px;margin-top:-8px;">机制 · 流程图 · 从正弦到 RoPE 的演进实现</p>
+
+<div class="card intuition">
+  <div class="card-title">▎从最简单的方案开始理解</div>
+  为了讲清楚"实现"，我们按历史顺序讲三个方案：① 原始 Transformer 的正弦编码（2017）→ ② 可学习绝对编码（GPT-1/BERT 时代）→ ③ RoPE（2021，现行标准）。理解前两个是读懂 RoPE 的前置铺垫。
+</div>
+
+<h3>方案 A：正弦位置编码（Attention is All You Need，2017）</h3>
+<p>原始 Transformer 的方法：为每个位置 <span class="math-inline">m</span> 生成一个固定向量，分量用不同频率的正弦和余弦函数计算：</p>
+
+<div class="math-block">
+PE(m, 2i)   = sin(m / 10000^(2i/d))
+PE(m, 2i+1) = cos(m / 10000^(2i/d))
+</div>
+
+<p>其中 <span class="math-inline">d</span> 是向量维度，<span class="math-inline">i</span> 是维度索引（0 到 d/2-1）。不同维度用不同频率，低维度（小 <span class="math-inline">i</span>）变化快，高维度变化慢——和音乐的高频泛音与低频基音类似。</p>
+
+<p>这个固定向量与 Token Embedding <strong>直接相加</strong>后进入模型：</p>
+<div class="math-block">
+x_m_final = TokenEmb(token_m) + PE(m)
+</div>
+
+<p><strong>问题</strong>：无法外推（训练了 512 长度，推理时遇到 513 位置就没有对应的 PE 向量），且绝对位置信息经过线性变换后相对位置关系被破坏。</p>
+
+<h3>方案 B：可学习绝对编码（GPT-1、BERT，2018-2019）</h3>
+<p>把每个位置的 Embedding 作为<strong>可训练参数</strong>，初始化后由梯度下降学习。这样模型可以自适应地调整位置向量。</p>
+<p><strong>问题</strong>：外推能力极差——训练 2048 长度时位置 2049 根本没有学过，推理时完全失效。现在几乎不再使用。</p>
+
+<h3>方案 C：RoPE——旋转位置编码（苏剑林，2021）</h3>
+<p>RoPE 是目前的事实标准，与前两者有本质不同：<strong>不是加法叠加，而是在注意力计算之前旋转 Q/K 向量</strong>。</p>
+
+<h3>RoPE 核心思路</h3>
+<p>先在二维空间理解，然后推广到高维。</p>
+
+<p><strong>二维版本</strong>：对于位置 <span class="math-inline">m</span> 处的一个二维向量 <span class="math-inline">(x₁, x₂)</span>，RoPE 把它绕原点旋转 <span class="math-inline">mθ</span> 角度：</p>
+
+<div class="math-block">
+f(x, m) = R(mθ) · x
+         = [cos(mθ)  -sin(mθ)] · [x₁]
+           [sin(mθ)   cos(mθ)]   [x₂]
+</div>
+
+<p>其中 <span class="math-inline">θ</span> 是预设的旋转频率（基础值）。关键性质：两个位置 <span class="math-inline">m</span> 和 <span class="math-inline">n</span> 的向量点积只取决于它们的<strong>相对距离</strong> <span class="math-inline">m - n</span>，而非绝对位置：</p>
+
+<div class="math-block">
+⟨f(q, m), f(k, n)⟩ = g(q, k, m-n)
+</div>
+
+<p>这就是"<strong>用绝对位置的形式实现相对位置编码的效果</strong>"——RoPE 的核心精妙之处。</p>
+
+<h3>高维推广</h3>
+<p>真实模型的 Q/K 向量是几千维的。RoPE 把整个向量拆成 <span class="math-inline">d/2</span> 对（每 2 个维度一组），每对独立旋转，每组用不同的频率 <span class="math-inline">θᵢ</span>：</p>
+
+<div class="math-block">
+θᵢ = base^(-2i/d)    （默认 base = 10000）
+
+i=0：θ₀ = 10000⁰ = 1        （旋转最快，感知短距离）
+i=d/4：θ_{d/4} ≈ 0.1        （中速，感知段落级）
+i=d/2-1：θ_{d/2-1} ≈ 0.0001 （旋转极慢，感知长程依赖）
+</div>
+
+<p>最终的旋转矩阵 <span class="math-inline">R</span> 是块对角形式（每 2×2 一个旋转块）：</p>
+
+<div class="math-block">
+R_{m,d} = blockdiag(
+  [cos(mθ₀)  -sin(mθ₀)],
+  [sin(mθ₀)   cos(mθ₀)],
+  [cos(mθ₁)  -sin(mθ₁)],
+  [sin(mθ₁)   cos(mθ₁)],
+  ...
+)
+</div>
+
+<p>RoPE 在<strong>每一个 Attention 层</strong>都作用于 Q 和 K（不作用于 V），而非只在 Embedding 层注入一次。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 260" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+  <text x="40" y="25" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b" font-weight="500">RoPE 在 Attention 层内的作用位置</text>
+  <!-- 输入向量 -->
+  <rect x="40" y="40" width="90" height="36" rx="6" fill="#f7f7f4" stroke="rgba(0,0,0,0.1)" stroke-width="0.5"/>
+  <text x="85" y="63" font-family="-apple-system,sans-serif" font-size="12" fill="#1a1a1a" text-anchor="middle">h（隐层输出）</text>
+  <!-- 3条分支箭头 -->
+  <path d="M132 58 L160 58" stroke="#534AB7" stroke-width="1" fill="none" marker-end="url(#arr3)"/>
+  <path d="M132 58 L132 120 L160 120" stroke="#534AB7" stroke-width="1" fill="none" marker-end="url(#arr3)"/>
+  <path d="M132 58 L132 182 L160 182" stroke="#534AB7" stroke-width="1" fill="none" marker-end="url(#arr3)"/>
+  <!-- Q K V 投影 -->
+  <rect x="162" y="40" width="80" height="36" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="202" y="63" font-family="-apple-system,sans-serif" font-size="13" fill="#26215C" text-anchor="middle">W_Q · h = q</text>
+  <rect x="162" y="102" width="80" height="36" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="202" y="125" font-family="-apple-system,sans-serif" font-size="13" fill="#26215C" text-anchor="middle">W_K · h = k</text>
+  <rect x="162" y="164" width="80" height="36" rx="6" fill="#f7f7f4" stroke="rgba(0,0,0,0.1)" stroke-width="0.5"/>
+  <text x="202" y="187" font-family="-apple-system,sans-serif" font-size="13" fill="#1a1a1a" text-anchor="middle">W_V · h = v</text>
+  <!-- RoPE 旋转 for Q and K -->
+  <path d="M244 58 L272 58" stroke="#BA7517" stroke-width="1.5" fill="none" marker-end="url(#arr3)"/>
+  <path d="M244 120 L272 120" stroke="#BA7517" stroke-width="1.5" fill="none" marker-end="url(#arr3)"/>
+  <!-- V直接穿过 -->
+  <path d="M244 182 L440 182" stroke="#534AB7" stroke-width="1" stroke-dasharray="5,3" fill="none" marker-end="url(#arr3)"/>
+  <rect x="274" y="40" width="100" height="36" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="324" y="58" font-family="-apple-system,sans-serif" font-size="11" fill="#633806" text-anchor="middle">RoPE 旋转</text>
+  <text x="324" y="72" font-family="-apple-system,sans-serif" font-size="12" fill="#633806" text-anchor="middle" font-style="italic">q' = R(mθ)·q</text>
+  <rect x="274" y="102" width="100" height="36" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="324" y="120" font-family="-apple-system,sans-serif" font-size="11" fill="#633806" text-anchor="middle">RoPE 旋转</text>
+  <text x="324" y="134" font-family="-apple-system,sans-serif" font-size="12" fill="#633806" text-anchor="middle" font-style="italic">k' = R(nθ)·k</text>
+  <!-- Attention Score -->
+  <path d="M376 58 L410 90" stroke="#534AB7" stroke-width="1.5" fill="none" marker-end="url(#arr3)"/>
+  <path d="M376 120 L410 110" stroke="#534AB7" stroke-width="1.5" fill="none" marker-end="url(#arr3)"/>
+  <rect x="412" y="80" width="110" height="44" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.5"/>
+  <text x="467" y="99" font-family="-apple-system,sans-serif" font-size="11" fill="#085041" text-anchor="middle">注意力分数</text>
+  <text x="467" y="115" font-family="-apple-system,sans-serif" font-size="12" fill="#085041" text-anchor="middle" font-style="italic">q'·k' / √d_k</text>
+  <text x="274" y="195" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b">V 不旋转，直接参与加权求和</text>
+  <!-- 标注关键性质 -->
+  <rect x="40" y="220" width="600" height="32" rx="6" fill="#EEEDFE" stroke="rgba(83,74,183,0.2)" stroke-width="0.5"/>
+  <text x="60" y="240" font-family="-apple-system,sans-serif" font-size="12" fill="#534AB7">关键性质：q'·k' = f(q, k, m-n)  ← 注意力分数只依赖相对距离，不依赖绝对位置</text>
+</svg>
+<p style="font-size:12px;color:var(--muted);margin:8px 0 0;">图 3：RoPE 在单个 Attention 层内的作用流程</p>
+</div>
+
+<h3>RoPE 的多频率分层可视化</h3>
+<p>不同维度组的旋转频率差异巨大，这是 RoPE 能同时感知短距离和长距离的根本原因：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 160" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <!-- 频率轴 -->
+  <text x="40" y="20" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b">维度组的旋转频率（d=128 为例，从低索引到高索引）</text>
+  <line x1="60" y1="130" x2="620" y2="130" stroke="rgba(0,0,0,0.15)" stroke-width="1"/>
+  <!-- 维度0 高频 -->
+  <rect x="70" y="60" width="60" height="70" rx="4" fill="#534AB7" opacity="0.85"/>
+  <text x="100" y="50" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">i=0</text>
+  <text x="100" y="155" font-family="-apple-system,sans-serif" font-size="10" fill="#6b6b6b" text-anchor="middle">θ=1.0</text>
+  <!-- 维度1 -->
+  <rect x="155" y="80" width="60" height="50" rx="4" fill="#534AB7" opacity="0.7"/>
+  <text x="185" y="50" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">i=8</text>
+  <text x="185" y="155" font-family="-apple-system,sans-serif" font-size="10" fill="#6b6b6b" text-anchor="middle">θ≈0.28</text>
+  <!-- 维度2 -->
+  <rect x="240" y="95" width="60" height="35" rx="4" fill="#534AB7" opacity="0.55"/>
+  <text x="270" y="50" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">i=16</text>
+  <text x="270" y="155" font-family="-apple-system,sans-serif" font-size="10" fill="#6b6b6b" text-anchor="middle">θ≈0.08</text>
+  <!-- 维度3 -->
+  <rect x="325" y="108" width="60" height="22" rx="4" fill="#534AB7" opacity="0.4"/>
+  <text x="355" y="50" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">i=32</text>
+  <text x="355" y="155" font-family="-apple-system,sans-serif" font-size="10" fill="#6b6b6b" text-anchor="middle">θ≈0.006</text>
+  <!-- 维度4 -->
+  <rect x="410" y="118" width="60" height="12" rx="4" fill="#534AB7" opacity="0.3"/>
+  <text x="440" y="50" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">i=48</text>
+  <text x="440" y="155" font-family="-apple-system,sans-serif" font-size="10" fill="#6b6b6b" text-anchor="middle">θ≈0.0005</text>
+  <!-- 维度5 极低频 -->
+  <rect x="495" y="125" width="60" height="5" rx="4" fill="#534AB7" opacity="0.2"/>
+  <text x="525" y="50" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle">i=63</text>
+  <text x="525" y="155" font-family="-apple-system,sans-serif" font-size="10" fill="#6b6b6b" text-anchor="middle">θ≈0.00004</text>
+  <!-- 标注 -->
+  <text x="80" y="37" font-family="-apple-system,sans-serif" font-size="10" fill="#993C1D">高频 → 感知相邻 token</text>
+  <text x="480" y="37" font-family="-apple-system,sans-serif" font-size="10" fill="#0F6E56">低频 → 感知长程依赖</text>
+</svg>
+<p style="font-size:12px;color:var(--muted);margin:8px 0 0;">图 4：RoPE 多频率分层示意（频率从 1.0 到 ~0.00004，指数级跨度）</p>
+</div>
+
+<div class="card takeaway">
+  <div class="card-title">▎RoPE 实现的 3 个工程关键</div>
+  1. <strong>零参数</strong>：旋转矩阵由预设频率公式计算，无需训练。模型参数量不增加。<br>
+  2. <strong>层层施加</strong>：每个 Attention 层都独立旋转 Q/K，不是只在 Embedding 层加一次。<br>
+  3. <strong>可缓存</strong>：位置旋转矩阵（freqs_cis）可以预计算并缓存，推理时不重复计算。
+</div>
+
+</section>
+
+<!-- ====== §3 为什么 ====== -->
+<section id="why">
+<h2>③ 为什么</h2>
+<p style="color:var(--muted);font-size:13px;margin-top:-8px;">第一性原理 · 设计取舍 · 数学本质</p>
+
+<h3>为什么需要相对位置而非绝对位置？</h3>
+<p>语言理解中，"相对位置"比"绝对位置"更重要。"我喜欢你"和"你喜欢我"在意思上的区别，来自词语的<strong>相对顺序</strong>，而不是每个词的绝对座位号（第 1 个、第 2 个、第 3 个）。</p>
+<p>更重要的是：在不同长度的文档里，同样的短语"然而……"可能出现在第 500 位，也可能出现在第 5000 位。如果模型死记硬背绝对位置，它在第 5000 位看到"然而"就不知道怎么处理了——它训练时可能只见过 2048 长度。</p>
+
+<div class="card insight">
+  <div class="card-title">▎第一性原理：位置编码本质是"告诉注意力机制两个 token 离多远"</div>
+  自注意力的核心计算是 <span class="math-inline">score(q, k) = q · k / √d</span>。这个点积反映的是"q 和 k 有多相关"。<br><br>
+  位置编码的任务不是额外添加信息，而是<strong>改变这个点积的结果</strong>，使得相距近的 token 在语法/语义上天然有更强的关联权重倾向。<br><br>
+  RoPE 的优雅之处：通过旋转操作，使 <span class="math-inline">q' · k' = f(m-n)</span>——点积自然包含了相对位置信息，不需要额外的位置偏置矩阵。
+</div>
+
+<h3>为什么 RoPE 选择"旋转"而不是"加法"？</h3>
+<p>加法（正弦编码）有一个根本问题：位置向量加到 token 向量后，经过线性变换 <span class="math-inline">W_Q, W_K</span> 时，位置信息和语义信息被混合，相对位置关系被破坏——你无法从 <span class="math-inline">(e+p)·W_Q</span> 中干净地分离出位置贡献。</p>
+<p>旋转是一种<strong>正交变换</strong>（向量模长不变），有一个关键代数性质：</p>
+
+<div class="math-block">
+⟨R(m)·q, R(n)·k⟩ = q^T · R(m)^T · R(n) · k
+                   = q^T · R(n-m) · k        ← R^T·R = R(-θ)旋转性质
+                   = f(q, k, n-m)
+</div>
+
+<p>旋转矩阵的逆等于转置（<span class="math-inline">R(-θ) = R(θ)^T</span>），这使得两个旋转向量的点积天然消去绝对位置，只留下相对位置差 <span class="math-inline">n-m</span>。这是纯数学的必然结果，不是工程技巧。</p>
+
+<h3>为什么 base=10000？</h3>
+<p>这个超参数决定了"最大可感知位置范围"。当 <span class="math-inline">base=10000, d=128</span> 时，最低频维度的周期约为 <span class="math-inline">2π × 10000^{(d-2)/d} ≈ 2π × 10000 ≈ 62,832</span>——大致对应 6 万多个 token 的最大感知距离。</p>
+<p>后来的模型（如 LLaMA3 用 base=500000，Qwen2.5 用 base=1,000,000）通过增大 base 来扩展感知范围，这是 YaRN 等长度外推方案的核心思路之一。</p>
+
+<table>
+<tr><th>方案</th><th>数学本质</th><th>优点</th><th>核心缺点</th></tr>
+<tr><td>正弦绝对编码</td><td>加法叠加，固定函数</td><td>零参数，简单</td><td>相对位置信息被破坏，外推差</td></tr>
+<tr><td>可学习绝对编码</td><td>加法叠加，可训参数</td><td>自适应</td><td>外推完全失效</td></tr>
+<tr><td>ALiBi</td><td>注意力分数上加线性惩罚 <span class="math-inline">-m·|i-j|</span></td><td>外推能力极强，推理快</td><td>长程精确推理稍弱</td></tr>
+<tr><td><strong>RoPE</strong></td><td>乘法旋转，正交变换</td><td>相对位置精确，工程友好</td><td>基础版外推能力一般（需 YaRN 增强）</td></tr>
+</table>
+
+<div class="thinking">
+为什么 ALiBi 的外推反而强于 RoPE？直觉：ALiBi 把"注意力随距离衰减"直接写死在公式里（线性惩罚不需要见过那个距离），而 RoPE 依赖训练时"见过这个旋转角度"——超出训练窗口的角度会把高频维度旋转到训练从未出现的位置，导致注意力崩塌。YaRN 的本质是压缩这些超出范围的旋转角，等效于扩大了 base。
+</div>
+
+</section>
+
+<!-- ====== §4 演进 ====== -->
+<section id="evolution">
+<h2>④ 演进格局</h2>
+<p style="color:var(--muted);font-size:13px;margin-top:-8px;">2017-2026 各流派选择 · 工业界共识形成过程</p>
+
+<div class="card deepen">
+  <div class="card-title">▎信息源说明（v3 审计标准）</div>
+  本节数据来源：Meta LLaMA 4 官方博客（ai.meta.com，2025-04）、Qwen2.5 技术报告（阿里官方，2024-09）、DeepSeek-V3 技术报告（DeepSeek 官方，2024-12）、aiwiki.ai positional encoding wiki（2026-01 更新）。引用来源: Meta AI Blog 2025-04 / DeepSeek-V3 Technical Report 2024-12 / Qwen2.5 Technical Report 2024-09。
+</div>
+
+<h3>时间线：位置编码的演进</h3>
+
+<div class="diagram">
+<svg viewBox="0 0 680 280" width="100%" xmlns="http://www.w3.org/2000/svg">
+  <!-- 时间轴 -->
+  <line x1="60" y1="240" x2="640" y2="240" stroke="#534AB7" stroke-width="1.5"/>
+  <path d="M636 237 L644 240 L636 243" fill="#534AB7"/>
+  <!-- 2017 -->
+  <circle cx="100" cy="240" r="5" fill="#534AB7"/>
+  <text x="100" y="260" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b" text-anchor="middle">2017</text>
+  <rect x="60" y="170" width="80" height="64" rx="6" fill="#f7f7f4" stroke="rgba(0,0,0,0.12)" stroke-width="0.5"/>
+  <text x="100" y="188" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle" font-weight="500">正弦编码</text>
+  <text x="100" y="202" font-family="-apple-system,sans-serif" font-size="10" fill="#6b6b6b" text-anchor="middle">Attention is</text>
+  <text x="100" y="216" font-family="-apple-system,sans-serif" font-size="10" fill="#6b6b6b" text-anchor="middle">All You Need</text>
+  <line x1="100" y1="234" x2="100" y2="240" stroke="#534AB7" stroke-width="1"/>
+  <!-- 2018-2019 -->
+  <circle cx="200" cy="240" r="5" fill="#534AB7"/>
+  <text x="200" y="260" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b" text-anchor="middle">2018-19</text>
+  <rect x="160" y="170" width="80" height="64" rx="6" fill="#f7f7f4" stroke="rgba(0,0,0,0.12)" stroke-width="0.5"/>
+  <text x="200" y="188" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle" font-weight="500">可学习编码</text>
+  <text x="200" y="202" font-family="-apple-system,sans-serif" font-size="10" fill="#6b6b6b" text-anchor="middle">GPT-1/BERT</text>
+  <text x="200" y="216" font-family="-apple-system,sans-serif" font-size="10" fill="#6b6b6b" text-anchor="middle">外推极差</text>
+  <line x1="200" y1="234" x2="200" y2="240" stroke="#534AB7" stroke-width="1"/>
+  <!-- 2021 -->
+  <circle cx="310" cy="240" r="6" fill="#BA7517"/>
+  <text x="310" y="260" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b" text-anchor="middle">2021</text>
+  <rect x="265" y="100" width="90" height="134" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.8"/>
+  <text x="310" y="120" font-family="-apple-system,sans-serif" font-size="11" fill="#BA7517" text-anchor="middle" font-weight="500">RoPE 提出</text>
+  <text x="310" y="135" font-family="-apple-system,sans-serif" font-size="10" fill="#633806" text-anchor="middle">苏剑林 RoFormer</text>
+  <text x="310" y="150" font-family="-apple-system,sans-serif" font-size="10" fill="#633806" text-anchor="middle">ALiBi 提出</text>
+  <text x="310" y="165" font-family="-apple-system,sans-serif" font-size="10" fill="#633806" text-anchor="middle">（BLOOM/MPT）</text>
+  <line x1="310" y1="234" x2="310" y2="240" stroke="#BA7517" stroke-width="1"/>
+  <!-- 2023 -->
+  <circle cx="420" cy="240" r="6" fill="#1D9E75"/>
+  <text x="420" y="260" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b" text-anchor="middle">2023</text>
+  <rect x="375" y="90" width="90" height="144" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.8"/>
+  <text x="420" y="110" font-family="-apple-system,sans-serif" font-size="11" fill="#1D9E75" text-anchor="middle" font-weight="500">RoPE 称霸</text>
+  <text x="420" y="126" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">LLaMA 1/2</text>
+  <text x="420" y="141" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">YaRN 提出</text>
+  <text x="420" y="156" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">NTK Scaling</text>
+  <text x="420" y="171" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">Mistral 7B</text>
+  <line x1="420" y1="234" x2="420" y2="240" stroke="#1D9E75" stroke-width="1"/>
+  <!-- 2024-2026 -->
+  <circle cx="560" cy="240" r="7" fill="#534AB7"/>
+  <text x="560" y="260" font-family="-apple-system,sans-serif" font-size="11" fill="#6b6b6b" text-anchor="middle">2024-26</text>
+  <rect x="500" y="30" width="120" height="204" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.8"/>
+  <text x="560" y="52" font-family="-apple-system,sans-serif" font-size="11" fill="#534AB7" text-anchor="middle" font-weight="500">全面 RoPE 生态</text>
+  <text x="560" y="70" font-family="-apple-system,sans-serif" font-size="10" fill="#26215C" text-anchor="middle">LLaMA 3 (500K base)</text>
+  <text x="560" y="85" font-family="-apple-system,sans-serif" font-size="10" fill="#26215C" text-anchor="middle">Qwen2.5 (1M base)</text>
+  <text x="560" y="100" font-family="-apple-system,sans-serif" font-size="10" fill="#26215C" text-anchor="middle">DeepSeek-V3 (YaRN)</text>
+  <text x="560" y="115" font-family="-apple-system,sans-serif" font-size="10" fill="#26215C" text-anchor="middle">Gemma 3 (双 base)</text>
+  <text x="560" y="130" font-family="-apple-system,sans-serif" font-size="10" fill="#26215C" text-anchor="middle">Cohere R7B (NoPE)</text>
+  <text x="560" y="145" font-family="-apple-system,sans-serif" font-size="10" fill="#26215C" text-anchor="middle">LLaMA 4 iRoPE</text>
+  <text x="560" y="160" font-family="-apple-system,sans-serif" font-size="10" fill="#26215C" text-anchor="middle">vLLM/FlashAttn</text>
+  <text x="560" y="175" font-family="-apple-system,sans-serif" font-size="10" fill="#26215C" text-anchor="middle">全面优化 RoPE</text>
+  <line x1="560" y1="234" x2="560" y2="240" stroke="#534AB7" stroke-width="1"/>
+</svg>
+<p style="font-size:12px;color:var(--muted);margin:8px 0 0;">图 5：位置编码 2017-2026 演进时间线</p>
+</div>
+
+<h3>2024-2026 行业格局：RoPE 的统治</h3>
+
+<table>
+<tr><th>模型</th><th>位置编码方案</th><th>base 频率</th><th>训练长度</th><th>外推方案</th></tr>
+<tr><td><strong>LLaMA 3.1</strong> (Meta)</td><td>RoPE</td><td>500,000</td><td>8K</td><td>RoPE Scaling → 128K</td></tr>
+<tr><td><strong>LLaMA 4 Scout/Maverick</strong> (Meta, 2025-04)</td><td>iRoPE（RoPE+NoPE 交叉）</td><td>—</td><td>256K</td><td>NoPE 层保全局注意力 → 10M</td></tr>
+<tr><td><strong>Qwen2.5</strong> (阿里, 2024-09)</td><td>RoPE</td><td>1,000,000</td><td>32K</td><td>YaRN → 128K</td></tr>
+<tr><td><strong>DeepSeek-V3</strong> (DeepSeek, 2024-12)</td><td>RoPE</td><td>10,000</td><td>4K</td><td>YaRN → 128K</td></tr>
+<tr><td><strong>Gemma 3</strong> (Google, 2025)</td><td>RoPE（双 base）</td><td>局部 10K / 全局 1M</td><td>—</td><td>局部滑动窗口 + 全局注意力</td></tr>
+<tr><td><strong>Cohere R7B</strong> (2024)</td><td>RoPE + NoPE 混合</td><td>—</td><td>—</td><td>前沿实验，小规模</td></tr>
+<tr><td>BLOOM / MPT（已落幕）</td><td>ALiBi</td><td>—</td><td>2K</td><td>强外推但已被 RoPE 淘汰</td></tr>
+</table>
+
+<div class="card insight">
+  <div class="card-title">▎行业共识（多家公司行动一致）</div>
+  <strong>RoPE 是 2024-2026 的绝对主流</strong>：LLaMA / Qwen / DeepSeek / Mistral / Gemma / Phi 系列全部采用。推理框架（vLLM、FlashAttention、llama.cpp）也专门为 RoPE 优化了内核（fused kernel）。ALiBi 的外推优势已被 YaRN + 大 base 的 RoPE 方案超越，BLOOM/MPT 属于历史。<br><br>
+  <strong>新前沿（尚非共识）</strong>：LLaMA 4 的 iRoPE（RoPE+NoPE 交错），目前只有 Meta 一家工业化，属于"学术前沿正在产品化"阶段，尚不算行业共识。
+</div>
+
+<h3>YaRN 的工作原理（Qwen2.5 / DeepSeek-V3 的外推方案）</h3>
+<p>原始 RoPE 在超出训练长度时，高频维度的旋转角度超出了训练分布（比如训练时最大旋转到 <span class="math-inline">4K × θ₀ = 4000 rad</span>，但推理时出现 <span class="math-inline">128K × θ₀ = 128000 rad</span>——完全没见过），导致注意力分布崩塌。</p>
+<p>YaRN 的核心操作：对不同频率的维度做差异化缩放——高频维度（局部关系）保持不变，低频维度（长程关系）做插值压缩，使旋转角度始终在训练分布内。公式上等效于根据目标上下文长度自适应地调大 base 值。</p>
+
+</section>
+
+<!-- ====== §5 产品连接 ====== -->
+<section id="connect">
+<h2>⑤ 与产品连接</h2>
+<p style="color:var(--muted);font-size:13px;margin-top:-8px;">DDAgent / KBA / FxAgent / 跨境支付场景 · 选型速查表</p>
+
+<h3>位置编码对你的 Agent 的实际影响</h3>
+<p>作为产品经理，你不需要手写 RoPE——但位置编码的选择和参数直接影响你的 Agent 产品的核心指标。</p>
+
+<div class="card intuition">
+  <div class="card-title">▎DDAgent · 尽调长文档问题</div>
+  DDAgent 的核心任务之一是读取完整的尽调问卷（通常 10-50K 字）并从中抽取关键信息填写报告。<br><br>
+  <strong>位置编码的影响</strong>：文档越长，位置编码对"模型能否看到中段信息"至关重要。LLaMA 3.1 (128K RoPE Scaling) 或 Qwen2.5 (128K YaRN) 在这个场景下比基础 4K 模型表现好得多——不是因为"窗口更大"，而是因为位置编码方案让模型真正能关注到文档中段。<br><br>
+  <strong>选型建议</strong>：选支持 32K+ 且有 YaRN 或 RoPE Scaling 的模型，而非只看名义上下文长度。
+</div>
+
+<div class="card takeaway">
+  <div class="card-title">▎KBA · 知识库检索与长文档总结</div>
+  KBA 的召回模块（Embedding 检索）对位置编码<em>不</em>敏感（检索是 Bi-encoder，位置编码在 Embedding 模型里是加法式的绝对编码）。<br><br>
+  但 KBA 的<strong>生成模块</strong>（将检索到的多段内容合并后生成回答）受位置编码影响：若将 5 段文档拼接后达到 8K 以上，需要底层模型的位置编码能有效处理这个长度。
+</div>
+
+<div class="card deepen">
+  <div class="card-title">▎FxAgent · 汇率播报与短窗口场景</div>
+  FxAgent 的主要任务是汇率行情播报、异动解读，输入通常很短（< 2K token）。<br><br>
+  对 FxAgent 来说，位置编码方案<strong>几乎不影响最终效果</strong>——短序列下 RoPE、ALiBi、正弦编码性能差异可以忽略。这也说明：不是所有 Agent 都需要关注位置编码，你的业务场景决定了这个参数是否是关键。
+</div>
+
+<h3>实用选型速查表</h3>
+<table>
+<tr><th>业务场景</th><th>典型长度</th><th>关键诉求</th><th>推荐方案</th></tr>
+<tr><td>长文档阅读（尽调报告、合同）</td><td>20K-128K</td><td>中段信息不丢失</td><td>YaRN / RoPE Scaling + 大 base</td></tr>
+<tr><td>多轮对话（KBA / FxAgent）</td><td>4K-16K</td><td>上下文连贯</td><td>标准 RoPE（32K+ 预训练）</td></tr>
+<tr><td>代码生成/分析</td><td>8K-64K</td><td>跨文件引用</td><td>LLaMA 3 / DeepSeek-V3 RoPE</td></tr>
+<tr><td>短文本分类/提取</td><td>&lt;2K</td><td>—</td><td>任意编码均可，关注其他维度</td></tr>
+<tr><td>跨百万 token 分析</td><td>&gt;500K</td><td>超长外推</td><td>iRoPE（LLaMA 4 Scout）</td></tr>
+</table>
+
+<h3>关于"有效上下文 vs 名义上下文"</h3>
+<p>aiwiki.ai 的调研指出（2026-01）：模型声称的上下文长度（如 128K）通常有效利用率约为 60-70%——这是位置编码方案、训练数据分布、"lost in the middle"现象共同作用的结果。</p>
+
+<div class="card warning">
+  <div class="card-title">▎PM 使用模型时的陷阱</div>
+  你选了一个"支持 128K 上下文"的模型，但把 100K 的尽调文档丢进去，关键信息在第 50K 处，模型可能完全没有注意到。<br><br>
+  <strong>原因</strong>：位置编码的质量决定了中段信息的注意力权重，而不是窗口大小本身。<br><br>
+  <strong>实践建议</strong>：在集成长文档模型前，用"needle in a haystack"测试（在文档中间藏一个独特事实，看模型能否找到）验证实际有效感知范围。
+</div>
+
+<div class="footer-actions">
+  <h3>本章配套资源</h3>
+  <ul>
+    <li><a href="1.3-positional-encoding-quiz.html">→ Quiz：5 题测验，覆盖全章</a></li>
+    <li><a href="../../../INDEX.html">← 返回知识图谱</a></li>
+    <li>下一章：<strong>1.4 长上下文扩展</strong> — YaRN / NTK / 超长窗口工程实践</li>
+  </ul>
+</div>
+
+</section>
+
+</body>
+</html>

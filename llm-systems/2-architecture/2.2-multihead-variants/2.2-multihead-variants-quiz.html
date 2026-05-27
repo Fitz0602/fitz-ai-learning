@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz 2.2 · 多头变种 GQA / MQA / MLA / FlashAttention</title>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F9F3;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--bg:#FAFAF8;--text:#1A1A1A;--muted:#6B6B6B;--border:#E5E5E0;--green:#1D9E75;--green-bg:#E6F9F3;--red:#993C1D;--red-bg:#FDEEE8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:24px 20px}
+h1{font-size:22px;font-weight:700;margin-bottom:4px;text-align:center}
+.subtitle{font-size:13px;color:var(--muted);text-align:center;margin-bottom:20px}
+.q-block{border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin:16px 0}
+.q-id{font-size:11px;color:var(--purple);font-weight:600;margin-bottom:6px}
+.q-text{font-size:14px;font-weight:500;margin-bottom:10px}
+.opts{display:flex;flex-direction:column;gap:6px}
+.opt-btn{display:block;width:100%;text-align:left;padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:13px;line-height:1.5;transition:all .15s}
+.opt-btn:hover{border-color:var(--purple);background:var(--purple-bg)}
+.opt-btn.correct{border-color:var(--teal);background:var(--teal-bg);font-weight:600}
+.opt-btn.wrong{border-color:var(--coral);background:var(--coral-bg)}
+.opt-btn:disabled{cursor:default;opacity:.8}
+.explain{margin-top:8px;padding:8px 12px;border-radius:6px;font-size:12.5px;display:none;line-height:1.6}
+.explain.show{display:block}
+.explain.correct-exp{background:var(--teal-bg);color:var(--teal)}
+.explain.wrong-exp{background:var(--coral-bg);color:var(--coral)}
+.explain a{color:var(--purple);text-decoration:underline}
+.score-box{margin-top:24px;padding:20px;border-radius:10px;text-align:center;font-size:16px;font-weight:600;display:none}
+.score-box.show{display:block}
+.score-box.great{background:var(--teal-bg);color:var(--teal)}
+.score-box.good{background:var(--amber-bg);color:var(--amber)}
+.score-box.poor{background:var(--coral-bg);color:var(--coral)}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.top-nav{display:flex;align-items:center;gap:8px;margin-bottom:20px}
+</style>
+</head>
+<body>
+<div class="top-nav">
+<a href="2.2-multihead-variants-chapter.html" class="nav-link">← 返回章节</a>
+<a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+</div>
+
+<h1>Quiz 2.2 · 多头变种</h1>
+<p class="subtitle">GQA / MQA / MLA / FlashAttention — 10 题 · 每节 2 题</p>
+
+<!-- T1-2.2-①-1 -->
+<div class="q-block">
+  <div class="q-id">T1-2.2-①-1 · 概念辨析</div>
+  <div class="q-text">GQA 与 MQA 的核心区别是什么？</div>
+  <div class="opts">
+    <button class="opt-btn" data-q="1" data-v="A" onclick="check(this,1,'B')">A. GQA 使用更小的头维度，MQA 使用完整的头维度</button>
+    <button class="opt-btn" data-q="1" data-v="B" onclick="check(this,1,'B')">B. GQA 将查询头分组共享 KV，MQA 所有查询头共享同一组 KV</button>
+    <button class="opt-btn" data-q="1" data-v="C" onclick="check(this,1,'B')">C. GQA 只用于训练，MQA 只用于推理</button>
+    <button class="opt-btn" data-q="1" data-v="D" onclick="check(this,1,'B')">D. GQA 使用 FlashAttention 加速，MQA 不使用</button>
+  </div>
+  <div class="explain" id="exp-1"></div>
+</div>
+
+<!-- T1-2.2-①-2 -->
+<div class="q-block">
+  <div class="q-id">T1-2.2-①-2 · 判断应用</div>
+  <div class="q-text">一个模型有 64 个查询头、8 个 KV 头。采用 GQA 时，KV Cache 相比 MHA 减少了多少？</div>
+  <div class="opts">
+    <button class="opt-btn" data-q="2" data-v="A" onclick="check(this,2,'C')">A. 8 倍</button>
+    <button class="opt-btn" data-q="2" data-v="B" onclick="check(this,2,'C')">B. 64%</button>
+    <button class="opt-btn" data-q="2" data-v="C" onclick="check(this,2,'C')">C. 87.5%</button>
+    <button class="opt-btn" data-q="2" data-v="D" onclick="check(this,2,'C')">D. 92%</button>
+  </div>
+  <div class="explain" id="exp-2"></div>
+</div>
+
+<!-- T1-2.2-②-1 -->
+<div class="q-block">
+  <div class="q-id">T1-2.2-②-1 · 概念辨析</div>
+  <div class="q-text">MLA（Multi-head Latent Attention）与 GQA 压缩 KV Cache 的方式本质区别是什么？</div>
+  <div class="opts">
+    <button class="opt-btn" data-q="3" data-v="A" onclick="check(this,3,'C')">A. MLA 使用更少的查询头，GQA 保持查询头不变</button>
+    <button class="opt-btn" data-q="3" data-v="B" onclick="check(this,3,'C')">B. MLA 丢弃部分 KV 头，GQA 对 KV 头做平均池化</button>
+    <button class="opt-btn" data-q="3" data-v="C" onclick="check(this,3,'C')">C. GQA 减少独立 KV 头数量（分组共享），MLA 将 KV 压缩到低维隐空间</button>
+    <button class="opt-btn" data-q="3" data-v="D" onclick="check(this,3,'C')">D. MLA 和 GQA 压缩方式相同，只是名称不同</button>
+  </div>
+  <div class="explain" id="exp-3"></div>
+</div>
+
+<!-- T1-2.2-②-2 -->
+<div class="q-block">
+  <div class="q-id">T1-2.2-②-2 · 判断应用</div>
+  <div class="q-text">FlashAttention 的"在线 Softmax"在数学上与标准 Softmax 的关系是？</div>
+  <div class="opts">
+    <button class="opt-btn" data-q="4" data-v="A" onclick="check(this,4,'B')">A. 在线 Softmax 是标准 Softmax 的近似，存在微小误差</button>
+    <button class="opt-btn" data-q="4" data-v="B" onclick="check(this,4,'B')">B. 在线 Softmax 与标准 Softmax 数学结果完全一致，只是计算顺序不同</button>
+    <button class="opt-btn" data-q="4" data-v="C" onclick="check(this,4,'B')">C. 在线 Softmax 仅适用于短序列，长序列必须用标准 Softmax</button>
+    <button class="opt-btn" data-q="4" data-v="D" onclick="check(this,4,'B')">D. 在线 Softmax 牺牲了位置信息，因此需要额外位置编码补偿</button>
+  </div>
+  <div class="explain" id="exp-4"></div>
+</div>
+
+<!-- T1-2.2-③-1 -->
+<div class="q-block">
+  <div class="q-id">T1-2.2-③-1 · 概念辨析</div>
+  <div class="q-text">自回归推理（逐 token 生成）时，注意力计算的主要瓶颈是什么？</div>
+  <div class="opts">
+    <button class="opt-btn" data-q="5" data-v="A" onclick="check(this,5,'C')">A. 计算量太大，Tensor Core 不够用</button>
+    <button class="opt-btn" data-q="5" data-v="B" onclick="check(this,5,'C')">B. 模型参数太多，显存放不下</button>
+    <button class="opt-btn" data-q="5" data-v="C" onclick="check(this,5,'C')">C. 显存带宽不够，KV Cache 搬运成为瓶颈（memory-bound）</button>
+    <button class="opt-btn" data-q="5" data-v="D" onclick="check(this,5,'C')">D. 注意力矩阵的数值溢出导致不稳定</button>
+  </div>
+  <div class="explain" id="exp-5"></div>
+</div>
+
+<!-- T1-2.2-③-2 -->
+<div class="q-block">
+  <div class="q-id">T1-2.2-③-2 · 判断应用</div>
+  <div class="q-text">GQA 成为行业共识的三个条件是：(1) 问题真实存在 (2) 方案足够简单 (3) 质量损失可接受。以下哪个方案不满足条件 3？</div>
+  <div class="opts">
+    <button class="opt-btn" data-q="6" data-v="A" onclick="check(this,6,'B')">A. GQA 本身</button>
+    <button class="opt-btn" data-q="6" data-v="B" onclick="check(this,6,'B')">B. MQA</button>
+    <button class="opt-btn" data-q="6" data-v="C" onclick="check(this,6,'B')">C. FlashAttention</button>
+    <button class="opt-btn" data-q="6" data-v="D" onclick="check(this,6,'B')">D. RoPE</button>
+  </div>
+  <div class="explain" id="exp-6"></div>
+</div>
+
+<!-- T1-2.2-④-1 -->
+<div class="q-block">
+  <div class="q-id">T1-2.2-④-1 · 概念辨析</div>
+  <div class="q-text">FlashAttention-4（2026.03）针对 Blackwell GPU 的核心创新是什么？</div>
+  <div class="opts">
+    <button class="opt-btn" data-q="7" data-v="A" onclick="check(this,7,'C')">A. 使用更深的神经网络替代注意力机制</button>
+    <button class="opt-btn" data-q="7" data-v="B" onclick="check(this,7,'C')">B. 引入 MoE 架构替代标准 FFN</button>
+    <button class="opt-btn" data-q="7" data-v="C" onclick="check(this,7,'C')">C. 用多项式近似在 CUDA Core 上算指数函数，绕开 SFU 瓶颈</button>
+    <button class="opt-btn" data-q="7" data-v="D" onclick="check(this,7,'C')">D. 将所有计算迁移到 CPU 上执行以降低 GPU 成本</button>
+  </div>
+  <div class="explain" id="exp-7"></div>
+</div>
+
+<!-- T1-2.2-④-2 -->
+<div class="q-block">
+  <div class="q-id">T1-2.2-④-2 · 判断应用</div>
+  <div class="q-text">2024-2026 年，Llama 3/4 和 Qwen 系列都选择了 GQA 而非 MLA，主要原因不包括以下哪项？</div>
+  <div class="opts">
+    <button class="opt-btn" data-q="8" data-v="A" onclick="check(this,8,'C')">A. GQA 实现简单，不需要自定义推理 kernel</button>
+    <button class="opt-btn" data-q="8" data-v="B" onclick="check(this,8,'C')">B. GQA 有 FlashAttention 原生支持，MLA 需要特殊适配</button>
+    <button class="opt-btn" data-q="8" data-v="C" onclick="check(this,8,'C')">C. MLA 的 KV Cache 压缩率不如 GQA</button>
+    <button class="opt-btn" data-q="8" data-v="D" onclick="check(this,8,'C')">D. GQA 的 Hugging Face / vLLM 生态更成熟</button>
+  </div>
+  <div class="explain" id="exp-8"></div>
+</div>
+
+<!-- T1-2.2-⑤-1 -->
+<div class="q-block">
+  <div class="q-id">T1-2.2-⑤-1 · 概念辨析</div>
+  <div class="q-text">DDAgent 处理 50K token 尽调文档时，推理的主要瓶颈是什么？</div>
+  <div class="opts">
+    <button class="opt-btn" data-q="9" data-v="A" onclick="check(this,9,'B')">A. 文档太长，模型无法理解</button>
+    <button class="opt-btn" data-q="9" data-v="B" onclick="check(this,9,'B')">B. 自回归生成时每步需搬运完整 KV Cache，显存带宽受限（memory-bound）</button>
+    <button class="opt-btn" data-q="9" data-v="C" onclick="check(this,9,'B')">C. 尽调字段太多，模型生成速度跟不上</button>
+    <button class="opt-btn" data-q="9" data-v="D" onclick="check(this,9,'B')">D. 工具调用的延迟远高于模型推理延迟</button>
+  </div>
+  <div class="explain" id="exp-9"></div>
+</div>
+
+<!-- T1-2.2-⑤-2 -->
+<div class="q-block">
+  <div class="q-id">T1-2.2-⑤-2 · 判断应用</div>
+  <div class="q-text">当前 DDAgent/KBA/FxAgent（2K-80K 上下文）选择 GQA 而非 MLA 的核心理由是？</div>
+  <div class="opts">
+    <button class="opt-btn" data-q="10" data-v="A" onclick="check(this,10,'C')">A. MLA 的模型质量远低于 GQA</button>
+    <button class="opt-btn" data-q="10" data-v="B" onclick="check(this,10,'C')">B. MLA 不支持长上下文推理</button>
+    <button class="opt-btn" data-q="10" data-v="C" onclick="check(this,10,'C')">C. 在当前上下文长度下 GQA 已足够，MLA 实现复杂度更高且生态不成熟</button>
+    <button class="opt-btn" data-q="10" data-v="D" onclick="check(this,10,'C')">D. MLA 不与 MoE 架构兼容</button>
+  </div>
+  <div class="explain" id="exp-10"></div>
+</div>
+
+<div class="score-box" id="score-box"></div>
+
+<script>
+const answers = {
+  1:'B', 2:'C', 3:'C', 4:'B', 5:'C', 6:'B', 7:'C', 8:'C', 9:'B', 10:'C'
+};
+const explanations = {
+  1:{c:'✅ 正确！GQA 将查询头分成 g 组，每组共享一对 KV 头；MQA 中 g=1，即所有查询头共享唯一一对 KV。GQA 是 MQA 的泛化（g=1 即 MQA，g=n_q 即 MHA）。参见 <a href="2.2-multihead-variants-chapter.html#is">§① 是什么</a>',w:'❌ GQA 和 MQA 的区别不在头维度或用途，而在 KV 头的共享粒度。GQA 分组共享，MQA 全头共享。参见 <a href="2.2-multihead-variants-chapter.html#is">§① 是什么</a>'},
+  2:{c:'✅ 正确！KV Cache 减少比 = 1 - g/n_q = 1 - 8/64 = 87.5%。64 个查询头只用 8 个 KV 头，每个 KV 头被 8 个查询头共享。参见 <a href="2.2-multihead-variants-chapter.html#how">§② 怎么实现</a>',w:'❌ KV Cache 减少比 = 1 - n_kv/n_q。64 查询头 / 8 KV 头 = 减少 87.5%。不是"8 倍"（那是绝对倍数），也不是 64%。参见 <a href="2.2-multihead-variants-chapter.html#how">§② 怎么实现</a>'},
+  3:{c:'✅ 正确！GQA 通过"减少独立 KV 头数量"（分组共享）来压缩；MLA 通过"将 KV 压缩到低维隐空间"来压缩。一个是"少放几本菜单"，一个是"把菜单压缩成摘要"。参见 <a href="2.2-multihead-variants-chapter.html#how">§② 怎么实现</a>',w:'❌ MLA 不减少头数也不丢弃头，而是用低秩投影压缩 KV 到隐空间。GQA 是分组共享，MLA 是低维压缩——机制完全不同。参见 <a href="2.2-multihead-variants-chapter.html#how">§② 怎么实现</a>'},
+  4:{c:'✅ 正确！在线 Softmax 通过逐块更新 running max 和 running sum，数学上与标准 Softmax 结果完全一致，只是计算顺序从"先算全部再归一化"变为"边算边归一化"。参见 <a href="2.2-multihead-variants-chapter.html#how">§② 怎么实现</a>',w:'❌ 在线 Softmax 不是近似！它通过数学等价的累积方式实现与标准 Softmax 完全一致的结果，这是 FlashAttention 能保持精确性的关键。参见 <a href="2.2-multihead-variants-chapter.html#how">§② 怎么实现</a>'},
+  5:{c:'✅ 正确！自回归推理时，每生成一个 token 需把整个 KV Cache 从 HBM 读到 SRAM，但计算量只有一个 token 的 Q 与所有 KV 的点积——"搬数据"远慢于"算"，所以是 memory-bound。参见 <a href="2.2-multihead-variants-chapter.html#why">§③ 为什么</a>',w:'❌ 自回归推理的瓶颈不在算力或参数量，而在显存带宽——KV Cache 的搬运速度跟不上计算速度。参见 <a href="2.2-multihead-variants-chapter.html#why">§③ 为什么</a>'},
+  6:{c:'✅ 正确！MQA（所有头共享唯一一对 KV）虽然推理最快，但质量下降明显——不满足"质量损失可接受"这个条件。GQA 论文的核心贡献就是证明 GQA 在速度接近 MQA 的同时质量接近 MHA。参见 <a href="2.2-multihead-variants-chapter.html#why">§③ 为什么</a>',w:'❌ MQA 虽然推理速度快，但所有头共享唯一一对 KV 会导致注意力模式多样性大幅下降，质量损失显著——这是 GQA 被提出的原因。参见 <a href="2.2-multihead-variants-chapter.html#why">§③ 为什么</a>'},
+  7:{c:'✅ 正确！FA-4 发现 Blackwell GPU 上 SFU（特殊函数单元）是前向传播瓶颈，因此用多项式近似在普通 CUDA Core 上算 exp()，绕开 SFU 队列瓶颈。同时引入条件 Softmax 重缩放减少 90% 修正操作。参见 <a href="2.2-multihead-variants-chapter.html#evolution">§④ 演进</a>',w:'❌ FA-4 没有替换注意力机制，也没有引入 MoE。它的创新是软硬件协同设计：软件指数近似绕 SFU 瓶颈 + 条件重缩放 + 2-CTA MMA。参见 <a href="2.2-multihead-variants-chapter.html#evolution">§④ 演进</a>'},
+  8:{c:'✅ 正确！"MLA 的 KV Cache 压缩率不如 GQA"是错误的——MLA 的压缩率（93.3%）远高于 GQA（75-87.5%）。Llama/Qwen 选择 GQA 是因为简单可靠、生态成熟，不是因为 MLA 压缩率低。参见 <a href="2.2-multihead-variants-chapter.html#evolution">§④ 演进</a>',w:'❌ MLA 压缩率（93.3%）实际远高于 GQA（75-87.5%）。不选 MLA 是因为实现复杂、生态不成熟，不是因为压缩率不够。参见 <a href="2.2-multihead-variants-chapter.html#evolution">§④ 演进</a>'},
+  9:{c:'✅ 正确！50K token 的尽调文档在自回归生成时，每一步都要搬运完整 KV Cache 到计算单元——这是 memory-bound 瓶颈。GQA/MLA 通过减少 KV 存储量来缓解此问题。参见 <a href="2.2-multihead-variants-chapter.html#connect">§⑤ 与产品连接</a>',w:'❌ 瓶颈不在理解能力或字段数量，而在推理时 KV Cache 的搬运速度。每生成 1 个 token 就要搬运 50K token 的 KV Cache，这是 memory-bound 的典型场景。参见 <a href="2.2-multihead-variants-chapter.html#connect">§⑤ 与产品连接</a>'},
+  10:{c:'✅ 正确！在 2K-80K 上下文下 GQA 已经足够有效，而 MLA 需自定义 kernel、训练调参复杂、Hugging Face/vLLM 生态不成熟——工程成本远大于收益。但 200K+ 时 MLA 将成为必要选项。参见 <a href="2.2-multihead-variants-chapter.html#connect">§⑤ 与产品连接</a>',w:'❌ MLA 的模型质量并不低于 GQA（DeepSeek-V2/V3 已验证），也支持长上下文和 MoE。不选 MLA 是工程成本和生态成熟度的考量，不是质量问题。参见 <a href="2.2-multihead-variants-chapter.html#connect">§⑤ 与产品连接</a>'}
+};
+let score=0;
+let answered=0;
+function check(btn,q,correct){
+  const v=btn.getAttribute('data-v');
+  const allBtns=document.querySelectorAll(`.opt-btn[data-q="${q}"]`);
+  allBtns.forEach(b=>b.disabled=true);
+  const exp=document.getElementById('exp-'+q);
+  if(v===correct){
+    btn.classList.add('correct');
+    exp.className='explain show correct-exp';
+    exp.innerHTML=explanations[q].c;
+    score++;
+  }else{
+    btn.classList.add('wrong');
+    allBtns.forEach(b=>{if(b.getAttribute('data-v')===correct)b.classList.add('correct')});
+    exp.className='explain show wrong-exp';
+    exp.innerHTML=explanations[q].w;
+  }
+  answered++;
+  if(answered===10){
+    const sb=document.getElementById('score-box');
+    sb.classList.add('show');
+    if(score>=8){sb.className='score-box show great';sb.innerHTML=`🎉 ${score}/10 · 扎实掌握！多头变种的精髓已入脑`;}
+    else if(score>=5){sb.className='score-box show good';sb.innerHTML=`👍 ${score}/10 · 良好基础，重点回顾错题对应章节`;}
+    else{sb.className='score-box show poor';sb.innerHTML=`📖 ${score}/10 · 建议重读 <a href="2.2-multihead-variants-chapter.html">2.2 章节</a>，尤其 §① 和 §③`;}
+  }
+}
+</script>
+</body>
+</html>

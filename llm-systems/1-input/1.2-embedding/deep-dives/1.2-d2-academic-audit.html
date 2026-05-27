@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>1.2 Embedding 章节行业共识审计 v3 · 权威模型公司实证</title>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08); --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE; --amber: #BA7517; --amber-bg: #FAEEDA;
+  --blue: #185FA5; --blue-bg: #E6F1FB; --coral: #993C1D; --coral-bg: #FAECE7;
+  --red: #C41E3A; --red-bg: #FDE8EB;
+}
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.75; max-width: 800px; margin: 0 auto;
+  padding: 32px 24px 80px; font-size: 15px; }
+h1 { font-size: 22px; font-weight: 700; margin: 4px 0 8px; }
+.subtitle { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+h2 { font-size: 18px; font-weight: 600; margin: 36px 0 14px; padding-left: 12px; border-left: 4px solid var(--purple); }
+h3 { font-size: 15px; font-weight: 600; margin: 22px 0 10px; color: #333; }
+h4 { font-size: 13.5px; font-weight: 600; margin: 16px 0 8px; color: var(--purple); }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin: 16px 0; }
+.card.critical { background: var(--red-bg); border-color: rgba(196,30,58,0.2); }
+.card.warning { background: var(--coral-bg); border-color: rgba(153,60,29,0.15); }
+.card.deepen { background: var(--amber-bg); border-color: rgba(186,117,23,0.15); }
+.card.takeaway { background: var(--teal-bg); border-color: rgba(29,158,117,0.15); }
+.card.info { background: var(--blue-bg); border-color: rgba(24,95,165,0.15); }
+.card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+.card.critical .card-title { color: var(--red); }
+.card.warning .card-title { color: var(--coral); }
+.card.deepen .card-title { color: var(--amber); }
+.card.takeaway .card-title { color: var(--teal); }
+.card.info .card-title { color: var(--blue); }
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 600; background: #f7f7f4; color: var(--muted); font-size: 12px; white-space: nowrap; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: #f1f1ee; padding: 2px 6px; border-radius: 4px; color: #d63384; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.tag.p0 { background: var(--red-bg); color: var(--red); }
+.tag.p1 { background: var(--coral-bg); color: var(--coral); }
+.tag.p2 { background: var(--amber-bg); color: var(--amber); }
+.tag.ok { background: var(--teal-bg); color: var(--teal); }
+.gap-table td:nth-child(2) { width: 70%; }
+.ref-list { font-size: 13.5px; line-height: 1.9; }
+.ref-list li { margin-bottom: 4px; }
+.badge { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 11px; font-weight: 600; margin-left: 6px; }
+.badge.cn { background: #EEEDFE; color: #534AB7; }
+.badge.intl { background: #E6F1FB; color: #185FA5; }
+.verdict-box { padding: 16px 20px; border-radius: 10px; margin: 18px 0; }
+.verdict-pass { background: var(--teal-bg); border-left: 4px solid var(--teal); }
+.verdict-warn { background: var(--amber-bg); border-left: 4px solid var(--amber); }
+.verdict-fail { background: var(--red-bg); border-left: 4px solid var(--red); }
+.source-tag { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-left: 4px; }
+.source-tag.cn { background: #EEEDFE; color: #534AB7; }
+.source-tag.intl { background: #E6F1FB; color: #185FA5; }
+</style>
+</head>
+<body>
+
+<div style="border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 28px;">
+  <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+    <span class="tag" style="background:var(--purple-bg);color:var(--purple);">T1 LLM 系统</span>
+    <span class="tag" style="background:#f1f1f1;color:var(--muted);">1.2 Embedding</span>
+    <span class="tag p0">Deep Dive · 行业共识审计 v3</span>
+  </div>
+  <h1>📋 Embedding 章节行业共识审计</h1>
+  <div class="subtitle">基于权威 AI 模型公司官方发布的 2025–2026 行业共识 · 非论文驱动</div>
+  <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+    审计日期：2026-05-15 · 信息源优先级：① 中国头部开源（Qwen/智谱/智源）→ ② 国际头部（Google/Cohere/Voyage/Microsoft）→ ③ 顶级会议论文（仅补充）
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>一、审计方法论 — 与 v2 的关键区别</h2>
+
+<div class="card info">
+  <div class="card-title">▎v2 → v3 的核心变化</div>
+  <table style="font-size:13px;">
+    <tr><th>维度</th><th>v2（已废弃）</th><th>v3（本次）</th></tr>
+    <tr><td><b>信息源定义</b></td><td>以学术论文为主要依据</td><td>以<strong>权威模型公司官方发布</strong>为主要依据</td></tr>
+    <tr><td><b>优先级</b></td><td>arXiv → ICLR/EMNLP → 行业</td><td>① 中国头部开源（Qwen/智谱/智源/DeepSeek）→ ② 国际头部（Google/Cohere/Voyage/Microsoft/OpenAI）→ ③ 顶级会议论文仅补充</td></tr>
+    <tr><td><b>过滤规则</b></td><td>无</td><td>移除非权威来源（个人博客/非官方综述/未经验证的第三方分析）</td></tr>
+    <tr><td><b>共识判定</b></td><td>1篇论文 = "最新认知"</td><td>需多家权威公司<strong>行动一致</strong>才算行业共识</td></tr>
+  </table>
+</div>
+
+<div class="card critical" style="margin-top:16px;">
+  <div class="card-title">🔴 v2 的核心问题</div>
+  v2 引用了 10 篇文献，其中 8 篇是学术论文/个人博客。例如：
+  <ul style="margin:6px 0;">
+    <li><b>EleutherAI Weight Tying 论文</b> — 1篇论文 ≠ 行业共识。Qwen3-Embedding 官方文档未提及此机制，行业实际做法已明确：大模型不共享</li>
+    <li><b>Semantic Shift 论文</b> — 学术发现，尚无权威公司据此调整产品</li>
+    <li><b>Provable Accuracy Collapse</b> — ICML 2026 Spotlight，但 OpenAI/Qwen/Cohere 全部支持 Matryoshka 截断，行业共识与论文结论矛盾</li>
+    <li><b>个人博客（Sinha, biechi.github.io）</b> — 非权威来源</li>
+  </ul>
+  <strong>v3 原则：论文发现 ≠ 行业共识。只有权威公司用行动验证的才算。</strong>
+</div>
+
+<!-- ============================================================ -->
+<h2>二、权威信息源总览</h2>
+
+<div class="card takeaway">
+  <div class="card-title">📚 v3 审计引用的权威来源（全部为官方发布）</div>
+  <table style="font-size:13px;">
+    <tr><th>来源</th><th>级别</th><th>关键信息</th></tr>
+    <tr><td><b>Qwen3-Embedding</b>（阿里通义，2025-06）</td><td><span class="source-tag cn">🇨🇳 中国头部</span></td><td>0.6B/4B/8B 三档，MTEB 多语言 #1，3阶段训练（弱监督对比→SFT→模型合并），MRL 支持，EOS pooling，100+语言</td></tr>
+    <tr><td><b>Qwen3-VL-Embedding</b>（阿里通义，2026-01）</td><td><span class="source-tag cn">🇨🇳 中国头部</span></td><td>2B/8B 多模态，文本+图片+视频统一向量空间，MMEB-v2 SOTA，MRL 支持</td></tr>
+    <tr><td><b>智谱 Embedding-3</b>（智谱 AI，2025）</td><td><span class="source-tag cn">🇨🇳 中国头部</span></td><td>8K 上下文，维度 256-2048 可调（MRL），架构与训练数据重大升级</td></tr>
+    <tr><td><b>BGE-M3 / bge-multilingual-gemma2</b>（智源 BAAI）</td><td><span class="source-tag cn">🇨🇳 中国头部</span></td><td>开源标杆，多语言+多功能（稀疏+密集+多向量），基于 Gemma-2-9B</td></tr>
+    <tr><td><b>Gemini Embedding 2</b>（Google，2025-11 GA）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>3072 维，原生多模态（文本+图片+视频+音频+PDF），MRL 支持，8K 上下文</td></tr>
+    <tr><td><b>Cohere Embed v4</b>（Cohere，2025-04）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>128K 上下文，多模态（文本+图片混合），MRL（256/512/1024/1536），SOTA 检索</td></tr>
+    <tr><td><b>Voyage 4 系列</b>（Voyage AI，2026-01）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>4 档（large/标准/lite/nano），共享向量空间，32K 上下文，MRL（256-2048），MoE 架构</td></tr>
+    <tr><td><b>Microsoft Harrier</b>（Microsoft，2026-04）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>27B/0.6B/270M 三档，MTEB-v2 多语言 #1（超 Gemini Emb 2），开源无许可限制</td></tr>
+    <tr><td><b>Jina Embeddings v5</b>（Jina AI，2026-02）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>sub-1B SOTA 多语言，蒸馏 4B→0.6B 保持质量，开源</td></tr>
+    <tr><td><b>NV-Embed-v2</b>（NVIDIA，2025-07）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>7B，双向注意力 + Latent Attention Pooling，MTEB 强竞争力</td></tr>
+  </table>
+  <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+    ⚠️ 注意：DeepSeek 和 Kimi（月之暗面）截至 2026-05 <strong>未发布独立的 Embedding 模型</strong>。DeepSeek 仅在其通用 LLM 内使用 embedding 层；Kimi 无公开的 embedding 产品。
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>三、逐节审计结果</h2>
+
+<!-- ==================== §① 是什么 ==================== -->
+<h3 id="s1">§① 是什么 — 直觉建立与物理形态</h3>
+
+<table class="gap-table">
+<tr><th style="width:90px;">级别</th><th>审计结论</th></tr>
+<tr><td><span class="tag ok">OK</span></td><td>
+<strong>核心直觉框架扎实</strong>：ID → 高维向量 → 语义坐标 → 查找表，叙事链对 PM 级读者友好且准确。"位置接近=意义接近"、embedding 矩阵物理形态 [vocab_size, dim]、推理链路图（文本→tokenizer→embedding→Transformer）均正确。
+</td></tr>
+<tr><td><span class="tag p2">P2</span></td><td>
+<strong>模型维度表缺最新型号</strong>。应补充：
+<table style="font-size:13px;margin:8px 0;">
+<tr><th>模型</th><th>词表</th><th>embedding 维度</th><th>是否权重共享</th><th>信息源</th></tr>
+<tr><td>GPT-4o (估)</td><td>~200,000</td><td>~12,288-18,432</td><td>否</td><td>社区推断</td></tr>
+<tr><td>Qwen3-Embedding-8B</td><td>152,064</td><td>4,096</td><td>否</td><td>Qwen 官方博客</td></tr>
+<tr><td>Qwen3-VL-Emb-8B</td><td>—</td><td>4,096</td><td>否</td><td>Qwen 官方博客</td></tr>
+<tr><td>Harrier-27B</td><td>—</td><td>未公开</td><td>否</td><td>Microsoft 官方</td></tr>
+</table>
+不影响核心理解，但会让读者觉得材料不够新。
+</td></tr>
+</table>
+
+<div class="verdict-box verdict-pass">
+  <strong>✅ §① 评级：基本通过</strong>（1 处 P2：维度表更新）
+</div>
+
+
+<!-- ==================== §② 怎么实现 ==================== -->
+<h3 id="s2">② 怎么实现 — 训练机制</h3>
+
+<table class="gap-table">
+<tr><th style="width:90px;">级别</th><th>审计结论</th></tr>
+<tr><td><span class="tag ok">OK</span></td><td>
+<strong>NTP 驱动的梯度下降叙事正确</strong>：随机初始化 → Next Token Prediction → 反向传播调整 embedding → t-SNE 可视化语义簇，这条训练循环描述符合工业实践。
+</td></tr>
+<tr><td><span class="tag p1">P1</span></td><td>
+<strong>缺少现代 embedding 模型的多阶段训练流水线</strong>——这是 2025 行业标准，由多家权威公司行动一致验证的<strong>行业共识</strong>：
+<br><br>
+<div class="card deepen" style="margin:10px 0;">
+<div class="card-title">🏭 行业共识：专用 Embedding 模型的三阶段训练</div>
+以下流程不是某篇论文的提议，而是 Qwen3-Embedding、Cohere Embed v4、Microsoft Harrier 等多个权威模型公司<strong>实际采用</strong>的工程实践：
+
+<table style="font-size:13px;">
+<tr><th>Stage</th><th>目的</th><th>数据规模</th><th>权威验证方</th></tr>
+<tr><td>Stage 1: 弱监督对比预训练</td><td>学习通用表征</td><td>1.5 亿–20 亿+ 对</td><td>Qwen3(1.5 亿合成对) · Harrier(20 亿+ GPT-5 合成对)</td></tr>
+<tr><td>Stage 2: 有监督精调</td><td>任务特定优化</td><td>数百万–千万对</td><td>全部 SOTA 模型</td></tr>
+<tr><td>Stage 3: 模型合并 / 蒸馏</td><td>泛化提升 / 轻量化</td><td>同 Stage 2</td><td>Qwen3(SLERP合并) · Harrier(27B→0.6B/270M 蒸馏) · Jina v5(4B→0.6B 蒸馏)</td></tr>
+</table>
+<br>
+<b>关键行业趋势</b>：
+<ul style="margin:6px 0;">
+<li><b>合成数据驱动</b>：Qwen3 用 Qwen3 自身生成弱监督对，Harrier 用 GPT-5 生成 20 亿+ 对——行业已从"爬社区论坛数据"转向"AI 生成训练数据"</li>
+<li><b>大模型可跳过 Stage 1</b>：预训练已提供足够好的表征基础（Qwen3-8B 直接从 Stage 2 开始效果也很好）</li>
+<li><b>蒸馏成为标配</b>：Harrier 27B→0.6B/270M，Jina v5 4B→0.6B，Voyage 4-large→nano——大模型蒸馏小模型是行业共识</li>
+</ul>
+</div>
+</td></tr>
+</table>
+
+<div class="verdict-box verdict-warn">
+  <strong>⚠️ ② 评级：通过 + 建议补充</strong>（1 处 P1：多阶段训练流水线——多家权威公司验证的行业共识）
+</div>
+
+
+<!-- ==================== §③ 为什么 ==================== -->
+<h3 id="s3">③ 为什么 — 设计原理</h3>
+
+<table class="gap-table">
+<tr><th style="width:90px;">级别</th><th>审计结论</th></tr>
+
+<tr><td><span class="tag ok">OK</span></td><td>
+<b>Weight Tying 段落结论正确</b>：章节写"GPT-3 之后的大模型大多不再共享"——这个结论与行业实践完全一致。当前所有主流模型的官方文档和模型权重均可验证：
+<ul style="margin:6px 0;">
+  <li>Qwen3-Embedding：<code>embed_tokens</code> 和 <code>lm_head</code> 权重独立</li>
+  <li>DeepSeek-V3：权重不共享</li>
+  <li>LLaMA 系列：从 LLaMA-1 开始就不共享</li>
+</ul>
+v2 将此标为 P0 并引用 EleutherAI 论文补充机理解释——但<b>该机制是学术研究而非行业共识</b>。行业决策逻辑更简单：<b>参数预算充裕时，分开训练更灵活</b>。章节当前表述已足够准确。
+</td></tr>
+
+<tr><td><span class="tag p1">P1</span></td><td>
+<b>One-Hot vs Dense 对比缺少信息论视角</b>。章节正确指出了 One-Hot 的 3 个问题，但没回答"为什么 dense 低维能编码高维语义而不丢失信息"——Johnson-Lindenstrauss 引理给出理论保证。对 PM 不是必须但对完整性有加分。
+</td></tr>
+
+<tr><td><span class="tag p1">P1</span></td><td>
+<b>"embedding ≠ 事实判断"可深化</b>。当前举了巴黎/伦敦例子，但多个权威公司的实践给出了更精确的解法：
+<ul style="margin:6px 0;">
+<li><b>Google Gemini Embedding 2</b>：支持 <code>task_type</code> 参数，检索任务用 <code>"retrieval_query"</code>，事实判断可用不同 task type 引导</li>
+<li><b>Qwen3-Embedding</b>：instruction-aware 设计，用户可指定"判断事实正确性"来引导模型产出不同表征</li>
+</ul>
+这是行业用实际行动回应"embedding 不擅长事实判断"的方案——不是理论推导，而是产品设计。
+</td></tr>
+</table>
+
+<div class="verdict-box verdict-pass">
+  <strong>✅ §③ 评级：通过</strong>（0 处 P0；2 处 P1 建议增强）
+</div>
+
+
+<!-- ==================== §④ 演进 ==================== -->
+<h3 id="s4">④ 演进 — 从 Word2Vec 到 2026</h3>
+
+<table class="gap-table">
+<tr><th style="width:90px;">级别</th><th>审计结论</th></tr>
+
+<tr><td><span class="tag p0">P0 🔴</span></td><td>
+<b>"趋势 A：Embedding 模型独立化"的模型列表严重过时</b>
+<br><br>
+当前章节列出的模型（OpenAI text-embedding-3-large / BGE-M3 / M3E / Cohere v3 / Voyage-3）全是 2023-2024 的。2025-2026 行业发生了由权威公司行动驱动的<strong>三大范式转移</strong>：
+
+<div class="card critical" style="margin:10px 0;">
+<div class="card-title">🔄 范式转移 1：LLM-as-Embedding（行业共识）</div>
+以前 embedding 模型是独立训练的 BERT-like 架构（如 BGE-M3）。2025-2026，<strong>所有头部公司的 SOTA embedding 模型都基于 decoder-only LLM</strong>：
+<br><br>
+<table style="font-size:12.5px;">
+<tr><th>模型</th><th>公司</th><th>参数</th><th>维度</th><th>Pooling</th><th>核心特点</th></tr>
+<tr><td><b>Qwen3-Emb-8B</b></td><td>阿里 <span class="source-tag cn">🇨🇳</span></td><td>8B</td><td>4096</td><td>EOS</td><td>MTEB 多语言 #1（2025-06），3阶段训练，MRL</td></tr>
+<tr><td><b>Harrier-27B</b></td><td>Microsoft <span class="source-tag intl">🌍</span></td><td>27B</td><td>—</td><td>EOS</td><td>MTEB-v2 多语言 #1（2026-04），超 Gemini Emb 2</td></tr>
+<tr><td><b>Voyage-4-large</b></td><td>Voyage AI <span class="source-tag intl">🌍</span></td><td>MoE</td><td>2048</td><td>—</td><td>RTEB 71.41（2026-01），MoE 架构</td></tr>
+<tr><td><b>Gemini Emb 2</b></td><td>Google <span class="source-tag intl">🌍</span></td><td>—</td><td>3072</td><td>—</td><td>原生多模态（2025-11 GA），MRL</td></tr>
+<tr><td><b>Jina v5-small</b></td><td>Jina AI <span class="source-tag intl">🌍</span></td><td>0.6B</td><td>—</td><td>—</td><td>sub-1B SOTA（2026-02），4B蒸馏</td></tr>
+<tr><td><b>NV-Embed-v2</b></td><td>NVIDIA <span class="source-tag intl">🌍</span></td><td>7B</td><td>—</td><td>Latent Attn</td><td>双向注意力 + Latent Attention Pooling</td></tr>
+</table>
+<br>
+<b>行业共识特征</b>：
+<ul style="margin:6px 0;">
+<li><b>全部基于 LLM</b>：无一例外，SOTA 模型都是 decoder-only LLM 微调而来</li>
+<li><b>EOS Pooling 成为主流</b>：Qwen3/Harrier 都用 last-token (EOS) pooling——这是 causal attention 模型的自然选择</li>
+<li><b>NV-Embed 是唯一例外</b>：仍坚持双向注意力 + Latent Attention Pooling，但排行榜上已被 causal 模型超越</li>
+</ul>
+</div>
+
+<div class="card critical" style="margin:10px 0;">
+<div class="card-title">🔄 范式转移 2：多模态 Embedding（行业共识）</div>
+2025-2026，<strong>多模态成为 embedding 模型的标配</strong>，而非可选功能：
+<br><br>
+<table style="font-size:12.5px;">
+<tr><th>模型</th><th>文本</th><th>图片</th><th>视频</th><th>音频</th><th>PDF</th><th>统一向量空间</th></tr>
+<tr><td>Qwen3-VL-Emb</td><td>✅</td><td>✅</td><td>✅</td><td>—</td><td>✅</td><td>✅ 跨模态检索</td></tr>
+<tr><td>Gemini Emb 2</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td><td>✅ 原生统一</td></tr>
+<tr><td>Cohere Emb v4</td><td>✅</td><td>✅</td><td>—</td><td>—</td><td>✅</td><td>✅ 混合输入</td></tr>
+</table>
+<br>
+<b>关键产品启示</b>：未来 KBA/DDB 的 RAG 不应只检索文本——图片、截图、PDF 的直接检索能力已经可用。Qwen3-VL-Embedding 是当前最成熟的开源多模态检索方案。
+</div>
+
+<div class="card critical" style="margin:10px 0;">
+<div class="card-title">🔄 范式转移 3：Matryoshka（MRL）成为标配（行业共识）</div>
+2025-2026，<strong>Matryoshka Representation Learning 从"新特性"变成"标配"</strong>：
+<br><br>
+<table style="font-size:12.5px;">
+<tr><th>模型</th><th>MRL 支持</th><th>可选维度</th><th>信息源</th></tr>
+<tr><td>Qwen3-Embedding</td><td>✅</td><td>灵活截断</td><td>Qwen 官方博客</td></tr>
+<tr><td>智谱 Embedding-3</td><td>✅</td><td>256/512/1024/2048</td><td>智谱官方文档</td></tr>
+<tr><td>Gemini Embedding 2</td><td>✅</td><td>256-3072 任意</td><td>Google 官方文档</td></tr>
+<tr><td>Cohere Embed v4</td><td>✅</td><td>256/512/1024/1536</td><td>Cohere 官方文档</td></tr>
+<tr><td>Voyage 4 系列</td><td>✅</td><td>256/512/1024/2048</td><td>Voyage 官方文档</td></tr>
+</table>
+<br>
+<b>行业共识</b>：所有权威公司都在产品中支持 MRL。v2 引用的 "Provable Accuracy Collapse" 论文（ICML 2026 Spotlight）虽然理论上成立，但行业实践已用行动否定了其悲观结论——<strong>256 维截断在实际产品中广泛使用且效果良好</strong>。
+<br><br>
+<b>修正建议</b>：将 Matryoshka 从"趋势"升级为"行业标准"，同时加入实用提醒（截断维度过低在特定任务上可能降质，需实测验证），而非引用理论崩塌警告。
+</div>
+</td></tr>
+
+<tr><td><span class="tag p1">P1</span></td><td>
+<b>Voyage 4 的"共享向量空间"设计值得提及</b>
+<br><br>
+Voyage 4 系列的 4 个模型（large/标准/lite/nano）<strong>共享同一个向量空间</strong>，意味着：
+<ul style="margin:4px 0;">
+<li>用 nano 本地建索引，后续可无缝切换到 large 做查询——<b>不需要重建索引</b></li>
+<li>不同规模模型之间的 embedding 可互相比较</li>
+</ul>
+这对 KBA 的实际意义：如果未来需要从轻量模型迁移到更精准的模型，不需要重新编码所有文档。这是行业首个提供此能力的 embedding 模型家族。
+</td></tr>
+
+<tr><td><span class="tag p1">P1</span></td><td>
+<b>"各家旗舰模型 embedding 维度"表格需更新</b>。当前停在 Qwen2.5-72B。需加入 Qwen3 系列、Harrier 等最新型号。
+</td></tr>
+</table>
+
+<div class="verdict-box verdict-fail">
+  <strong>❌ ④ 评级：需重大修订</strong>（1 处 P0 🔴 含 3 个范式转移；2 处 P1）
+</div>
+
+
+<!-- ==================== §⑤ 产品连接 ==================== -->
+<h3 id="s5">⑤ 与产品连接</h3>
+
+<table class="gap-table">
+<tr><th style="width:90px;">级别</th><th>审计结论</th></tr>
+<tr><td><span class="tag ok">OK</span></td><td>
+<strong>产品场景选择精准且实用</strong>：KBA RAG / DDAgent 专有名词 / 跨模型迁移 / FxAgent 时效陷阱 / 定价切片设计——5 个场景都是真实工作痛点，takeaway 可直接落地。
+</td></tr>
+<tr><td><span class="tag p1">P1</span></td><td>
+<b>KBA 场景应更新推荐模型</b>。当前建议"用 BGE-M3 做检索"——2026 年更优选择：
+<table style="font-size:13px;">
+<tr><th>需求</th><th>2024 推荐</th><th>2026 推荐</th><th>原因</th></tr>
+<tr><td>纯文本 RAG</td><td>BGE-M3</td><td><b>Qwen3-Emb-0.6B</b> 或 <b>Jina v5-small</b></td><td>同参数量下 MTEB 更高，且 MRL 原生支持</td></tr>
+<tr><td>多模态 RAG</td><td>无</td><td><b>Qwen3-VL-Emb-2B</b></td><td>唯一开源多模态检索 SOTA，支持文本+图片+视频</td></tr>
+<tr><td>大规模部署</td><td>BGE-M3</td><td><b>Voyage-4-lite</b> 或 <b>Harrier-0.6B</b></td><td>成本更低、精度更高</td></tr>
+<tr><td>极致成本</td><td>—</td><td><b>Voyage-4-nano</b></td><td>开源免费，本地推理</td></tr>
+</table>
+</td></tr>
+<tr><td><span class="tag p1">P1</span></td><td>
+<b>DDAgent 场景可引入 instruction-aware embedding 的解法</b>。当前解法是"system prompt 定义 + RAG 召回 + output schema"。2025-2026 行业新增了 <b>instruction-aware embedding</b>——Qwen3-Embedding 支持在检索时指定 instruction（如"查找与'网联清算'相关的正式定义"），可以显著提升专有名词的召回精度。
+</td></tr>
+<tr><td><span class="tag p2">P2</span></td><td>
+<b>Matryoshka takeaway 可更具体</b>。当前写"256维粗排+1024维精排"，可补充：Qwen3-Emb 原生支持任意维度截断，Voyage 4 支持 256/512/1024/2048 四档，KBA 可直接在 API 参数中指定维度。
+</td></tr>
+</table>
+
+<div class="verdict-box verdict-warn">
+  <strong>⚠️ ⑤ 评级：通过 + 建议增强</strong>（0 处 P0；2 处 P1：模型推荐更新 + instruction-aware；1 处 P2）
+</div>
+
+
+<!-- ============================================================ -->
+<h2>四、Gap 汇总与修订优先级</h2>
+
+<div class="card critical">
+  <div class="card-title">🔴 P0 必须修复（行业共识级认知缺失）</div>
+  <table style="font-size:13.5px;">
+    <tr><th>#</th><th>位置</th><th>Gap 描述</th><th>行业共识来源</th></tr>
+    <tr><td>P0-1</td><td>④ 演进</td><td>独立 embedding 模型列表停在 2024，缺失 LLM-as-Embedding 范式转移（全部 SOTA 基于 decoder-only LLM）</td><td>Qwen3/Harrier/Voyage4/Jina v5/NV-Embed 官方发布</td></tr>
+    <tr><td>P0-2</td><td>④ 演进</td><td>完全缺失多模态 Embedding 范式（文本+图片+视频统一向量空间已成为 2026 标配）</td><td>Qwen3-VL-Emb/Gemini Emb 2/Cohere Emb v4 官方发布</td></tr>
+    <tr><td>P0-3</td><td>④ 演进</td><td>Matryoshka(MRL) 从"新趋势"变为"行业标配"——所有头部公司产品均支持</td><td>Qwen3/智谱/Google/Cohere/Voyage 官方文档</td></tr>
+  </table>
+</div>
+
+<div class="card warning" style="margin-top:16px;">
+  <div class="card-title">🟡 P1 建议补充（增强深度但不影响正确性）</div>
+  <table style="font-size:13.5px;">
+    <tr><th>#</th><th>位置</th><th>Gap 描述</th><th>来源</th></tr>
+    <tr><td>P1-1</td><td>② 实现</td><td>缺少专用 embedding 模型的 3 阶段训练流水线（弱监督对比→SFT→合并/蒸馏）</td><td>Qwen3/Harrier/Jina v5 官方</td></tr>
+    <tr><td>P1-2</td><td>③ 为什么</td><td>One-Hot vs Dense 缺少 JL 引理的理论保证视角</td><td>经典理论</td></tr>
+    <tr><td>P1-3</td><td>③ 为什么</td><td>"embedding ≠ 事实判断"可引入 instruction-aware/task_type 的行业解法</td><td>Qwen3/Google 官方</td></tr>
+    <tr><td>P1-4</td><td>④ 演进</td><td>Voyage 4 共享向量空间设计（跨模型无需重建索引）</td><td>Voyage AI 官方</td></tr>
+    <tr><td>P1-5</td><td>⑤ 产品</td><td>KBA 模型推荐需更新（BGE-M3 → Qwen3-Emb/Jina v5/Harrier）</td><td>多公司 MTEB 排行</td></tr>
+    <tr><td>P1-6</td><td>⑤ 产品</td><td>DDAgent 场景可引入 instruction-aware embedding 提升专有名词召回</td><td>Qwen3 官方</td></tr>
+    <tr><td>P1-7</td><td>④ 演进</td><td>模型列表需补 Qwen3/Harrier/Jina v5/Voyage 4 等最新型号</td><td>各公司官方</td></tr>
+  </table>
+</div>
+
+<div class="card deepen" style="margin-top:16px;">
+  <div class="card-title">🟢 P2 锦上添花</div>
+  <table style="font-size:13.5px;">
+    <tr><th>#</th><th>位置</th><th>Gap 描述</th></tr>
+    <tr><td>P2-1</td><td>① 是什么</td><td>维度表格补 Qwen3 / Harrier 最新型号</td></tr>
+    <tr><td>P2-2</td><td>⑤ 产品</td><td>Matryoshka takeaway 补充具体 API 参数用法</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<h2>五、v2 → v3 变更说明</h2>
+
+<div class="card info">
+  <div class="card-title">▎哪些 v2 的 Gap 在 v3 中被降级或移除</div>
+  <table style="font-size:13px;">
+    <tr><th>v2 Gap</th><th>v2 级别</th><th>v3 处置</th><th>原因</th></tr>
+    <tr><td>Weight Tying 缺 EleutherAI 机理解析</td><td>P0 🔴</td><td><b>降级 → OK</b></td><td>章节结论"大模型不共享"与行业实践一致。EleutherAI 论文是学术研究，非行业共识。Qwen3/DeepSeek/LLaMA 官方均未引用此机制</td></tr>
+    <tr><td>Attention 信息流对 embedding 质量的影响</td><td>P0 🔴</td><td><b>移除</b></td><td>来源是 4 篇学术论文（HTP/AutoRegEmbed/DiffEmbed/Survey）。Qwen3-Emb 用 EOS pooling + causal attention 达到 MTEB #1——行业用行动证明 causal 够用</td></tr>
+    <tr><td>Matryoshka 安全警告（Accuracy Collapse）</td><td>P0 🔴</td><td><b>移除</b></td><td>ICML 2026 Spotlight 论文，但 OpenAI/Qwen/Cohere/Google/Voyage 全部支持 MRL 截断且产品中广泛使用——<strong>行业实践与论文结论矛盾时，以行业实践为准</strong></td></tr>
+    <tr><td>SMEC 修正方案</td><td>P0 内</td><td><b>移除</b></td><td>EMNLP 2025 论文，尚无权威公司采纳</td></tr>
+    <tr><td>DiffEmbed / Diffusion LM</td><td>P1</td><td><b>移除</b></td><td>EMNLP 2025 论文，无权威公司发布基于 Diffusion 的 embedding 产品</td></tr>
+    <tr><td>LightRetriever</td><td>P1</td><td><b>移除</b></td><td>ICLR 2026 论文，无权威公司产品化</td></tr>
+    <tr><td>Semantic Shift / collapse 理论</td><td>P1/P2</td><td><b>移除</b></td><td>学术论文发现，无权威公司据此调整产品</td></tr>
+    <tr><td>个人博客（Sinha/biechi）</td><td>参考</td><td><b>移除</b></td><td>非权威来源</td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<h2>六、章节整体评价</h2>
+
+<table>
+<tr><th>维度</th><th>评分</th><th>说明</th></tr>
+<tr><td>直觉建立的准确性</td><td>⭐⭐⭐⭐⭐</td><td>ID→向量→语义坐标的叙事链对 PM 极其友好且无误</td></tr>
+<tr><td>训练机制的正确性</td><td>⭐⭐⭐⭐</td><td>NTP→backprop 循环正确，缺专用模型的对比训练线</td></tr>
+<tr><td>设计原理的深度</td><td>⭐⭐⭐⭐</td><td>v3 修正后 Weight Tying 结论正确，无需补充学术机理</td></tr>
+<tr><td>前沿进展的时效性</td><td>⭐⭐</td><td>演进章节停在 2024，缺失 2025-2026 三大范式转移</td></tr>
+<tr><td>产品连接的实用性</td><td>⭐⭐⭐⭐⭐</td><td>5 个场景精准命中团队痛点，takeaway 可直接落地</td></tr>
+<tr><td><strong>综合</strong></td><td><strong>⭐⭐⭐½</strong></td><td><strong>基础牢固但前沿部分显著滞后</strong>——①②③⑤优秀，④需重大更新</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>七、修订建议执行计划</h2>
+
+<div class="card deepen">
+  <div class="card-title">▎建议修订顺序</div>
+  <table style="font-size:13.5px;">
+    <tr><th>步骤</th><th>目标</th><th>涉及 Section</th><th>工作量</th></tr>
+    <tr><td><b>Step 1</b></td><td>重写 §④"趋势A"：替换旧模型表 → LLM-as-Embedding 范式 + 2025-2026 权威模型对比表</td><td>④</td><td>中等</td></tr>
+    <tr><td><b>Step 2</b></td><td>新增"趋势B：多模态 Embedding"段落（Qwen3-VL-Emb/Gemini Emb 2/Cohere v4）</td><td>④</td><td>中等</td></tr>
+    <tr><td><b>Step 3</b></td><td>升级 Matryoshka 段落：从"新趋势"→"行业标配"，加各公司支持情况表</td><td>④</td><td>小</td></tr>
+    <tr><td><b>Step 4</b></td><td>补充 P1 项：②加 3 阶段训练流水线表；⑤更新模型推荐；③加 instruction-aware 解法</td><td>②③⑤</td><td>小（分散）</td></tr>
+    <tr><td><b>Step 5</b></td><td>更新"各家旗舰模型 embedding 维度"表格</td><td>④</td><td>小</td></tr>
+  </table>
+</div>
+
+<div style="background:var(--purple-bg);border-radius:10px;padding:20px;margin-top:32px;">
+  <h3 style="margin-top:0;color:var(--purple);">▎关键结论</h3>
+  <ul style="padding-left:20px;">
+    <li><strong>v2 的 4 个 P0 中，3 个被降级/移除</strong>——因为信息源是学术论文而非行业共识</li>
+    <li><strong>v3 新增 3 个 P0</strong>——全部基于权威公司官方发布，代表真实行业趋势</li>
+    <li><strong>最核心的 Gap</strong>：§④ 演进章节需要重写，反映 2025-2026 三大范式转移（LLM-as-Embedding / 多模态 / MRL 标配化）</li>
+    <li><strong>好消息</strong>：§①②③⑤ 的基础叙事无需修改，只需补充和增强</li>
+  </ul>
+</div>
+
+</body>
+</html>

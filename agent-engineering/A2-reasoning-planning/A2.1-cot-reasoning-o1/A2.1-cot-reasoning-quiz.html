@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>A2.1 CoT · 推理模型 Quiz（10 题）</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--purple-bg);color:var(--purple)}
+.tag-chapter{background:var(--purple-bg);color:var(--purple)}
+h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:4px}
+.subtitle{font-size:13px;color:var(--muted);margin-bottom:10px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+
+/* Progress bar */
+.progress-bar{background:#E8E8E4;border-radius:20px;height:28px;display:flex;margin:16px 0 24px;overflow:hidden}
+.progress-fill{height:100%;border-radius:20px;background:linear-gradient(90deg,var(--teal),#3BC29A);transition:width .5s ease;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;font-weight:600;padding:0 12px}
+.progress-text{flex:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--muted);font-weight:500}
+
+/* Question card */
+.question-card{border:1px solid #E0E0DC;border-radius:12px;margin:18px 0;overflow:hidden;transition:border-color .2s}
+.question-card:hover{border-color:#c0bdb8}
+.q-header{background:var(--purple-bg);padding:10px 16px;display:flex;align-items:center;gap:10px}
+.q-badge{background:var(--purple);color:#fff;font-size:11px;font-weight:600;padding:3px 10px;border-radius:14px;min-width:56px;text-align:center}
+.q-section-tag{font-size:10px;background:rgba(255,255,255,.6);color:var(--purple);padding:2px 8px;border-radius:10px;font-weight:500}
+.q-body{padding:16px 18px 14px}
+.q-body p{font-size:14.5px;line-height:1.7;margin-bottom:14px}
+.options-list{list-style:none;padding:0;margin:0}
+.option-item{border:1.5px solid #E8E8E4;border-radius:10px;padding:11px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s ease;display:flex;align-items:flex-start;gap:10px;font-size:13.5px;line-height:1.55}
+.option-item:last-child{margin-bottom:0}
+.option-item:hover:not(.disabled){border-color:#B0ADAA;background:#FCFBF9}
+.option-label{font-weight:700;font-size:12px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1.5px solid #ccc;color:#999;font-size:11px;margin-top:1px}
+.option-item.selected:not(.disabled) .option-label{background:var(--purple);color:#fff;border-color:var(--purple)}
+.option-item.correct .option-label{background:var(--teal)!important;color:#fff!important;border-color:var(--teal)!important}
+.option-item.wrong .option-label{background:var(--coral)!important;color:#fff!important;border-color:var(--coral)!important}
+.option-item.correct{border-color:var(--teal)!important;background:var(--teal-bg)!important}
+.option-item.wrong{border-color:var(--coral)!important;background:var(--coral-bg)!important}
+.option-item.disabled{cursor:default;opacity:.85}
+.option-item.show-correct:not(.correct):not(.wrong){border-color:#ddd;background:#fafafa;opacity:.6}
+
+/* Explanation */
+.explanation{display:none;margin-top:12px;padding:12px 14px;border-radius:8px;font-size:13px;line-height:1.65}
+.explanation.visible{display:block}
+.explanation.correct-exp{background:var(--teal-bg);border-left:3px solid var(--teal)}
+.explanation.wrong-exp{background:var(--coral-bg);border-left:3px solid var(--coral)}
+.exp-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.correct-exp .exp-label{color:var(--teal)}
+.wrong-exp .exp-label{color:var(--coral)}
+
+/* Score section */
+.score-section{display:none;text-align:center;padding:30px 20px;margin-top:32px;border-radius:14px}
+.score-section.visible{display:block}
+.score-section.perfect{background:linear-gradient(135deg,#E1F5EE,#D4F0E5);border:2px solid var(--teal)}
+.score-section.good{background:linear-gradient(135deg,#EEEDFE,#E6E8FD);border:2px solid var(--purple)}
+.score-section.retry{background:linear-gradient(135deg,#FAEEDA,#F7EBCE);border:2px solid var(--amber)}
+.score-number{font-size:48px;font-weight:800;line-height:1}
+.score-section.perfect .score-number{color:var(--teal)}
+.score-section.good .score-number{color:var(--purple)}
+.score-section.retry .score-number{color:var(--amber)}
+.score-label{font-size:14px;color:var(--muted);margin:8px 0 16px}
+.btn-retry{background:var(--purple);color:#fff;border:none;padding:10px 28px;border-radius:20px;font-size:13.5px;font-weight:600;cursor:pointer}
+.btn-retry:hover{opacity:.88}
+.footer-nav{text-align:center;margin-top:36px;padding-top:20px;border-top:1px solid #E8E8E4}
+.footer-nav a{color:var(--purple);text-decoration:none;font-size:13;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">A2 推理规划</span>
+<span class="tag tag-chapter">A2.1</span>
+<a href="A2.1-cot-reasoning-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+</div>
+<h1>Quiz：CoT · o1/R1 机制 · Test-time Compute</h1>
+<p class="subtitle">10 道选择题，覆盖全部 5 个小节。每节 2 题，检验你的理解深度。</p>
+</div>
+
+<div class="progress-bar">
+<div id="progressFill" style="width:0%"></div><span class="progress-text" id="progressText">0 / 10 已完成</span></div>
+
+<!-- ========== Q1 (§① 是什么) ========== -->
+<div class="question-card" data-qid="1" data-sec="is">
+<div class="q-header"><span class="q-badge">Q1</span> <span class="q-section-tag">§① 是什么</span></div>
+<div class="q-body">
+<p>1. Wei et al. 2022 年的 CoT 论文中，触发模型推理能力的关键短语是？</p>
+<ol class="options-list" data-correct="B">
+<li class="option-item" data-opt="A"><span class="option-label">A</span><span>Please explain your reasoning in detail.</span></li>
+<li class="option-item" data-opt="B"><span class="option-label">B</span><span>Let's think step by step.</span></li>
+<li class="option-item" data-opt="C"><span class="option-label">C</span><span>Show me your thought process before answering.</span></li>
+<li class="option-item" data-opt="D"><span class="option-label">D</span><span>Break down the problem into smaller parts first.</span></li>
+</ol>
+<div class="explanation wrong-exp"><div class="exp-label">解析</div><p>正确答案是 <strong>B</strong>。"Let's think step by step" 是 CoT 论文中的 magic words。这个短语在 GSM8K 上让 PaLM 540B 从 17.9% 跃升到 55.7%。其他选项虽然语义相近，但不是论文中验证过的触发词。</p></div>
+</div>
+</div>
+
+<!-- ========== Q2 (§① 是什么) ========== -->
+<div class="question-card" data-qid="2" data-sec="is">
+<div class="q-header"><span class="q-badge">Q2</span> <span class="q-section-tag">§① 是什么</span></div>
+<div class="q-body">
+<p>2. 在系统1 vs 系统2 的类比中，以下哪项<strong>不正确地描述</strong>了 CoT / 推理模型的特征？</p>
+<ol class="options-list" data-correct="C">
+<li class="option-item" data-opt="A"><span class="option-label">A</span><span>系统2（推理模型）的计算量根据问题难度动态变化</span></li>
+<li class="option-item" data-opt="B"><span class="option-label">B</span><span>系统1 对应 Prompt Engineering，系统2 对应 Chain-of-Thought</span></li>
+<li class="option-item" data-opt="C"><span class="option-label">C</span><span>系统1 的延迟总是比系统2 更高（因为需要更多训练）</span></li>
+<li class="option-item" data-opt="D"><span class="option-label">D</span><span>FXAgent 查汇率适合用系统1，DDAgent 做尽调更适合用系统2</span></li>
+</ol>
+<div class="explanation correct-exp"><div class="exp-label">解析</div><p>正确答案是 <strong>C</strong>。<strong>C 是错误的描述</strong>——系统1（快思考）的特征恰恰是<strong>低延迟、固定成本</strong>，而系统2（慢推理/CoT）因为要生成中间推理链，延迟更高且随问题难度波动。选项 C 把两者的延迟关系说反了。</p></div>
+</div>
+</div>
+
+<!-- ========== Q3 (§② 怎么实现) ========== -->
+<div class="question-card" data-qid="3" data-sec="how">
+<div class="q-header"><span class="q-badge">Q3</span> <span class="q-section-tag">§② 怎么实现</span></div>
+<div class="q-body">
+<p>3. GRPO（Group Relative Policy Optimization）相比 PPO 的核心改进是什么？</p>
+<ol class="options-list" data-correct="A">
+<li class="option-item" data-opt="A"><span class="option-label">A</span><span>不需要独立的 critic/value 网络，用组内采样互相作为 baseline</span></li>
+<li class="option-item" data-opt="B"><span class="option-label">B</span><span>引入了更强的奖励模型来评估推理质量</span></li>
+<li class="option-item" data-opt="C"><span class="option-label">C</span><span>使用更大的学习率和更少的训练步数加速收敛</span></li>
+<li class="option-item" data-opt="D"><span class="option-label">D</span><span>将 reward 从标量改为向量以支持多目标优化</span></li>
+</ol>
+<div class="explanation correct-exp"><div class="exp-label">解析</div><p>正确答案是 <strong>A</strong>。GRPO 的核心创新就是<strong>放弃 critic 网络</strong>，改为对同一个问题采样 G 条轨迹，用组内奖励归一化值作为优势函数：$A_i = \frac{r_i - \text{mean}(\{r_1,...,r_G\})}{\text{std}(\{r_1,...,r_G\})}$。这解决了 PPO 需要 value model 的复杂性和不稳定性问题，也是 R1-Zero 能纯 RL 涌现推理能力的关键。</p></div>
+</div>
+</div>
+
+<!-- ========== Q4 (§② 怎么实现) ========== -->
+<div class="question-card" data-qid="4" data-sec="how">
+<div class="q-header"><span class="q-badge">Q4</span> <span class="q-section-tag">§② 怎么实现</span></div>
+<div class="q-body">
+<p>4. 关于 OpenAI o1 系列的 Reasoning Tokens，以下说法<strong>正确的是</strong>？</p>
+<ol class="options-list" data-correct="D">
+<li class="option-item" data-opt="A"><span class="option-label">A</span><span>Reasoning Tokens 默认对用户可见，用于展示思考过程</span></li>
+<li class="option-item" data-opt="B"><span class="option-label">B</span><span>Reasoning Tokens 和 Completion Tokens 数量比例固定为 1:1</span></li>
+<li class="option-item" data-opt="C"><span class="option-label">C</span><span>Reasoning Tokens 只在数学任务中生成，代码任务不会使用</span></li>
+<li class="option-item" data-opt="D"><span class="option-label">D</span><span>Reasoning Tokens 默认隐藏，长度根据问题难度动态调整</span></li>
+</ol>
+<div class="explanation correct-exp"><div class="exp-label">解析</div><p>正确答案是 <strong>D</strong>。o1 的 reasoning tokens 有两个关键特征：<strong>(1)</strong>默认隐藏（用户不可见）；<strong>(2)</strong>长度可变（简单问题几百 token，复杂问题数万 token）。隐藏的原因包括：避免干扰用户体验、防止蒸馏攻击、规避安全风险。A 错在"默认可见"，B 错在"固定比例"，C 错在适用范围。</p></div>
+</div>
+</div>
+
+<!-- ========== Q5 (§③ 为什么) ========== -->
+<div class="question-card" data-qid="5" data-sec="why">
+<div class="q-header"><span class="q-badge">Q5</span> <span class="q-section-tag">§③ 为什么</span></div>
+<div class="q-body">
+<p>5. EuroMLSys 2026 的实验数据表明：一个 4B 小模型配合 2000 token 推理预算，GSM8K 达到 90%，超过 14B 大模型的 82%。这说明了什么？</p>
+<ol class="options-list" data-correct="B">
+<li class="option-item" data-opt="A"><span class="option-label">A</span><span>大模型已经过时，应该全面转向小模型+长推理</span></li>
+<li class="option-item" data-opt="B"><span class="option-label">B</span><span>Test-time Compute Scaling 可以在某些条件下替代参数规模扩展</span></li>
+<li class="option-item" data-opt="C"><span class="option-label">C</span><span>GSM8K 数据集太简单，不能反映真实推理能力</span></li>
+<li class="option-item" data-opt="D"><span class="option-label">D</span><span>4B 模型的预训练数据质量远高于 14B 模型</span></li>
+</ol>
+<div class="explanation correct-exp"><div class="exp-label">解析</div><p>正确答案是 <strong>B</strong>。这是 Test-time Compute Scaling 核心命题的直接证据：<strong>合理分配推理时计算可以超越增大模型参数的效果</strong>。同时该配置还节省了 71% 内存（8GB vs ~28GB）。但注意 A 过于绝对化——这只是在特定条件（有确定性答案的数学题）下的结论；C 和 D 与实验结论无关。</p></div>
+</div>
+</div>
+
+<!-- ========== Q6 (§③ 为什么) ========== -->
+<div class="question-card" data-qid="6" data-sec="why">
+<div class="q-header"><span class="q-badge">Q6</span> <span class="q-section-tag">§③ 为什么</span></div>
+<div class="q-body">
+<p>6. 根据 2026 年最新研究，以下关于"更长推理轨迹"的说法，哪个是<strong>正确</strong>的？</p>
+<ol class="options-list" data-correct="C">
+<li class="option-item" data-opt="A"><span class="option-label">A</span><span>推理越长效果越好，不存在边际递减</span></li>
+<li class="option-item" data-opt="B"><span class="option-label">B</span><span>位置偏差与推理链长度无关</span></li>
+<li class="option-item" data-opt="C"><span class="option-label">C</span><span>更长的推理会放大位置偏差（Position Bias），需要智能停止机制</span></li>
+<li class="option-item" data-opt="D"><span class="option-label">D</span><span>2026 年研究证明推理模型已完美解决所有停止条件问题</span></li>
+</ol>
+<div class="explanation correct-exp"><div class="exp-label">解析</div><p>正确答案是 <strong>C</strong>。arXiv:2605.06672 的研究发现：<strong>12/13 种配置下，推理链长度与位置偏差呈正相关</strong>——模型倾向于过度关注推理末尾信息而忽略前面的关键步骤。arXiv:2605.06690 提出了 epistemic state graph + order-gap 指标的智能停止方案，ICLR 2026 Self-Calibration 用 Early-Stopping 将 MathQA 从 81 提升到 83.6。所以核心结论是：<strong>不是想越久越好，而是需要更智能的停止点。</strong>A、B、D 都是错误的。</p></div>
+</div>
+</div>
+
+<!-- ========== Q7 (§④ 演进) ========== -->
+<div class="question-card" data-qid="7" data-sec="evolution">
+<div class="q-header"><span class="q-badge">Q7</span> <span class="q-section-tag">§④ 演进</span></div>
+<div class="q-body">
+<p>7. DeepSeek R1-Zero 的 "Aha Moment" 指的是什么现象？</p>
+<ol class="options-list" data-correct="B">
+<li class="option-item" data-opt="A"><span class="option-label">A</span><span>模型突然学会了写代码而无需任何代码训练数据</span></li>
+<li class="option-item" data-opt="B"><span class="option-label">B</span><span>纯 RL 训练过程中，模型自发涌现出长文本思维链结构</span></li>
+<li class="option-item" data-opt="C"><span class="option-label">C</span><span>模型在某一天突然达到了 AGI 水平</span></li>
+<li class="option-item" data-opt="D"><span class="option-label">D</span><span>SFT 阶段一次性加载了大量 CoT 数据后的性能跃升</span></li>
+</ol>
+<div class="explanation correct-exp"><div class="exp-label">解析</div><p>正确答案是 <strong>B</strong>。R1-Zero 使用<strong>纯 RL（无 SFT）</strong>训练基础模型。训练早期输出乱码，中期<strong>突然自发出现长文本的 CoT 结构</strong>（即 Aha Moment），后期 CoT 质量和表现持续提升。这说明<strong>推理能力不需要被"教"，只要奖励信号设计得当（GRPO），模型会自己学会如何思考</strong>。A 和 C 都是对 Aha Moment 的夸大或误读，D 错在 R1-Zero 没有 SFT。</p></div>
+</div>
+</div>
+
+<!-- ========== Q8 (§④ 演进) ========== -->
+<div class="question-card" data-qid="8" data-sec="evolution">
+<div class="q-header"><span class="q-badge">Q8</span> <span class="q-section-tag">§④ 演进</span></div>
+<div class="q-body">
+<p>8. DeepSeek R1（完整版）在 R1-Zero 基础上增加了 Cold-start SFT，主要解决哪些工程问题？</p>
+<ol class="options-list" data-correct="D">
+<li class="option-item" data-opt="A"><span class="option-label">A</span><span>推理准确率不足，无法达到 SOTA 性能</span></li>
+<li class="option-item" data-opt="B"><span class="option-label">B</span><span>推理速度太慢，无法满足生产环境需求</span></li>
+<li class="option-item" data-opt="C"><span class="option-label">C</span><span>模型参数量过大，无法有效部署</span></li>
+<li class="option-item" data-opt="D"><span class="option-label">D</span><span>语言混杂（中英混合）、格式混乱、重复冗余等可读性问题</span></li>
+</ol>
+<div class="explanation correct-exp"><div class="exp-label">解析</div><p>正确答案是 <strong>D</strong>。R1-Zero 虽然证明了"纯 RL 可涌现推理能力"的原理，但有严重的<strong>工程缺陷</strong>：(1) 语言混合——推理过程混杂中英文；(2) 格式混乱——缺乏统一 CoT 格式；(3) 重复冗余——大量无意义循环推理。Cold-start SFT 用数千条高质量长 CoT 样本（来自 R1-Zero 少量输出 + 人工筛选）做微调，再接 GRPO RL，最终保持了推理能力同时修复了这些问题。A 错在 R1-Zero 准确率已经很高，B/C 不是 Cold-start SFT 要解决的。</p></div>
+</div>
+</div>
+
+<!-- ========== Q9 (§⑤ 产品连接) ========== -->
+<div class="question-card" data-qid="9" data-sec="connect">
+<div class="q-header"><span class="q-badge">Q9</span> <span class="q-section-tag">§⑤ 与产品连接</span></div>
+<div class="q-body">
+<p>9. Fitz 的 Agent 产品矩阵中，以下场景最<strong>不适合</strong>使用推理模型（如 o1/R1）的是？</p>
+<ol class="options-list" data-correct="A">
+<li class="option-item" data-opt="A"><span class="option-label">A</span><span>FXAgent：用户查询 USD/CNH 实时汇率（月活 40 万，延迟敏感）</span></li>
+<li class="option-item" data-opt="B"><span class="option-label">B</span><span>DDAgent：企业尽调中的多源数据交叉验证和风险推断</span></li>
+<li class="option-item" data-opt="C"><span class="option-label">C</span><span>BAAgent：月度经营分析报告中的异常指标归因</span></li>
+<li class="option-item" data-opt="D"><span class="option-label">D</span><span>代码审查 Agent：识别潜在安全漏洞和逻辑错误</span></li>
+</ol>
+<div class="explanation correct-exp"><div class="exp-label">解析</div><p>正确答案是 <strong>A</strong>。FXAgent 查询汇率的特征：<strong>(1)</strong> 任务极简（查表返回数值即可）；<strong>(2)</strong> 高频高并发（40万月活）；<strong>(3)</strong> 延迟敏感（用户期望毫秒级响应）。这三条都指向标准模型而非推理模型——推理模型不仅浪费 token（成本 8-20x），还会增加不必要的延迟。B（尽调交叉验证）、C（异常归因分析）、D（安全漏洞检测）都是典型的"需要多步推理"的场景，适合使用推理模型。</p></div>
+</div>
+</div>
+
+<!-- ========== Q10 (§⑤ 产品连接) ========== -->
+<div class="question-card" data-qid="10" data-sec="connect">
+<div class="q-header"><span class="q-badge">Q10</span> <span class="q-section-tag">§⑤ 与产品连接</span></div>
+<div class="q-body">
+<p>10. 关于推理模型在生产环境的成本优化策略，以下组合中最合理的是？</p>
+<ol class="options-list" data-correct="C">
+<li class="option-item" data-opt="A"><span class="option-label">A</span><span>全量切换到推理模型 + 不设 max_completion_tokens 让模型自由发挥</span></li>
+<li class="option-item" data-opt="B"><span class="option-label">B</span><span>只使用蒸馏后的小模型（如 7B）完全不用原生推理模型</span></li>
+<li class="option-item" data-opt="C"><span class="option-label">C</span><span>问题难度分类器前置路由 + 蒸馏模型处理大部分 + 复杂问题升级原生模型 + 设定 token 预算上限</span></li>
+<li class="option-item" data-opt="D"><span class="option-label">D</span><span>缓存所有推理结果避免重复调用（不管问题是否相似）</span></li>
+</ol>
+<div class="explanation correct-exp"><div class="exp-label">解析</div><p>正确答案是 <strong>C</strong>。这是一个<strong>分层优化策略</strong>的组合拳：
+<br><br><strong>(1)</strong> 前置路由：先判断是否真的需要推理模型（避免对简单问题浪费资源）
+<br><strong>(2)</strong> 蒸馏优先：用 R1-Distill-7B/14B 处理大多数中等难度场景
+<br><strong>(3)</strong> 按需升级：仅在极端困难问题上调用原生 R1/o1
+<br><strong>(4)</strong> 预算控制：设置 max_completion_tokens 上限防止失控
+<br><br>A 全量切换太贵且没必要；B 放弃了原生模型处理极端难题的能力；D 不切实际——每个用户的尽调问题都不同，缓存命中率低。</p></div>
+</div>
+</div>
+
+<!-- Score Section -->
+<div id="scoreSection" class="score-section">
+<div class="score-number" id="scoreNumber">0/10</div>
+<div class="score-label" id="scoreLabel"></div>
+<button class="btn-retry" onclick="resetQuiz()">再做一次</button>
+</div>
+
+<!-- Footer -->
+<div class="footer-nav">
+<a href="A2.1-cot-reasoning-chapter.html">← 返回 A2.1 章节</a> &nbsp;|&nbsp;
+<a href="../../../INDEX.html">知识图谱首页</a>
+</div>
+
+<script>
+(function(){
+const cards=document.querySelectorAll('.question-card');
+let answered=0,total=cards.length,score=0;
+
+function updateProgress(){
+document.getElementById('progressFill').style.width=(answered/total*100)+'%';
+document.getElementById('progressText').textContent=answered+' / '+total+' 已完成';
+}
+
+function showScore(){
+const sec=document.getElementById('scoreSection');
+sec.classList.add('visible');
+sec.className='score-section visible '+(
+score===total?'perfect':score>=7?'good':'retry'
+);
+document.getElementById('scoreNumber').textContent=score+'/'+total;
+const msgs={
+perfect:['🎉 完美通关！','你对 CoT 和推理模型的理解非常扎实！'],
+good:['👍 表现不错！','还有几个知识点可以复习一下章节原文。'],
+retry:['💪 继续加油！','建议重新阅读章节内容后再试一次。']
+};
+const m=msgs[score>=7?(score===total?'perfect':'good'):'retry'];
+document.getElementById('scoreLabel').innerHTML=m[0]+'<br>'+m[1];
+window.scrollTo({top:sec.offsetTop-20,behavior:'smooth'});
+}
+
+cards.forEach(card=>{
+const opts=card.querySelectorAll('.option-item');
+const correctOpt=card.querySelector('.options-list').dataset.correct;
+const expl=card.querySelector('.explanation');
+
+opts.forEach(opt=>{
+opt.addEventListener('click',function(){
+if(this.closest('.question-card').classList.contains('answered'))return;
+card.classList.add('answered');
+answered++;
+opts.forEach(o=>{
+o.classList.add('disabled');
+if(o.dataset.opt!==correctOpt&&o!==this)o.classList.add('show-correct');
+});
+if(this.dataset.opt===correctOpt){
+this.classList.add('correct');score++;
+expl.classList.add('visible','correct-exp');
+}else{
+this.classList.add('wrong');
+const co=card.querySelector('[data-opt="'+correctOpt+'"]');
+co.classList.add('correct');
+expl.classList.add('visible','wrong-exp');
+}
+updateProgress();
+if(answered===total)setTimeout(showScore,400);
+});
+});
+});
+
+window.resetQuiz=function(){
+answered=0;score=0;
+cards.forEach(c=>{c.classList.remove('answered');const opts=c.querySelectorAll('.option-item');opts.forEach(o=>{o.classList.remove('selected','disabled','correct','wrong','show-correct')});c.querySelector('.explanation').classList.remove('visible','correct-exp','wrong-exp');});
+const sec=document.getElementById('scoreSection');
+sec.classList.remove('visible','perfect','good','retry');
+updateProgress();
+window.scrollTo({top:0,behavior:'smooth'});
+};
+
+updateProgress();
+})();
+</script>
+
+</body>
+</html>

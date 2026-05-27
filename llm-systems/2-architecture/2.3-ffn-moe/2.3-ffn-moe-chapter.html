@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2.3 FFN + 归一化 + MoE · T1 LLM 系统</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card-bg:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--purple-bg);color:var(--purple)}
+.tag-chapter{background:var(--blue-bg);color:var(--blue)}
+.tag-status{background:var(--teal-bg);color:var(--teal)}
+h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:4px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.progress-nav{display:flex;gap:4px;margin:16px 0 0;flex-wrap:wrap}
+.progress-nav a{font-size:11px;padding:3px 8px;border-radius:8px;text-decoration:none;background:var(--purple-bg);color:var(--purple);font-weight:500}
+.progress-nav a.done{background:var(--teal-bg);color:var(--teal)}
+section{margin-top:36px;padding-top:20px;border-top:1px solid #E8E8E4}
+section h2{font-size:20px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;padding:2px 8px;border-radius:8px}
+h3{font-size:16px;font-weight:600;margin:16px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--amber-bg);border-color:var(--amber)}
+.card.takeaway{background:var(--teal-bg);border-color:var(--teal)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.card.intuition .card-label{color:var(--amber)}
+.card.takeaway .card-label{color:var(--teal)}
+.card.warning .card-label{color:var(--coral)}
+.diagram{margin:20px 0}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid #E0E0DC;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{background:#fff}
+code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;background:#F0F0EC;padding:1px 4px;border-radius:3px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<!-- ====== HEADER ====== -->
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">D2 模型骨架</span>
+<span class="tag tag-chapter">2.3</span>
+<span class="tag tag-status">✅ 完成</span>
+<a href="../../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+<a href="2.3-ffn-moe-quiz.html" class="nav-link">Quiz →</a>
+</div>
+<h1>2.3 FFN + 归一化 + MoE</h1>
+<p class="subtitle">知识存储与按需激活 — Attention 之后的第二大脑</p>
+<div class="spine-link">主线连接：FFN 存知识 · MoE 按需激活 → Agent 推理成本的另一面</div>
+<nav class="progress-nav">
+<a href="#is" class="done">① 是什么 ✓</a>
+<a href="#how" class="done">② 怎么实现 ✓</a>
+<a href="#why" class="done">③ 为什么 ✓</a>
+<a href="#evolution" class="done">④ 演进 ✓</a>
+<a href="#connect" class="done">⑤ 与产品 ✓</a>
+</nav>
+</div>
+
+<!-- ====== 章节一览图 ====== -->
+<div class="diagram">
+<p>章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 760 340" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ov-arr23" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- ① 紫 -->
+<rect x="20" y="20" width="120" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="80" y="45" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">① 是什么</text>
+<text x="80" y="63" text-anchor="middle" fill="#534AB7" font-size="10">FFN·归一化·MoE</text>
+<line x1="140" y1="50" x2="168" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<!-- ② 蓝 -->
+<rect x="170" y="20" width="120" height="60" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="230" y="45" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="700">② 怎么实现</text>
+<text x="230" y="63" text-anchor="middle" fill="#185FA5" font-size="10">SwiGLU+RMSNorm</text>
+<line x1="290" y1="50" x2="318" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<!-- ③ 琥珀 -->
+<rect x="320" y="20" width="120" height="60" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="380" y="45" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">③ 为什么</text>
+<text x="380" y="63" text-anchor="middle" fill="#BA7517" font-size="10">设计取舍本质</text>
+<line x1="440" y1="50" x2="468" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<!-- ④ 紫浅 -->
+<rect x="470" y="20" width="120" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="530" y="45" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">④ 演进格局</text>
+<text x="530" y="63" text-anchor="middle" fill="#534AB7" font-size="10">2024-2026 MoE</text>
+<line x1="590" y1="50" x2="618" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<!-- ⑤ 绿 -->
+<rect x="620" y="20" width="50" height="60" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="645" y="45" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="700">⑤</text>
+<text x="645" y="63" text-anchor="middle" fill="#1D9E75" font-size="10">产品</text>
+<!-- 下方展开说明 -->
+<line x1="80" y1="80" x2="80" y2="110" stroke="#534AB7" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="10" y="112" width="140" height="50" rx="8" fill="#fff" stroke="#534AB7" stroke-width="1"/>
+<text x="80" y="133" text-anchor="middle" fill="#534AB7" font-size="10">知识存在FFN权重里</text>
+<text x="80" y="149" text-anchor="middle" fill="#534AB7" font-size="10">MoE让模型按需激活</text>
+
+<line x1="230" y1="80" x2="230" y2="110" stroke="#185FA5" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="155" y="112" width="150" height="50" rx="8" fill="#fff" stroke="#185FA5" stroke-width="1"/>
+<text x="230" y="133" text-anchor="middle" fill="#185FA5" font-size="10">门控=调光旋钮</text>
+<text x="230" y="149" text-anchor="middle" fill="#185FA5" font-size="10">RMSNorm=信号稳定器</text>
+
+<line x1="380" y1="80" x2="380" y2="110" stroke="#BA7517" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="305" y="112" width="150" height="50" rx="8" fill="#fff" stroke="#BA7517" stroke-width="1"/>
+<text x="380" y="133" text-anchor="middle" fill="#BA7517" font-size="10">为什么不是ReLU？</text>
+<text x="380" y="149" text-anchor="middle" fill="#BA7517" font-size="10">为什么MoE比Dense便宜？</text>
+
+<line x1="530" y1="80" x2="530" y2="110" stroke="#534AB7" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="463" y="112" width="170" height="50" rx="8" fill="#fff" stroke="#534AB7" stroke-width="1"/>
+<text x="548" y="133" text-anchor="middle" fill="#534AB7" font-size="10">DeepSeek-V4·Llama4·Qwen3</text>
+<text x="548" y="149" text-anchor="middle" fill="#534AB7" font-size="10">无辅助损失·共享专家</text>
+
+<line x1="693" y1="80" x2="693" y2="110" stroke="#1D9E75" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="643" y="112" width="100" height="50" rx="8" fill="#fff" stroke="#1D9E75" stroke-width="1"/>
+<text x="693" y="133" text-anchor="middle" fill="#1D9E75" font-size="10">DDAgent路由</text>
+<text x="693" y="149" text-anchor="middle" fill="#1D9E75" font-size="10">Agent成本优化</text>
+
+<!-- 底部横线：信息流 -->
+<line x1="80" y1="200" x2="693" y2="200" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<text x="360" y="220" text-anchor="middle" fill="#888780" font-size="11">信息流：Token 经 Attention 关联后 → FFN 存取知识 → MoE 按需激活 → 成本可控的智能</text>
+</svg>
+</div>
+
+<!-- ====== §① 是什么 ====== -->
+<section id="is">
+<h2><span class="sec-num">①</span> 是什么：FFN、归一化与 MoE</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>如果 Attention 是"人与人之间的交流"，那 FFN 就是"每个人的大脑记忆库"——Attention 决定你关注谁，FFN 决定你从记忆里取出什么知识来回应。</p>
+<p>归一化是"音量旋钮"，防止信号在层层传递中越来越大或越来越小。</p>
+<p>MoE 则是"医院分诊台"：不是所有科室都处理每个病人，而是根据症状把病人路由到最相关的专家那里，节省资源。</p>
+</div>
+
+<h3>FFN：Transformer 的知识存储器</h3>
+<p>在 Transformer 的每一层，信息流经两条路径：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 180" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<rect x="20" y="60" width="100" height="50" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="70" y="82" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">Attention</text>
+<text x="70" y="98" text-anchor="middle" fill="#534AB7" font-size="10">Token间关联</text>
+<line x1="120" y1="85" x2="160" y2="85" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<rect x="162" y="60" width="100" height="50" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="212" y="82" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="700">Add+Norm</text>
+<text x="212" y="98" text-anchor="middle" fill="#185FA5" font-size="10">残差+归一化</text>
+<line x1="262" y1="85" x2="302" y2="85" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<rect x="304" y="60" width="100" height="50" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="354" y="82" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="700">FFN</text>
+<text x="354" y="98" text-anchor="middle" fill="#BA7517" font-size="10">知识存取</text>
+<line x1="404" y1="85" x2="444" y2="85" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<rect x="446" y="60" width="100" height="50" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="496" y="82" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="700">Add+Norm</text>
+<text x="496" y="98" text-anchor="middle" fill="#185FA5" font-size="10">残差+归一化</text>
+<text x="340" y="30" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="600">← FFN 占了每层约 2/3 参数量 →</text>
+<text x="340" y="155" text-anchor="middle" fill="#888780" font-size="10">每层：Attention 关联 → FFN 知识提取 → 归一化稳定 → 输出送入下一层</text>
+</svg>
+</div>
+
+<p>FFN（Feed-Forward Network，前馈网络）是 Transformer 中唯一包含"知识"的模块。它的核心操作：</p>
+<p>$$\text{FFN}(x) = \sigma(xW_1 + b_1) \cdot W_2 + b_2$$</p>
+<p>其中 $W_1$ 将输入从 $d_{\text{model}}$ 维映射到 $d_{\text{ff}}$ 维（通常 $d_{\text{ff}} = 4 \times d_{\text{model}}$），$\sigma$ 是激活函数，$W_2$ 再投影回 $d_{\text{model}}$ 维。</p>
+
+<div class="card intuition">
+<div class="card-label">产品视角</div>
+<p>DDAgent 处理尽调报告时，Attention 找到"这家公司"与"尽调模板"的对应关系，而 FFN 里存储了"尽调领域的专业知识"——什么是关键财务指标、什么风险需要关注。FFN 越大，模型"懂"的领域知识越多。</p>
+</div>
+
+<h3>归一化：训练稳定的守护者</h3>
+<p>深层网络中，每层的输出幅度如果不控制，60 层后信号可能放大 300 倍（$1.1^{60} \approx 304$）或衰减到零——梯度爆炸/消失。归一化的本质是：每一层结束后把信号"归零重整"，确保下一层收到的输入幅度稳定。</p>
+
+<h3>MoE：用更少的算力存更多的知识</h3>
+<p>MoE（Mixture of Experts，混合专家）的核心思想：<strong>不激活全部参数，只激活与当前输入相关的"专家"</strong>。一个 671B 总参数的模型，每次推理只激活 37B 参数——成本降低 18 倍，但知识容量不变。</p>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>FFN 是 Transformer 的"记忆库"，归一化是"稳定器"，MoE 是"分诊台"。三者组合让模型既能存大量知识（FFN 大），又能稳定训练（归一化），还能控制推理成本（MoE 稀疏激活）。</p>
+</div>
+</section>
+
+<!-- ====== §② 怎么实现 ====== -->
+<section id="how">
+<h2><span class="sec-num">②</span> 怎么实现：SwiGLU · RMSNorm · MoE 路由</h2>
+
+<h3>2.1 SwiGLU：从开关到调光旋钮</h3>
+<p>激活函数的演进：ReLU（硬开关）→ GELU（平滑开关）→ SwiGLU（智能门控）。</p>
+
+<p><strong>ReLU</strong>：简单粗暴，负值归零，正值原样通过。</p>
+<p>$$\text{ReLU}(x) = \max(0, x)$$</p>
+<p>问题：梯度在 $x < 0$ 时恒为零——"死亡神经元"，一旦进入负区间永远无法恢复。</p>
+
+<p><strong>SwiGLU</strong>（2026 行业标准，LLaMA/Qwen/DeepSeek/Mistral 全部采用）：</p>
+<p>$$\text{SwiGLU}(x) = (\text{Swish}(xW_1) \odot xW_3) \cdot W_2$$</p>
+<p>其中 $\text{Swish}(x) = x \cdot \sigma(x)$，$\sigma$ 是 sigmoid 函数，$\odot$ 是逐元素乘法。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 200" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<rect x="20" y="30" width="130" height="50" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="85" y="52" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="700">Swish(xW₁)</text>
+<text x="85" y="68" text-anchor="middle" fill="#BA7517" font-size="9">门控路径：调光旋钮</text>
+<rect x="20" y="110" width="130" height="50" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="85" y="132" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="700">xW₃</text>
+<text x="85" y="148" text-anchor="middle" fill="#185FA5" font-size="9">内容路径：待传递的信息</text>
+<text x="185" y="95" text-anchor="middle" fill="#534AB7" font-size="16" font-weight="700">⊙</text>
+<rect x="210" y="60" width="100" height="70" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="260" y="88" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">逐元素相乘</text>
+<text x="260" y="105" text-anchor="middle" fill="#534AB7" font-size="9">门控筛选内容</text>
+<line x1="310" y1="95" x2="340" y2="95" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<rect x="342" y="60" width="100" height="70" rx="8" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="392" y="88" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">· W₂</text>
+<text x="392" y="105" text-anchor="middle" fill="#1D9E75" font-size="9">输出投影回 d_model</text>
+<line x1="442" y1="95" x2="472" y2="95" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<rect x="474" y="70" width="60" height="50" rx="8" fill="#fff" stroke="#888780" stroke-width="1"/>
+<text x="504" y="95" text-anchor="middle" fill="#2D2D2D" font-size="11" font-weight="600">输出</text>
+<text x="350" y="180" text-anchor="middle" fill="#888780" font-size="10">SwiGLU 比 ReLU 多一个 W₃ 矩阵，参数量增加 50%，但困惑度降低 0.5-1.0</text>
+</svg>
+</div>
+
+<p>关键设计：$d_{\text{ff}}$ 从传统 $4d$ 调整为 $\frac{8}{3}d \approx 2.69d$（如 LLaMA: $d=4096 \to d_{\text{ff}}=11008$），保持总参数量与 ReLU FFN 相当，但效果更优。</p>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>ReLU 是"灯泡开关"——只有开和关。SwiGLU 是"调光旋钮"——不仅决定信息是否通过，还精细控制通过多少。这种乘法交互（门控 × 内容）让网络能学习"哪些特征组合重要"——类似 Attention 中 QK 乘积捕获交互的思路。</p>
+</div>
+
+<h3>2.2 RMSNorm + Pre-Norm：轻量稳定方案</h3>
+<p>现代 LLM 的归一化标配：<strong>RMSNorm + Pre-Norm</strong>。</p>
+
+<p><strong>LayerNorm</strong>（原始 Transformer）：</p>
+<p>$$\text{LN}(x) = \frac{x - \mu}{\sqrt{\sigma^2 + \epsilon}} \cdot \gamma + \beta$$</p>
+<p>同时调整均值 $\mu$ 和方差 $\sigma^2$，需要两个可学习参数 $\gamma, \beta$。</p>
+
+<p><strong>RMSNorm</strong>（LLaMA/DeepSeek/Qwen 全部采用）：</p>
+<p>$$\text{RMSNorm}(x) = \frac{x}{\sqrt{\frac{1}{d}\sum_{i=1}^d x_i^2 + \epsilon}} \cdot \gamma$$</p>
+<p>省略均值中心化，只调整幅度。可学习参数只有 $\gamma$（无 $\beta$），计算更快，效果相当。</p>
+
+<p><strong>Pre-Norm vs Post-Norm</strong>：</p>
+<table>
+<tr><th>位置</th><th>公式</th><th>优势</th><th>劣势</th><th>使用方</th></tr>
+<tr><td>Pre-Norm</td><td>$x + f(\text{Norm}(x))$</td><td>梯度稳定，不需要 warm-up</td><td>深层可能欠优化</td><td>LLaMA/Qwen/DeepSeek（主流）</td></tr>
+<tr><td>Post-Norm</td><td>$\text{Norm}(x + f(x))$</td><td>理论表达力更强</td><td>需精心 warm-up，训练不稳</td><td>原始 Transformer</td></tr>
+<tr><td>Sandwich-Norm</td><td>Norm 在 Attention/FFN 前后各一个</td><td>更稳定</td><td>多一次 Norm 开销</td><td>Gemma 2/3</td></tr>
+</table>
+
+<h3>2.3 MoE 路由机制</h3>
+<p>MoE 层将一个大型 FFN 替换为 $N$ 个小型 FFN（专家），通过 Router 动态选择每 token 激活哪 $K$ 个专家：</p>
+<p>$$g(x) = \text{TopK}(\text{softmax}(x \cdot W_r + b))$$</p>
+<p>$$\text{MoE}(x) = \sum_{i \in g(x)} g_i(x) \cdot E_i(x)$$</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 240" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<!-- Router -->
+<rect x="280" y="10" width="120" height="40" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="340" y="30" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">Router</text>
+<text x="340" y="44" text-anchor="middle" fill="#534AB7" font-size="9">xW_r → softmax → TopK</text>
+<!-- 输入 -->
+<rect x="20" y="15" width="80" height="30" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="60" y="35" text-anchor="middle" fill="#185FA5" font-size="11">输入 x</text>
+<line x1="100" y1="30" x2="278" y2="30" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr23)"/>
+<!-- 专家们 -->
+<rect x="80" y="100" width="80" height="40" rx="6" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1"/>
+<text x="120" y="118" text-anchor="middle" fill="#1D9E75" font-size="10">E₁</text>
+<text x="120" y="132" text-anchor="middle" fill="#1D9E75" font-size="8">0.32</text>
+<rect x="180" y="100" width="80" height="40" rx="6" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1"/>
+<text x="220" y="118" text-anchor="middle" fill="#1D9E75" font-size="10">E₂</text>
+<text x="220" y="132" text-anchor="middle" fill="#1D9E75" font-size="8">0.28</text>
+<rect x="280" y="100" width="80" height="40" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="320" y="118" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="700">E₃ ★</text>
+<text x="320" y="132" text-anchor="middle" fill="#BA7517" font-size="8">0.25</text>
+<rect x="380" y="100" width="80" height="40" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="420" y="118" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="700">E₄ ★</text>
+<text x="420" y="132" text-anchor="middle" fill="#BA7517" font-size="8">0.15</text>
+<rect x="480" y="100" width="80" height="40" rx="6" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1"/>
+<text x="520" y="118" text-anchor="middle" fill="#1D9E75" font-size="10">E₅</text>
+<text x="520" y="132" text-anchor="middle" fill="#1D9E75" font-size="8">0.00</text>
+<rect x="580" y="100" width="80" height="40" rx="6" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1"/>
+<text x="620" y="118" text-anchor="middle" fill="#1D9E75" font-size="10">E₆</text>
+<text x="620" y="132" text-anchor="middle" fill="#1D9E75" font-size="8">0.00</text>
+<!-- 连线 -->
+<line x1="300" y1="50" x2="120" y2="98" stroke="#888780" stroke-width="0.8" stroke-dasharray="3 3"/>
+<line x1="320" y1="50" x2="320" y2="98" stroke="#BA7517" stroke-width="1.5"/>
+<line x1="360" y1="50" x2="420" y2="98" stroke="#BA7517" stroke-width="1.5"/>
+<line x1="380" y1="50" x2="520" y2="98" stroke="#888780" stroke-width="0.8" stroke-dasharray="3 3"/>
+<!-- 输出 -->
+<line x1="320" y1="140" x2="340" y2="175" stroke="#BA7517" stroke-width="1.2"/>
+<line x1="420" y1="140" x2="360" y2="175" stroke="#BA7517" stroke-width="1.2"/>
+<rect x="290" y="175" width="120" height="40" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="350" y="195" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">加权和输出</text>
+<text x="350" y="210" text-anchor="middle" fill="#534AB7" font-size="9">0.25×E₃ + 0.15×E₄</text>
+<text x="340" y="235" text-anchor="middle" fill="#888780" font-size="10">★ 被选中的专家（Top-K=2）· 琥珀色高亮</text>
+</svg>
+</div>
+
+<p><strong>DeepSeek 的创新：共享专家 + 无辅助损失均衡</strong></p>
+<p>DeepSeek-V3/V4 引入 1 个"共享专家"（所有 token 必经）+ 256 个"路由专家"（每 token 激活 8 个）。共享专家处理通用知识（语法、常识），路由专家专注领域知识。</p>
+<p>传统 MoE 用辅助损失（auxiliary loss）强制负载均衡，但会损害模型性能。DeepSeek-V3 改用<strong>偏置调整法</strong>：为每个专家维护一个可调偏置 $b_i$，在 TopK 选择时加入 $\rho + b$，动态调整负载，无需额外损失函数。</p>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>SwiGLU 的乘法门控创造特征交叉（类似 Attention 的 QK 乘积），RMSNorm 比 LayerNorm 省计算且效果相当，MoE 的 Router 做动态专家选择实现稀疏激活。2026 行业标配：SwiGLU + RMSNorm + Pre-Norm + MoE。</p>
+</div>
+</section>
+
+<!-- ====== §③ 为什么 ====== -->
+<section id="why">
+<h2><span class="sec-num">③</span> 为什么：设计取舍的第一性原理</h2>
+
+<h3>3.1 为什么 FFN 是知识存储器？</h3>
+<p>从第一性原理看，Attention 是<strong>动态关联</strong>（token 之间建立连接），FFN 是<strong>静态记忆</strong>（从训练好的权重中提取知识）。这有一个经典的实证依据：</p>
+<p>Geva et al. (2021) 发现 FFN 的每个神经元对应一个"语义模式"——$W_1$ 的每一行像一个"键"（key），匹配输入中的特定模式；$W_2$ 的每一列像一个"值"（value），输出对应的知识。</p>
+<p>$$\text{FFN}(x) = \sum_{j=1}^{d_{\text{ff}}} \sigma(x \cdot w_{1j}) \cdot w_{2j}$$</p>
+<p>每个 $w_{1j}$ 是一个"知识条目"：当输入匹配 $w_{1j}$（$\sigma$ 输出大），$w_{2j}$ 对应的"值"被激活——像极了 Key-Value 存储。</p>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>FFN 就像 DDAgent 的知识库（KBA）：$W_1$ 是"索引"（什么问题匹配什么知识），$W_2$ 是"内容"（匹配到后输出什么答案）。FFN 参数量越大 = 知识库条目越多。</p>
+</div>
+
+<h3>3.2 为什么 SwiGLU 击败了 ReLU？</h3>
+<table>
+<tr><th>维度</th><th>ReLU</th><th>GELU</th><th>SwiGLU</th></tr>
+<tr><td>非线性能力</td><td>弱（硬截断）</td><td>中等（平滑）</td><td>强（门控+平滑）</td></tr>
+<tr><td>梯度稳定性</td><td>死亡神经元</td><td>较好</td><td>非常好（无硬截断）</td></tr>
+<tr><td>表达能力</td><td>单路径</td><td>单路径</td><td>双路径交互（乘法门控）</td></tr>
+<tr><td>参数量</td><td>2 矩阵（$W_1, W_2$）</td><td>2 矩阵</td><td>3 矩阵（$W_1, W_2, W_3$）</td></tr>
+<tr><td>困惑度</td><td>基准</td><td>略优</td><td>显著优（-0.5~1.0 ppl）</td></tr>
+</table>
+
+<p>核心原因：SwiGLU 的乘法交互 $\text{Swish}(xW_1) \odot xW_3$ 创建了特征交叉项 $x_j \times x_k$——这与 Attention 中 $QK^T$ 乘积捕获交互的逻辑一致。单路径激活（ReLU/GELU）只做加权和，特征之间不交互。</p>
+
+<h3>3.3 为什么 RMSNorm 替代了 LayerNorm？</h3>
+<p>RMSNorm 省掉了均值中心化（减 $\mu$），只做幅度归一化。为什么省这一步不影响效果？</p>
+<p>因为 Transformer 中每个 token 的特征分布本身就没有明显的"偏移"（不像 CNN 有通道间的分布差异），均值中心化是冗余操作。省掉后：计算量减半、参数减半（无 $\beta$）、训练更稳定。</p>
+
+<h3>3.4 为什么 MoE 能用 1/18 的算力达到同级效果？</h3>
+<p>直觉：不是所有知识都需要同时激活。处理数学题时，不需要文学专家；处理中文时，不需要法语专家。</p>
+<p>数学本质：Dense 模型每 token 激活全部 $P$ 个参数，MoE 模型每 token 只激活 $P/K_{\text{ratio}}$ 个参数（$K_{\text{ratio}}$ = 总参数/激活参数），但总知识容量仍然是 $P$。</p>
+<p>DeepSeek-V4 Pro：1.6T 总参数 / 49B 激活参数 = 33× 稀疏比。知识容量等同 1.6T Dense 模型，但推理成本只有 49B 级别。</p>
+
+<div class="card warning">
+<div class="card-label">关键取舍</div>
+<p>MoE 的代价：(1) 全部参数都要加载到显存，内存需求 = 总参数量（不是激活量）；(2) 负载不均衡风险——某些专家被过度使用，某些闲置；(3) 训练更复杂，需要路由均衡策略。这就是 DeepSeek-V3 创新无辅助损失均衡的原因。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>FFN 是 Key-Value 知识库，SwiGLU 的乘法门控让知识提取更精准（特征交叉），RMSNorm 省掉冗余操作更高效，MoE 用"分诊台"思路解耦知识容量和计算成本——但代价是显存和训练复杂度。</p>
+</div>
+</section>
+
+<!-- ====== §④ 演进与对比 ====== -->
+<section id="evolution">
+<h2><span class="sec-num">④</span> 演进格局：2024-2026 MoE 时代</h2>
+
+<div class="diagram">
+<svg viewBox="0 0 680 220" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ev-arr23" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- 时间线 -->
+<line x1="40" y1="40" x2="660" y2="40" stroke="#888780" stroke-width="1.5" marker-end="url(#ev-arr23)"/>
+<text x="50" y="28" fill="#888780" font-size="10">2017</text>
+<text x="200" y="28" fill="#888780" font-size="10">2022</text>
+<text x="340" y="28" fill="#888780" font-size="10">2024</text>
+<text x="490" y="28" fill="#888780" font-size="10">2025</text>
+<text x="610" y="28" fill="#888780" font-size="10">2026</text>
+<!-- 事件节点 -->
+<circle cx="60" cy="40" r="6" fill="#534AB7"/>
+<text x="60" y="65" text-anchor="middle" fill="#534AB7" font-size="9" font-weight="600">Transformer</text>
+<text x="60" y="78" text-anchor="middle" fill="#534AB7" font-size="8">ReLU+LN+Dense</text>
+
+<circle cx="210" cy="40" r="6" fill="#185FA5"/>
+<text x="210" y="65" text-anchor="middle" fill="#185FA5" font-size="9" font-weight="600">PaLM/Switch</text>
+<text x="210" y="78" text-anchor="middle" fill="#185FA5" font-size="8">SwiGLU+MoE初探</text>
+
+<circle cx="350" cy="40" r="6" fill="#BA7517"/>
+<text x="350" y="65" text-anchor="middle" fill="#BA7517" font-size="9" font-weight="600">Mixtral 8x7B</text>
+<text x="350" y="78" text-anchor="middle" fill="#BA7517" font-size="8">开源MoE元年</text>
+
+<circle cx="440" cy="40" r="6" fill="#534AB7"/>
+<text x="440" y="65" text-anchor="middle" fill="#534AB7" font-size="9" font-weight="600">DeepSeek-V3</text>
+<text x="440" y="78" text-anchor="middle" fill="#534AB7" font-size="8">无辅助损失均衡</text>
+
+<circle cx="520" cy="40" r="6" fill="#1D9E75"/>
+<text x="520" y="65" text-anchor="middle" fill="#1D9E75" font-size="9" font-weight="600">Qwen3/Llama4</text>
+<text x="520" y="78" text-anchor="middle" fill="#1D9E75" font-size="8">MoE成主流</text>
+
+<circle cx="620" cy="40" r="6" fill="#993C1D"/>
+<text x="620" y="65" text-anchor="middle" fill="#993C1D" font-size="9" font-weight="600">DeepSeek-V4</text>
+<text x="620" y="78" text-anchor="middle" fill="#993C1D" font-size="8">1.6T/49B 稀疏33×</text>
+
+<!-- 底部对比 -->
+<text x="340" y="120" text-anchor="middle" fill="#888780" font-size="10">2026 主流 MoE 模型对比</text>
+<line x1="40" y1="130" x2="660" y2="130" stroke="#E0E0DC" stroke-width="1"/>
+<text x="120" y="148" fill="#534AB7" font-size="10" font-weight="600">DeepSeek-V4 Pro</text>
+<text x="300" y="148" fill="#2D2D2D" font-size="10">1.6T总 / 49B激活</text>
+<text x="470" y="148" fill="#2D2D2D" font-size="10">1共享+256路由 Top8</text>
+<text x="610" y="148" fill="#1D9E75" font-size="10" font-weight="600">MLA</text>
+
+<text x="120" y="168" fill="#534AB7" font-size="10" font-weight="600">Qwen3-235B</text>
+<text x="300" y="168" fill="#2D2D2D" font-size="10">235B总 / 22B激活</text>
+<text x="470" y="168" fill="#2D2D2D" font-size="10">128路由 Top8 无共享</text>
+<text x="610" y="168" fill="#1D9E75" font-size="10" font-weight="600">GQA</text>
+
+<text x="120" y="188" fill="#534AB7" font-size="10" font-weight="600">Llama4 Maverick</text>
+<text x="300" y="188" fill="#2D2D2D" font-size="10">400B总 / 17B激活</text>
+<text x="470" y="188" fill="#2D2D2D" font-size="10">1共享+128路由 Top2</text>
+<text x="610" y="188" fill="#1D9E75" font-size="10" font-weight="600">GQA</text>
+
+<text x="120" y="208" fill="#534AB7" font-size="10" font-weight="600">Mistral Large 3</text>
+<text x="300" y="208" fill="#2D2D2D" font-size="10">675B总 / 41B激活</text>
+<text x="470" y="208" fill="#2D2D2D" font-size="10">路由专家</text>
+<text x="610" y="208" fill="#1D9E75" font-size="10" font-weight="600">GQA</text>
+</svg>
+</div>
+
+<h3>共识与分歧（2026 行业现状）</h3>
+<table>
+<tr><th>组件</th><th>行业共识</th><th>分歧点</th></tr>
+<tr><td>激活函数</td><td>SwiGLU（LLaMA/Qwen/DeepSeek/Mistral 全部采用）</td><td>Gemma 用 GeGLU（门控用 GELU 替代 Swish）</td></tr>
+<tr><td>归一化方法</td><td>RMSNorm</td><td>无分歧，2026 全部采用</td></tr>
+<tr><td>归一化位置</td><td>Pre-Norm 为主流</td><td>OLMo 2/Gemma 2/3 用 Post-Norm 变体 + QK-Norm</td></tr>
+<tr><td>MoE 共享专家</td><td>DeepSeek/Llama4 用共享专家</td><td>Qwen3 不用共享专家，纯路由</td></tr>
+<tr><td>负载均衡</td><td>DeepSeek 无辅助损失（偏置法）</td><td>其他模型仍用辅助损失</td></tr>
+<tr><td>FFN 隐维度比</td><td>$d_{\text{ff}} \approx \frac{8}{3}d \approx 2.69d$</td><td>无分歧，SwiGLU 下的最优比</td></tr>
+</table>
+
+<div class="card intuition">
+<div class="card-label">趋势洞察</div>
+<p>2026 年两个最显著的趋势：(1) MoE 已从"实验"变成"标配"——所有 sub-$1/M token 的前沿模型都是 MoE；(2) 稀疏比越来越高——从 DeepSeek-V3 的 18× 到 Llama4 Maverick 的 23× 到 DeepSeek-V4 的 33×，算力效率持续提升。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>SwiGLU + RMSNorm + Pre-Norm + MoE 是 2026 的行业共识。分歧主要在共享专家、归一化位置和负载均衡策略。DeepSeek 的无辅助损失均衡是近两年最关键的 MoE 创新。</p>
+</div>
+</section>
+
+<!-- ====== §⑤ 与产品连接 ====== -->
+<section id="connect">
+<h2><span class="sec-num">⑤</span> 与产品：Agent 成本优化的架构基础</h2>
+
+<h3>5.1 FFN 知识存储 → DDAgent 的"领域专家"</h3>
+<p>DDAgent 的 Dispatcher 架构本质上在做"人工 MoE"：不同子 Agent 就像不同专家，路由器（Dispatcher）根据尽调场景把请求分配到最相关的子 Agent。</p>
+<p>类比映射：</p>
+<table>
+<tr><th>MoE 概念</th><th>DDAgent 对应</th><th>本质</th></tr>
+<tr><td>Router</td><td>Dispatcher</td><td>动态路由，匹配输入到最相关专家</td></tr>
+<tr><td>共享专家</td><td>通用尽调框架</td><td>所有场景都需要的基础知识</td></tr>
+<tr><td>路由专家</td><td>子 Agent（银行/保险/证券）</td><td>领域专用知识</td></tr>
+<tr><td>Top-K 选择</td><td>场景匹配</td><td>每 token/请求只激活最相关的 K 个</td></tr>
+<tr><td>负载均衡</td><td>子 Agent 任务分配</td><td>防止某些子 Agent 过载</td></tr>
+</table>
+
+<h3>5.2 MoE 稀疏激活 → Agent 推理成本优化</h3>
+<p>FxAgent 日均 250 次换汇咨询，如果每次都调用全量模型推理，成本不可控。MoE 的思路启示：</p>
+<div class="card intuition">
+<div class="card-label">产品启示</div>
+<p><strong>轻量路由 + 按需激活</strong>：先轻量判断用户意图（Router），只对复杂查询调用重模型（路由专家），简单查询走轻模型或规则（共享专家）。FxAgent 的 98-99.75% AI 采纳率说明：大部分换汇咨询是标准化问题，不需要"全量专家"。</p>
+</div>
+
+<h3>5.3 归一化 → Agent 输出稳定性</h3>
+<p>TRSAgent 处理售后邮件时，分类准确率 92.2% 但仍有误分类。归一化的启示：在 Agent 流水线中加入"归一化层"——每个环节结束后做质量校验（Gate），防止错误在后续步骤中被放大（类似梯度爆炸）。</p>
+<p>Fitz 的 Harness 框架中，Gate 组件就是 Agent 的"归一化层"：每步行动后检查输出是否在合理范围内，超出则拦截重试。</p>
+
+<h3>5.4 选型决策：何时用 MoE 模型？</h3>
+<table>
+<tr><th>场景</th><th>推荐</th><th>原因</th></tr>
+<tr><td>高频调用 + 成本敏感</td><td>MoE 模型（DeepSeek-V4/Qwen3）</td><td>推理成本 1/10~1/30</td></tr>
+<tr><td>质量敏感 + 调用量适中</td><td>Dense 模型（Claude Opus/GPT-5）</td><td>输出一致性更高</td></tr>
+<tr><td>多领域混合场景</td><td>MoE + 共享专家</td><td>共享知识 + 领域专家</td></tr>
+<tr><td>单领域深度场景</td><td>Dense 模型（全量激活更专注）</td><td>不需要跨领域知识</td></tr>
+<tr><td>Agent 多步推理</td><td>MoE（每步成本更低，多步累积优势大）</td><td>10 步推理 × 1/10 成本 = 总成本大幅下降</td></tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>MoE 的"稀疏激活"思想可以直接映射到 Agent 架构：DDAgent 的 Dispatcher 就是人工 Router，Harness 的 Gate 就是归一化层。理解了 FFN/MoE 的设计原理，就能更好地设计 Agent 的路由和成本优化策略。</p>
+</div>
+</section>
+
+<!-- ====== FOOTER ====== -->
+<div class="chapter-footer">
+<a href="../../../INDEX.html">← 返回知识图谱</a>
+<a href="2.3-ffn-moe-quiz.html">📝 去做 Quiz（10 题）→</a>
+</div>
+
+</body>
+</html>

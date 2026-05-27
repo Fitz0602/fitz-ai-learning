@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz · 1.2 Embedding</title>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE;
+  --amber: #BA7517; --amber-bg: #FAEEDA;
+  --coral: #993C1D; --coral-bg: #FAECE7;
+  --blue: #185FA5; --blue-bg: #E6F1FB;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7;
+  max-width: 700px; margin: 0 auto; padding: 32px 24px 80px; font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.tag.t1 { background: var(--purple-bg); color: var(--purple); }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 20px; font-weight: 600; margin: 8px 0 2px; }
+.subtitle { color: var(--muted); font-size: 13px; }
+.section-divider { font-size: 11px; color: var(--purple); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 28px 0 8px; padding: 4px 10px; background: var(--purple-bg); border-radius: 6px; display: inline-block; }
+.q-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 12px 0; transition: opacity 0.2s; }
+.q-block.answered { opacity: 0.85; }
+.q-num { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.multi-badge { font-size: 10px; background: var(--amber-bg); color: var(--amber); padding: 1px 6px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
+.q-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt { padding: 10px 14px 10px 42px; border-radius: 8px; border: 1.5px solid var(--border); cursor: pointer; font-size: 14px; transition: all 0.15s; background: var(--card); line-height: 1.5; position: relative; }
+.opt:hover { border-color: var(--purple); background: var(--purple-bg); }
+.opt.selected { border-color: var(--purple); background: var(--purple-bg); }
+.opt.correct { border-color: var(--teal); background: var(--teal-bg); }
+.opt.wrong { border-color: var(--coral); background: var(--coral-bg); }
+.opt::before { content: ''; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 50%; transition: all 0.15s; background: white; }
+.q-block[data-type="multi"] .opt::before { border-radius: 4px; }
+.opt.selected::before { border-color: var(--purple); background: var(--purple); }
+.opt.selected::after { content: ''; position: absolute; left: 14px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; }
+.q-block[data-type="multi"] .opt.selected::after { width: 9px; height: 5px; transform: translateY(-50%) rotate(0); border-width: 2px 0 0 2px; left: 13px; }
+.opt.locked { pointer-events: none; }
+
+.action-btns { display: flex; gap: 8px; margin-top: 14px; }
+.q-btn { flex: 1; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; text-align: center; }
+.q-btn:hover { border-color: var(--purple); background: var(--purple-bg); }
+.q-btn.submit-btn { background: var(--purple); color: white; border-color: var(--purple); }
+.q-btn.submit-btn:hover { background: #3C3489; }
+.q-btn.reveal-btn { color: var(--muted); }
+.q-btn.reveal-btn:hover { color: var(--text); }
+.q-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: 14px; display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.correct-fb { background: var(--teal-bg); color: #085041; }
+.feedback.wrong-fb { background: var(--coral-bg); color: #711B0C; }
+.source { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.score-bar { background: var(--purple-bg); border-radius: 12px; padding: 24px; margin-top: 32px; text-align: center; display: none; }
+.score-bar.show { display: block; }
+.score-num { font-size: 44px; font-weight: 700; color: var(--purple); }
+.score-label { font-size: 14px; color: var(--muted); margin-top: 6px; }
+.global-actions { display: flex; gap: 10px; margin-top: 24px; }
+.global-btn { flex: 1; padding: 13px; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+.global-btn.primary { background: var(--purple); color: white; }
+.global-btn.primary:hover { background: #3C3489; }
+.global-btn.secondary { background: var(--card); color: var(--purple); border: 1.5px solid var(--purple); }
+.global-btn.secondary:hover { background: var(--purple-bg); }
+.global-btn:disabled { background: #ccc; border-color: #ccc; color: #666; cursor: not-allowed; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: #f1f1ee; padding: 2px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t1">T1 LLM 系统</span>
+    <span class="tag" style="background:#f1f1f1;color:var(--muted);">1.2 Quiz</span>
+    <span class="tag" style="background:var(--teal-bg);color:var(--teal);">10 题 · 单选+多选 · ≈ 10 min</span>
+    <a href="1.2-embedding-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+<a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+  </div>
+  <h1>Quiz · 1.2 Embedding</h1>
+  <div class="subtitle">概念辨析 + 判断应用 · 覆盖全章 5 节 · 每题可独立提交</div>
+</div>
+
+<div class="section-divider">① 是什么</div>
+
+<div class="q-block" data-q="1">
+  <div class="q-num">Q1 · 概念辨析</div>
+  <div class="q-text">关于 Token Embedding，以下哪项描述最准确？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. Embedding 是一个查找表（Lookup Table），把 token ID 映射到工程师手工设计的高维向量</div>
+    <div class="opt" data-val="B">B. Embedding 把 token ID 映射到高维稠密向量，向量由预训练自动学习得到；语义相近的 token 在向量空间中距离更近</div>
+    <div class="opt" data-val="C">C. Embedding 是 Tokenizer 的另一个名字，两者可以互换使用</div>
+    <div class="opt" data-val="D">D. Embedding 矩阵的形状是 [隐藏维度, 序列长度]</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(1)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(1)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb1"></div>
+  <div class="source">参考：<a href="1.2-embedding-chapter.html#is">§① 是什么</a></div>
+</div>
+
+<div class="q-block" data-q="2">
+  <div class="q-num">Q2 · 判断应用</div>
+  <div class="q-text">以下关于 Embedding 的说法，哪一项是错误的？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. Embedding 矩阵形状是 [词表大小, 隐藏维度]，词表大小直接决定 Embedding 参数量</div>
+    <div class="opt" data-val="B">B. 不同模型训练出的 Embedding 向量互不相通——GPT-4 的向量在 DeepSeek 的空间里没有意义</div>
+    <div class="opt" data-val="C">C. Embedding 空间里的向量运算有意义：如 vec("国王") - vec("男人") + vec("女人") ≈ vec("女王")</div>
+    <div class="opt" data-val="D">D. 由于 Embedding 能捕获语义，RAG 系统可以用 Embedding 相似度来完成精确的实时数字查询（如今日汇率）</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(2)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(2)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb2"></div>
+  <div class="source">参考：<a href="1.2-embedding-chapter.html#is">§① 是什么</a></div>
+</div>
+
+<div class="section-divider">② 怎么实现</div>
+
+<div class="q-block" data-q="3">
+  <div class="q-num">Q3 · 概念辨析</div>
+  <div class="q-text">Embedding 矩阵预训练前是随机噪声，预训练后"美元"和"日元"的向量自然相邻。这是怎么发生的？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 工程师在预训练时手动标注了"美元"和"日元"语义相近，模型据此调整向量</div>
+    <div class="opt" data-val="B">B. 预训练任务（下一个 token 预测）产生梯度信号，"美元"和"日元"在大量语料里出现在极相似的上下文中，梯度方向相似，反向传播后它们的向量自然靠近</div>
+    <div class="opt" data-val="C">C. 模型使用 Word2Vec 算法预先计算了词语相似度，再初始化 Embedding 矩阵</div>
+    <div class="opt" data-val="D">D. Embedding 矩阵用余弦相似度公式初始化，让语言学上相关的词天然接近</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(3)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(3)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb3"></div>
+  <div class="source">参考：<a href="1.2-embedding-chapter.html#how">§② 怎么实现</a></div>
+</div>
+
+<div class="q-block" data-q="4">
+  <div class="q-num">Q4 · 判断应用</div>
+  <div class="q-text">大模型的 Embedding 层和 Unembedding 层（将隐藏向量投影回词表）有时会共享权重（Weight Tying）。以下关于 Weight Tying 的说法，哪项最准确？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 所有现代大模型都强制要求 Weight Tying，这是行业强制标准</div>
+    <div class="opt" data-val="B">B. Weight Tying 的核心逻辑是：输入端"理解 token"和输出端"生成 token"用到的语义表示应该相同，共享参数还能减少参数量</div>
+    <div class="opt" data-val="C">C. Weight Tying 会导致模型无法区分输入和输出，实践中效果更差</div>
+    <div class="opt" data-val="D">D. GPT-3 之后，所有规模的大模型都默认使用 Weight Tying</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(4)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(4)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb4"></div>
+  <div class="source">参考：<a href="1.2-embedding-chapter.html#how">§② 怎么实现</a></div>
+</div>
+
+<div class="section-divider">③ 为什么</div>
+
+<div class="q-block" data-q="5">
+  <div class="q-num">Q5 · 概念辨析</div>
+  <div class="q-text">为什么大模型用 7168 维稠密向量（DeepSeek-V3），而不用 128000 维 One-Hot 编码？以下哪项抓住了根本原因？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. One-Hot 占用显存太多，纯粹是工程性能问题</div>
+    <div class="opt" data-val="B">B. 大模型只能处理浮点数，无法处理 0/1 整数</div>
+    <div class="opt" data-val="C">C. One-Hot 让所有 token 两两正交（余弦距离均为 0），无法表达"美元"和"日元"比"美元"和"番茄"更相关——丢失了语义结构，是表达力问题而非性能问题</div>
+    <div class="opt" data-val="D">D. One-Hot 是早期废弃技术，现代 NLP 没人用，原因已不重要</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(5)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(5)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb5"></div>
+  <div class="source">参考：<a href="1.2-embedding-chapter.html#why">③ 为什么</a></div>
+</div>
+
+<!-- 多选题 -->
+<div class="q-block" data-q="6" data-type="multi">
+  <div class="q-num">Q6 · 判断应用<span class="multi-badge">多选</span></div>
+  <div class="q-text">以下关于 Embedding 维度设计的说法，哪些是<strong>正确的</strong>？（选所有适用的选项）</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 隐藏维度越大，理论上模型表达能力越强，但计算量和参数量也随之增加</div>
+    <div class="opt" data-val="B">B. GPT-4 使用约 12,288 维，DeepSeek-V3 使用 7,168 维，这种差异反映了不同架构下性能与效率的取舍</div>
+    <div class="opt" data-val="C">C. Embedding 维度越高，模型的词表大小必须成比例增加，否则会导致欠拟合</div>
+    <div class="opt" data-val="D">D. 在 RAG 场景中，生成模型的 Embedding 维度与检索用的专用 Embedding 模型维度没有直接关系——两者是独立系统</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(6)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(6)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb6"></div>
+  <div class="source">参考：<a href="1.2-embedding-chapter.html#why">③ 为什么</a></div>
+</div>
+
+<div class="section-divider">④ 演进格局</div>
+
+<div class="q-block" data-q="7">
+  <div class="q-num">Q7 · 概念辨析</div>
+  <div class="q-text">以下关于 Embedding 技术演进的描述，哪项最准确？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. Word2Vec 每个词有一个固定向量（静态 embedding），无法区分"bank=银行"和"bank=河岸"；BERT 等上下文 embedding 解决了这个多义词问题</div>
+    <div class="opt" data-val="B">B. BERT 和 GPT 的 embedding 实现完全相同，可以互相替换用于生成任务</div>
+    <div class="opt" data-val="C">C. 现代 RAG 系统直接用生成大模型（如 GPT-4）的内部 embedding 来做检索，不需要专用 embedding 模型</div>
+    <div class="opt" data-val="D">D. Matryoshka Embedding（MRL）要求截取后必须重新训练，无法直接使用截短的子向量</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(7)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(7)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb7"></div>
+  <div class="source">参考：<a href="1.2-embedding-chapter.html#evolution">④ 演进格局</a></div>
+</div>
+
+<!-- 多选题 -->
+<div class="q-block" data-q="8" data-type="multi">
+  <div class="q-num">Q8 · 判断应用<span class="multi-badge">多选</span></div>
+  <div class="q-text">以下关于 Matryoshka Representation Learning（MRL，套娃 embedding）的说法，哪些是<strong>正确的</strong>？（选所有适用的选项）</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. MRL 允许用同一个模型的前 256 维、512 维、1024 维子向量分别完成检索，无需重新训练</div>
+    <div class="opt" data-val="B">B. OpenAI text-embedding-3 和 Nomic Embed 都支持 MRL 截断功能，是行业共识</div>
+    <div class="opt" data-val="C">C. MRL 截断后语义完全等价于全维度，检索精度不会有任何损失</div>
+    <div class="opt" data-val="D">D. MRL 在存储受限的场景（如移动端、边缘计算）有显著优势，可以用更少的存储换取可接受的精度损失</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(8)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(8)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb8"></div>
+  <div class="source">参考：<a href="1.2-embedding-chapter.html#evolution">④ 演进格局</a></div>
+</div>
+
+<div class="section-divider">⑤ 与产品连接</div>
+
+<div class="q-block" data-q="9">
+  <div class="q-num">Q9 · 概念辨析</div>
+  <div class="q-text">KBA 知识库系统使用 RAG（检索增强生成）架构，用 Embedding 相似度召回文档片段。以下哪项最能说明"专用 embedding 模型 + 生成模型解耦"是最佳实践？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 因为生成模型的 API 太贵，分开用可以节省成本</div>
+    <div class="opt" data-val="B">B. 专用 embedding 模型（如 BGE-M3、Voyage-3）针对检索任务专门优化了向量空间，比直接用生成模型的内部 embedding 检索精度更高；同时两者解耦可以独立升级</div>
+    <div class="opt" data-val="C">C. 生成模型的 embedding 不是向量格式，无法用于检索</div>
+    <div class="opt" data-val="D">D. 专用 embedding 模型的向量维度更低，存储更省，所以更好</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(9)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(9)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb9"></div>
+  <div class="source">参考：<a href="1.2-embedding-chapter.html#connect">⑤ 与产品连接</a></div>
+</div>
+
+<div class="q-block" data-q="10">
+  <div class="q-num">Q10 · 判断应用</div>
+  <div class="q-text">FxAgent 用户问"今天美元兑日元汇率多少"，如果完全依赖 Embedding RAG 检索知识库，最可能出现什么问题？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. "今天"和"昨天"在 embedding 空间非常接近，RAG 可能召回昨天或上周的汇率数据，而 embedding 无法区分时效性——实时数字查询应走结构化 API 而非 RAG</div>
+    <div class="opt" data-val="B">B. 汇率数字（如 157.32）无法被 tokenizer 处理，所以 RAG 直接报错</div>
+    <div class="opt" data-val="C">C. Embedding 无法处理中文，导致"美元兑日元"的语义理解失败</div>
+    <div class="opt" data-val="D">D. RAG 召回速度太慢，无法满足实时查询需求，这是主要问题</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(10)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(10)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb10"></div>
+  <div class="source">参考：<a href="1.2-embedding-chapter.html#connect">⑤ 与产品连接</a></div>
+</div>
+
+<div class="global-actions">
+  <button class="global-btn primary" id="submitAllBtn" onclick="submitRemaining()">提交剩余题目</button>
+  <button class="global-btn secondary" id="revealAllBtn" onclick="revealAll()">查看所有答案</button>
+</div>
+
+<div class="score-bar" id="scorebar">
+  <div class="score-num" id="scorenum">0/10</div>
+  <div class="score-label" id="scoremsg"></div>
+</div>
+
+<script>
+const answers = {
+  1:'B', 2:'D', 3:'B', 4:'B', 5:'C',
+  6:['A','B','D'], 7:'A', 8:['A','B','D'],
+  9:'B', 10:'A'
+};
+const multiSet = new Set([6, 8]);
+const feedbacks = {
+  1: {
+    B: '正确。Embedding 是自动学习的——预训练期间梯度信号驱动矩阵更新，使语义相近的 token 聚集。矩阵形状是 [vocab_size, hidden_dim]，是一个可训练的查找表，不是手工设计的。',
+    default: 'A 错：Embedding 是预训练自动学出来的，不是手工设计；C 错：Tokenizer 负责文本↔ID，Embedding 负责 ID→向量，是完全不同的两步；D 错：Embedding 矩阵形状是 [词表大小, 隐藏维度]，不含序列长度维度。'
+  },
+  2: {
+    D: '正确，这是错误的说法。Embedding 擅长语义相似度（"美元"和"日元"语义接近），但不擅长精确事实查询（"今天"和"昨天"在 embedding 空间非常接近，无法区分时效性）。FxAgent 的实时汇率应该走结构化 API 调用，而不是 RAG embedding 检索。',
+    default: 'A、B、C 都是正确描述。错误的是 D——embedding 不擅长精确数字/时间查询，"今天"和"昨天"语义太近，RAG 会召回过期数据。'
+  },
+  3: {
+    B: '正确。这是分布式语义假设（"You shall know a word by the company it keeps"）的核心：预训练通过"预测下一个 token"任务，产生梯度信号。"美元"和"日元"在数百亿次训练样本中出现在极相似的上下文里（"换100___"、"汇率___"），反向传播使两者的向量朝相似方向调整，最终在 7168 维空间里自然靠近。',
+    default: 'A 错：没有任何人工标注，完全是无监督的统计涌现；C 错：现代大模型不用 Word2Vec 初始化，而是随机初始化后端到端训练；D 错：embedding 初始化是随机的，不用余弦相似度公式。'
+  },
+  4: {
+    B: '正确。Weight Tying 的直觉：理解一个 token 和生成一个 token，用到的语义表示应该是一致的。这既有理论依据，也能减少参数量（避免维护两个独立矩阵）。早期 GPT-2 采用，但规模更大的模型（GPT-3+）出于灵活性考虑大多不强制绑定。',
+    A: '不对，Weight Tying 不是行业强制标准，各家模型选择不同。',
+    C: '不对，Weight Tying 在实践中效果良好，GPT-2 就是典型案例，不会"更差"。',
+    D: '不准确，GPT-3 之后大规模模型反而有很多不用 Weight Tying——越大的模型越倾向于解耦输入输出权重。'
+  },
+  5: {
+    C: '正确。One-Hot 的根本缺陷不是性能，而是表达力：所有 token 互相正交（内积为 0，余弦距离均为 0），意味着"美元 vs 日元"和"美元 vs 番茄"对模型来说完全一样远——语义结构彻底丢失，模型无法泛化到未见过的语义关系。稠密 embedding 正是解决了这个结构性问题。',
+    default: 'A 把性能问题当成根本原因，是混淆了现象和本质；B 错，大模型当然能处理 0/1 整数；D 错，理解"为什么"本身就是学习的核心。'
+  },
+  6: {
+    AB_D: '正确！A、B、D 均为正确描述。隐藏维度与表达能力/计算量的 trade-off（A）；不同模型维度差异反映架构取舍（B）；RAG 场景两系统独立（D）。C 是错误项——维度和词表大小是相互独立的设计维度，没有强制的成比例约束。',
+    default: '你漏选了或多选了错误项。正确答案是 A、B、D。C 是错误的——Embedding 维度和词表大小相互独立，Qwen3 词表 152K、GPT-4 词表约 200K，但隐藏维度各不相同，都能正常工作。'
+  },
+  7: {
+    A: '正确。这是 embedding 演进的核心脉络：Word2Vec（2013）= 静态 embedding，每词一个固定向量，无法处理多义词；ELMo（2018）= 上下文感知，但用 LSTM；BERT/GPT（2018-2019）= Transformer 上下文 embedding，"bank"在"银行"语境和"河岸"语境下向量不同，彻底解决多义词问题。',
+    B: 'BERT 是双向编码器（适合理解/检索），GPT 是单向自回归（适合生成）。训练目标完全不同，embedding 不可互换。',
+    C: '行业最佳实践是专用 embedding 模型（BGE-M3/Voyage-3）+ 生成模型解耦，不是直接用生成模型内部 embedding 做检索。',
+    D: 'MRL 的核心优势就是不需要重新训练——截短后直接使用，这才是它的价值所在。'
+  },
+  8: {
+    AB_D: '正确！A、B、D 均为正确描述。无需重训直接截短（A）；OpenAI/Nomic 支持 MRL 是共识（B）；存储受限场景有显著优势（D）。C 是错误项——MRL 截断必然有精度损失（截得越短损失越大），这是信息损失的 trade-off，不是"完全等价"。',
+    default: '你漏选了或多选了错误项。正确答案是 A、B、D。C 是错误的——MRL 截断必然有精度损失，这是 MRL 的设计前提而非缺陷。其价值在于"精度可接受的损失范围内"提供更低的存储和计算成本。'
+  },
+  9: {
+    B: '正确。专用 embedding 模型（如 BGE-M3、Voyage-3）是专门为"向量检索"这个任务优化的，它们的训练目标就是让语义相近的文本在向量空间中靠近——这比直接用生成模型的内部 embedding 做检索精度更高。解耦还带来另一个优势：可以独立升级检索模型而不影响生成模型。',
+    default: 'A 把成本作为主要理由，忽略了更重要的精度因素；C 错，生成模型也有内部 embedding，但不适合直接做检索；D 不准确，维度不是主要判断依据。'
+  },
+  10: {
+    A: '正确。这是 embedding 的本质局限：它擅长语义相似度，不擅长精确的时间敏感查询。"今天美元兑日元"和"昨天美元兑日元"在 embedding 空间里极度相似，RAG 会随机召回不同时间的数据。解决方案：把实时数据（汇率、行情）从 RAG 剥离，走结构化 API 调用；只让 RAG 服务静态规则文档（如"如何换汇的流程"）。',
+    default: 'B 错，汇率数字可以被 tokenizer 正常处理；C 错，主流 embedding 模型完全支持中文；D 的速度确实有差异但不是主要问题，根本问题是时效性混淆。'
+  }
+};
+
+let selected = {};
+let answered = new Set();
+let score = 0;
+
+document.querySelectorAll('.opt').forEach(opt => {
+  opt.addEventListener('click', function() {
+    const block = this.closest('.q-block');
+    const q = parseInt(block.dataset.q);
+    if (answered.has(q)) return;
+    const isMulti = block.dataset.type === 'multi';
+    if (!isMulti) {
+      block.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+      this.classList.add('selected');
+      selected[q] = this.dataset.val;
+    } else {
+      this.classList.toggle('selected');
+      if (!selected[q]) selected[q] = [];
+      const val = this.dataset.val;
+      if (this.classList.contains('selected')) {
+        if (!selected[q].includes(val)) selected[q].push(val);
+      } else {
+        selected[q] = selected[q].filter(v => v !== val);
+      }
+    }
+  });
+});
+
+function normalizeAnswer(ans) {
+  return Array.isArray(ans) ? ans.slice().sort().join(',') : ans;
+}
+
+function checkOne(q) {
+  const block = document.querySelector('[data-q="' + q + '"]');
+  const userAns = selected[q];
+  const correct = answers[q];
+  const isMulti = multiSet.has(q);
+
+  if (!userAns || (Array.isArray(userAns) && userAns.length === 0)) {
+    alert('请先选择至少一个选项'); return;
+  }
+
+  const userKey = normalizeAnswer(userAns);
+  const correctKey = normalizeAnswer(correct);
+  const isCorrect = userKey === correctKey;
+
+  block.querySelectorAll('.opt').forEach(o => {
+    const val = o.dataset.val;
+    if (correct.includes(val)) o.classList.add('correct');
+    else if ((Array.isArray(userAns) ? userAns.includes(val) : userAns === val))
+      o.classList.add('wrong');
+    o.classList.add('locked');
+  });
+
+  const fb = document.getElementById('fb' + q);
+  fb.classList.add('show');
+
+  if (isCorrect) {
+    score++;
+    fb.classList.add('correct-fb');
+    fb.innerHTML = '<strong style="color:#085041">✓ 正确。</strong> ' + (feedbacks[q][correctKey] || feedbacks[q][Object.keys(feedbacks[q]).find(k => !k.startsWith('_') && k !== 'default')] || '');
+  } else {
+    fb.classList.add('wrong-fb');
+    const msg = feedbacks[q][userKey] || feedbacks[q]['default'] || '';
+    fb.innerHTML = '<strong style="color:#711B0C">✗ 不正确。</strong> ' + msg + '<br><em style="color:var(--muted)">正确答案：' + (Array.isArray(correct) ? correct.join(' + ') : correct) + '</em>';
+  }
+
+  block.querySelectorAll('.q-btn').forEach(b => b.disabled = true);
+  block.classList.add('answered');
+  answered.add(q);
+  updateScore();
+}
+
+function revealOne(q) {
+  const block = document.querySelector('[data-q="' + q + '"]');
+  const correct = answers[q];
+
+  block.querySelectorAll('.opt').forEach(o => {
+    if (correct.includes(o.dataset.val)) o.classList.add('correct');
+    o.classList.add('locked');
+  });
+
+  const fb = document.getElementById('fb' + q);
+  fb.classList.add('show');
+  fb.style.background = '#f5f5f0';
+  fb.style.color = 'var(--text)';
+  fb.innerHTML = '<strong>参考答案：' + (Array.isArray(correct) ? correct.join(' + ') : correct) + '</strong><br>' +
+    (feedbacks[q][normalizeAnswer(correct)] || '');
+
+  block.querySelectorAll('.q-btn').forEach(b => b.disabled = true);
+  if (!answered.has(q)) { answered.add(q); updateScore(); }
+  block.classList.add('answered');
+}
+
+function submitRemaining() {
+  let anyLeft = false;
+  for (let q = 1; q <= Object.keys(answers).length; q++) {
+    if (!answered.has(q)) {
+      anyLeft = true;
+      const userAns = selected[q];
+      if (userAns && !(Array.isArray(userAns) && userAns.length === 0)) {
+        checkOne(q);
+      } else { revealOne(q); }
+    }
+  }
+  if (!anyLeft) alert('所有题目已作答！');
+}
+
+function revealAll() {
+  for (let q = 1; q <= Object.keys(answers).length; q++) {
+    if (!answered.has(q)) revealOne(q);
+  }
+}
+
+function updateScore() {
+  const total = Object.keys(answers).length;
+  document.getElementById('scorenum').textContent = score + '/' + total;
+  let msgs = [
+    '0-4：建议重读章节，重点看§①和§③',
+    '0-4：建议重读章节，重点看§①和§③',
+    '0-4：建议重读章节，重点看§①和§③',
+    '0-4：建议重读章节，重点看§①和§③',
+    '0-4：建议重读章节，重点看§①和§③',
+    '5-7：基础扎实，建议重点看错题对应节',
+    '5-7：基础扎实，建议重点看错题对应节',
+    '5-7：基础扎实，建议重点看错题对应节',
+    '8-9：理解很好，可以进入追问深挖模式',
+    '8-9：理解很好，可以进入追问深挖模式',
+    '满分！可以自信进入 1.3 位置编码了'
+  ];
+  document.getElementById('scoremsg').textContent = msgs[score] || '';
+  document.getElementById('scorebar').classList.add('show');
+  const remaining = total - answered.size;
+  const submitBtn = document.getElementById('submitAllBtn');
+  if (remaining === 0) { submitBtn.disabled = true; submitBtn.textContent = '已全部完成'; }
+  else { submitBtn.textContent = '提交剩余题目（' + remaining + '）'; }
+}
+</script>
+
+</body>
+</html>

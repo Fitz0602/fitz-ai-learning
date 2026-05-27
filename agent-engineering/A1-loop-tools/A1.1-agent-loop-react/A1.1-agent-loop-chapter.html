@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>A1.1 Agent Loop · ReAct · Tool Use · T2 Agent 工程</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card-bg:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--teal-bg);color:#0F6E56}
+.tag-chapter{background:var(--purple-bg);color:var(--purple)}
+.tag-status{background:var(--amber-bg);color:var(--amber)}
+h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:4px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.progress-nav{display:flex;gap:4px;margin:16px 0 0;flex-wrap:wrap}
+.progress-nav a{font-size:11px;padding:3px 8px;border-radius:8px;text-decoration:none;background:var(--purple-bg);color:var(--purple);font-weight:500}
+.progress-nav a.done{background:var(--teal-bg);color:var(--teal)}
+section{margin-top:36px;padding-top:20px;border-top:1px solid #E8E8E4}
+section h2{font-size:20px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;padding:2px 8px;border-radius:8px}
+h3{font-size:16px;font-weight:600;margin:16px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--amber-bg);border-color:var(--amber)}
+.card.takeaway{background:var(--teal-bg);border-color:var(--teal)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card.deepen{background:var(--blue-bg);border-color:var(--blue)}
+.card.insight{background:var(--purple-bg);border-color:var(--purple)}
+.card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.card.intuition .card-label{color:var(--amber)}
+.card.takeaway .card-label{color:var(--teal)}
+.card.warning .card-label{color:var(--coral)}
+.card.deepen .card-label{color:var(--blue)}
+.card.insight .card-label{color:var(--purple)}
+.diagram{margin:20px 0}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid #E0E0DC;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{background:#fff}
+code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;background:#F0F0EC;padding:1px 4px;border-radius:3px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+.code-block{background:#F7F6F3;border:1px solid #E8E8E4;border-radius:8px;padding:14px 18px;margin:14px 0;font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;line-height:1.8;color:#333;overflow-x:auto;white-space:pre}
+.code-block .kw{font-weight:700;color:#534AB7}
+.code-block .cmt{color:#888780}
+.code-block .str{color:#1D9E75}
+.code-block .fn{color:#BA7517}
+.code-block .var{color:#185FA5}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<!-- ====== HEADER ====== -->
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">A1 基础机制</span>
+<span class="tag tag-chapter">A1.1</span>
+<span class="tag tag-status">✅ 完成</span>
+<a href="../../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+<a href="A1.1-agent-loop-quiz.html" class="nav-link">Quiz →</a>
+</div>
+<h1>Agent Loop · ReAct · Tool Use</h1>
+<p class="subtitle">让模型从"会回答"到"能做事" — 循环执行引擎的解剖学</p>
+<div class="spine-link">主线连接：问题5 — 如何让模型主动行动？从单次文本输出到循环执行工具调用</div>
+<nav class="progress-nav">
+<a href="#is" class="done">① 是什么 ✓</a>
+<a href="#how" class="done">② 怎么实现 ✓</a>
+<a href="#why" class="done">③ 为什么 ✓</a>
+<a href="#evolution" class="done">④ 演进 ✓</a>
+<a href="#connect" class="done">⑤ 与产品 ✓</a>
+</nav>
+</div>
+
+<!-- ====== 章节一览图 ====== -->
+<div class="diagram">
+<p>章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 340" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ov-arra11" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<rect x="210" y="10" width="260" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text x="340" y="30" text-anchor="middle" fill="#534AB7" font-size="13" font-weight="700">① 是什么</text>
+<text x="340" y="48" text-anchor="middle" fill="#3C3489" font-size="11">LLM in a Loop：不是一次输出，而是一系列思考+行动</text>
+<line x1="340" y1="62" x2="340" y2="88" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arra11)"/>
+<rect x="210" y="92" width="260" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="340" y="112" text-anchor="middle" fill="#185FA5" font-size="13" font-weight="700">② 怎么实现</text>
+<text x="340" y="130" text-anchor="middle" fill="#0C447C" font-size="8.5">ReAct: Thought → Action → Observation 循环 + Tool Schema</text>
+<line x1="340" y1="144" x2="340" y2="170" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arra11)"/>
+<rect x="210" y="174" width="260" height="52" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+<text x="340" y="194" text-anchor="middle" fill="#BA7517" font-size="13" font-weight="700">③ 为什么</text>
+<text x="340" y="212" text-anchor="middle" fill="#633806" font-size="11">纯CoT盲于世界·纯工具调用无计划·ReAct融合二者</text>
+<line x1="340" y1="226" x2="340" y2="246" stroke="#888780" stroke-width="0.5"/>
+<line x1="340" y1="246" x2="168" y2="246" stroke="#888780" stroke-width="0.5"/>
+<line x1="340" y1="246" x2="512" y2="246" stroke="#888780" stroke-width="0.5"/>
+<line x1="168" y1="246" x2="168" y2="256" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arra11)"/>
+<line x1="512" y1="246" x2="512" y2="256" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arra11)"/>
+<rect x="40" y="260" width="256" height="30" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+<text x="168" y="278" text-anchor="middle" fill="#534AB7" font-size="9" font-weight="500">④ 演进：ReAct→Function Call→MCP→Advanced Tool Use</text>
+<rect x="384" y="260" width="256" height="30" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+<text x="512" y="278" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="500">⑤ 产品：DDAgent·BAAgent·FXAgent·TRSAgent</text>
+</svg>
+</div>
+
+<!-- ====== §① 是什么 ====== -->
+<section id="is">
+<h2><span class="sec-num">①</span> 是什么：LLM 不再只是聊天机器人</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p><strong>把 Agent Loop 想象成一个新入职的跨境支付运营专员。</strong></p>
+<p>以前你问 ChatGPT 一个问题，它就像一个<strong>只能口头回答的顾问</strong>——知道汇款流程、懂外汇政策，但不会自己去查系统、不会自己发邮件、不会自己去核对一笔订单的状态。</p>
+<p>Agent Loop 做的事情是：<strong>给这个运营专员一台电脑和一套操作权限，让他不仅能"说"，还能"做"</strong>。他可以查系统获取实时数据、调 API 执行换汇操作、读数据库确认订单状态——然后基于这些操作的<strong>真实结果</strong>继续思考和决策。</p>
+<p>核心区别只有一句话：<strong>从单次文本输出变成循环的"思考→行动→观察→再思考"。</strong></p>
+</div>
+
+<h3>Agent 的公式</h3>
+
+<p>Lilian Weng（OpenAI）在 2023 年给出了至今仍被广泛引用的 Agent 公式：</p>
+
+<p style="text-align:center;margin:16px 0;">$$ \text{Agent} = \text{LLM} + \text{Memory} + \text{Planning} + \text{Tool\ Use} $$</p>
+
+<p><strong>Agent Loop</strong> 就是把这个公式变成可运行的代码——它是把 LLM 的单次推理能力包装进一个 while 循环里，让模型在每次迭代中决定：</p>
+
+<table>
+<tr><th>步骤</th><th>模型自问</th><th>产出</th></tr>
+<tr><td><strong>Thought 思考</strong></td><td>我现在该做什么？</td><td>自然语言推理过程（不给用户看）</td></tr>
+<tr><td><strong>Action 行动</strong></td><td>调用哪个工具？参数是什么？</td><td>结构化的函数调用请求</td></tr>
+<tr><td><strong>Observation 观察</strong></td><td>工具返回了什么结果？</td><td>真实的执行结果 JSON/文本</td></tr>
+</table>
+
+<h3>三个前置概念</h3>
+
+<p>在深入 ReAct 之前，先理解它融合了哪两种更早的能力：</p>
+
+<table>
+<tr><th>能力</th><th>做什么</th><th>缺什么</th></tr>
+<tr>
+<td><strong>Chain-of-Thought (CoT)</strong></td>
+<td>让模型"展示思考过程"，分步推理复杂问题</td>
+<td><span style="color:#993C1D;">盲于现实世界</span> —— 只能用训练数据里的知识，无法获取新信息</td>
+</tr>
+<tr>
+<td><strong>Tool Calling</strong></td>
+<td>让模型输出结构化的函数调用请求，由外部代码执行</td>
+<td><span style="color:#993C1D;">没有规划</span> —— 模型不知道何时调用、为何调用、调用后怎么办</td>
+</tr>
+<tr>
+<td><strong>ReAct（本题主角）</strong></td>
+<td>交替进行推理和工具调用，每次观察后重新规划</td>
+<td><span style="color:#1D9E75;">两者融合</span> —— 既能思考又能行动，且行动结果反馈回思维过程</td>
+</tr>
+</table>
+
+<div class="card insight">
+<div class="card-label">关键洞察</div>
+<p>Anthropic 工程团队的官方描述精准地概括了这个模式：<strong>"Agents can handle sophisticated tasks, but their implementation is often straightforward. They are typically just LLMs using tools based on environmental feedback in a loop."</strong></p>
+<p>翻译成人话：Agent 听起来很高级，但本质就是 <strong>LLM + 工具 + 循环</strong>。所有复杂性来自工具设计和终止逻辑，而非架构本身。</p>
+</div>
+</section>
+
+<!-- ====== §② 怎么实现 ====== -->
+<section id="how">
+<h2><span class="sec-num">②</span> 怎么实现：ReAct 循环的解剖学</h2>
+
+<h3>2.1 ReAct 的三步循环</h3>
+
+<p>ReAct 由 Princeton 和 Google Research 的 Yao 等人于 2022 年提出（<em>ReAct: Synergizing Reasoning and Acting in Language Models</em>）。核心思想极简：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 640 420" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs>
+<marker id="arr-loop" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arr-exit" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<text x="320" y="22" font-family="-apple-system,sans-serif" font-size="14" font-weight="600" fill="#333" text-anchor="middle">ReAct 循环：一次迭代的完整流程</text>
+<rect x="180" y="38" width="280" height="36" rx="8" fill="#f7f7f4" stroke="#ccc" stroke-width="1" stroke-dasharray="4,2"/>
+<text x="320" y="61" font-family="-apple-system,sans-serif" font-size="12" fill="#555" text-anchor="middle">User: "帮我查腾讯控股最新汇率并换汇"</text>
+<rect x="220" y="94" width="200" height="30" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.8"/>
+<text x="320" y="114" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#BA7517" text-anchor="middle">Build Prompt (system + tools + history)</text>
+<line x1="320" y1="74" x2="320" y2="93" stroke="#888" stroke-width="1" marker-end="url(#arr-loop)"/>
+<rect x="160" y="138" width="320" height="50" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.2"/>
+<text x="320" y="159" font-family="-apple-system,sans-serif" font-size="12" font-weight="600" fill="#534AB7" text-anchor="middle">Call LLM (stateless API)</text>
+<text x="320" y="176" font-family="-apple-system,sans-serif" font-size="10.5" fill="#3C3489" text-anchor="middle">模型返回：Thought + Action(tool_call) 或 Final Answer</text>
+<line x1="320" y1="124" x2="320" y2="137" stroke="#888" stroke-width="1" marker-end="url(#arr-loop)"/>
+<polygon points="320,206 380,236 320,266 260,236" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="320" y="233" font-family="-apple-system,sans-serif" font-size="10.5" font-weight="500" fill="#185FA5" text-anchor="middle">tool_use?</text>
+<line x1="320" y1="188" x2="320" y2="205" stroke="#888" stroke-width="1" marker-end="url(#arr-loop)"/>
+<line x1="380" y1="236" x2="520" y2="236" stroke="#1D9E75" stroke-width="1.2" marker-end="url(#arr-exit)"/>
+<text x="450" y="228" font-family="-apple-system,sans-serif" font-size="10" fill="#1D9E75" font-weight="500">end_turn</text>
+<rect x="522" y="218" width="100" height="36" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="1"/>
+<text x="572" y="240" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#1D9E75" text-anchor="middle">返回用户</text>
+<line x1="320" y1="266" x2="320" y2="290" stroke="#534AB7" stroke-width="1.2" marker-end="url(#arr-loop)"/>
+<text x="338" y="280" font-family="-apple-system,sans-serif" font-size="10" fill="#534AB7" font-weight="500">yes</text>
+<rect x="140" y="296" width="360" height="44" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+<text x="320" y="315" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#993C1D" text-anchor="middle">Execute Tools (search / api_call / code_exec / db_query)</text>
+<text x="320" y="332" font-family="-apple-system,sans-serif" font-size="10" fill="#711B0C" text-anchor="middle">并行执行多个 tool_calls → 捕获每个结果为 tool_result</text>
+<rect x="190" y="354" width="260" height="30" rx="6" fill="#f7f7f4" stroke="#999" stroke-width="0.8" stroke-dasharray="3,2"/>
+<text x="320" y="374" font-family="-apple-system,sans-serif" font-size="11" fill="#666" text-anchor="middle">Append to messages → 回到 Build Prompt</text>
+<line x1="320" y1="340" x2="320" y2="353" stroke="#888" stroke-width="1" marker-end="url(#arr-loop)"/>
+<path d="M140 370 Q90 370 90 240 Q90 110 200 110" fill="none" stroke="#534AB7" stroke-width="0.8" stroke-dasharray="4,3" marker-end="url(#arr-loop)"/>
+<text x="75" y="245" font-family="-apple-system,sans-serif" font-size="10" fill="#534AB7" writing-mode="tb">loop</text>
+</svg>
+</div>
+
+<p>一次迭代的三块内容：</p>
+
+<div class="card deepen">
+<div class="card-label">Thought（思考）</div>
+<p>模型的自由文本推理。例如："用户想换汇，我需要先查询当前汇率，再确认用户的换汇额度。"</p>
+<p><strong>关键点</strong>：Thought 不是写给用户看的，而是给模型自己的"工作笔记"。它决定了下一步 Action 的合理性。</p>
+</div>
+
+<div class="card deepen">
+<div class="card-label">Action（行动）</div>
+<p>结构化的工具调用请求。例如：<code>query_exchange_rate(from="USD", to="HKD")</code></p>
+<p><strong>关键点</strong>：Action 不是模型自己执行的——它只输出"我想调用这个函数"，由你的代码（runtime）真正执行。这就是 Function Calling 的核心契约。</p>
+</div>
+
+<div class="card deepen">
+<div class="card-label">Observation（观察）</div>
+<p>工具执行后的结果，原样回传给模型。例如：<code>{"rate": 7.7823, "timestamp": "2026-05-21T18:00:00Z"}</code></p>
+<p><strong>关键点</strong>：Observation 必须是真实的执行结果，不能被篡改或省略。否则模型会基于错误信息做出后续决策——这是生产环境最常见的 Bug 来源之一。</p>
+</div>
+
+<h3>2.2 伪代码：整个循环不到 10 行</h3>
+
+<p>这是所有 Agent Loop 框架的核心骨架，无论 OpenAI SDK、Anthropic SDK 还是 LangChain，底层都是这段逻辑：</p>
+
+<div class="code-block"><span class="kw">messages</span> = [{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: user_request}]
+<span class="kw">while</span> True:
+    response = <span class="fn">call_llm</span>(messages, tools=tool_schemas)
+    <span class="kw">if</span> response.finish_reason == <span class="str">"tool_use"</span>:
+        results = <span class="fn">execute_tools</span>(response.tool_calls)  <span class="cmt"># 并行执行多个调用</span>
+        messages.<span class="fn">append</span>(response)    <span class="cmt"># Thought + Action 追加到上下文</span>
+        messages.<span class="fn">append</span>(results)     <span class="cmt"># Observation 追加到上下文</span>
+    <span class="kw">else</span>:
+        <span class="kw">return</span> response.content  <span class="cmt"># Final Answer → 退出循环</span></div>
+
+<div class="card warning">
+<div class="card-label">生产环境的 3 个必加守卫</div>
+<ol style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>最大迭代次数限制</strong>：默认 ≤ 10 次/轮。防止模型陷入无限工具调用循环（runaway loop），导致费用失控。</li>
+<li><strong>工具失败必须返回错误结果</strong>：永远不要因为工具报错就跳过 tool_result。缺失的 tool_result 会导致 API 校验错误；错误的 tool_result（如空字符串）会导致模型幻觉式编造答案。</li>
+<li><strong>并行工具调用</strong>：当模型一次返回多个 tool_calls 时，应并发执行以减少总延迟 50-70%（来源：LLMversus Production Architecture, 2026）。</li>
+</ol>
+</div>
+
+<h3>【示例】FXAgent 的真实 ReAct 循环（Python + Anthropic SDK）</h3>
+
+<p>光有伪代码不够——来看 FXAgent（40万月活，AI采纳率 98-99.75%）的真实代码骨架：</p>
+
+<div class="code-block"><span class="kw">import</span> anthropic
+
+client = anthropic.<span class="fn">Anthropic</span>()
+
+<span class="cmt"># FXAgent 工具定义：查询实时汇率</span>
+FX_TOOLS = [
+    {
+        <span class="str">"name"</span>: <span class="str">"query_fx_rate"</span>,
+        <span class="str">"description"</span>: <span class="str">"查询指定币对的实时汇率。仅在用户明确需要汇率信息时调用。"</span>,
+        <span class="str">"input_schema"</span>: {
+            <span class="str">"type"</span>: <span class="str">"object"</span>,
+            <span class="str">"properties"</span>: {
+                <span class="str">"from_currency"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"description"</span>: <span class="str">"源币种，如 USD/CNY/HKD"</span>},
+                <span class="str">"to_currency"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"description"</span>: <span class="str">"目标币种"</span>}
+            },
+            <span class="str">"required"</span>: [<span class="str">"from_currency"</span>, <span class="str">"to_currency"</span>]
+        }
+    }
+]
+
+<span class="kw">def</span> <span class="fn">fx_agent_loop</span>(user_message: str) -> str:
+    <span class="str">"""FXAgent 核心：短循环 ReAct（通常 1-2 轮）"""</span>
+    messages = [{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: user_message}]
+
+    <span class="kw">for</span> iteration <span class="kw">in</span> <span class="fn">range</span>(5):  <span class="cmt"># 守卫：最多 5 轮（FX 场景通常 1-2 轮够用）</span>
+        response = client.messages.<span class="fn">create</span>(
+            model=<span class="str">"claude-sonnet-4-20250514"</span>,
+            max_tokens=<span class="var">1024</span>,
+            system=<span class="str">"你是跨境支付换汇助手。简洁回答，给出汇率后直接给建议。"</span>,
+            messages=messages,
+            tools=FX_TOOLS,
+        )
+
+        <span class="cmt"># 提取 stop_reason 决定下一步</span>
+        <span class="kw">if</span> response.stop_reason == <span class="str">"end_turn"</span>:
+            <span class="kw">return</span> response.content[0].text  <span class="cmt"># 最终答案 → 直接返回用户</span>
+
+        <span class="cmt"># tool_use → 执行工具 → 将 Observation 追加回消息列表</span>
+        <span class="kw">for</span> block <span class="kw">in</span> response.content:
+            <span class="kw">if</span> block.type == <span class="str">"tool_use"</span>:
+                result = <span class="fn">execute_fx_query</span>(block.input)  <span class="cmt"># 调 tpg-fx-rate skill</span>
+                messages.<span class="fn">append</span>({<span class="str">"role"</span>: <span class="str">"assistant"</span>, <span class="str">"content"</span>: [block]})
+                messages.<span class="fn">append</span>({
+                    <span class="str">"role"</span>: <span class="str">"user"</span>,
+                    <span class="str">"content"</span>: [
+                        {<span class="str">"type"</span>: <span class="str">"tool_result"</span>, <span class="str">"tool_use_id"</span>: block.id,
+                         <span class="str">"content"</span>: <span class="fn">json</span>.dumps(result, ensure_ascii=False)}
+                    ]
+                })
+
+    <span class="kw">return</span> <span class="str">"抱歉，处理超时，请重试。"</span>  <span class="cmt"># 达到最大迭代次数仍未结束</span></div>
+
+<div class="card intuition">
+<div class="card-label">代码解读</div>
+<p>注意这个循环和伪代码的对应关系：</p>
+<ul style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>`for iteration in range(5)`</strong> → 最大迭代守卫。FXAgent 高频场景下 5 轮绰绰有余，实际平均 1.2 轮</li>
+<li><strong>`response.stop_reason`</strong> → Anthropic 的循环控制字段（对应 OpenAI 的 `finish_reason`）</li>
+<li><strong>`messages.append(assistant) + messages.append(tool_result)`</strong> → 关键！必须把模型的 Action 和工具的 Observation 都追加进去，形成闭环</li>
+<li><strong>`system` prompt</strong> → 控制回复风格。FXAgent 用"简洁回答"确保高采纳率</li>
+</ul>
+</div>
+
+<h3>2.3 Function Calling：模型与外部世界的契约</h3>
+
+<p>ReAct 能运转的基础设施是 <strong>Function Calling</strong>（OpenAI 术语）/<strong>Tool Use</strong>（Anthropic 术语）。这是一套三方契约：</p>
+
+<table>
+<tr><th>角色</th><th>职责</th><th>产出物</th></tr>
+<tr>
+<td><strong>你（开发者）</strong></td>
+<td>定义工具清单（name + description + JSON Schema 参数）</td>
+<td><code>tools[]</code> 数组</td>
+</tr>
+<tr>
+<td><strong>LLM</strong></td>
+<td>根据上下文判断是否/何时/如何调用哪个工具</td>
+<td><code>tool_use</code> block（含函数名 + 参数 JSON）</td>
+</tr>
+<tr>
+<td><strong>Runtime</strong></td>
+<td>解析调用请求，执行实际操作，返回结构化结果</td>
+<td><code>tool_result</code> message block</td>
+</tr>
+</table>
+
+<h3>【示例】DDAgent 的工具定义（多工具编排）</h3>
+
+<p>DDAgent（83% 预填率）需要比 FXAgent 复杂得多的工具集——它要做企业尽调，涉及多个数据源：</p>
+
+<div class="code-block">DDAGENT_TOOLS = [
+    <span class="cmt"># Tool 1: 查询企业工商信息（Knotel API）</span>
+    {
+        <span class="str">"name"</span>: <span class="str">"query_company_info"</span>,
+        <span class="str">"description"</span>: (
+            <span class="str">"查询企业的工商注册信息（法人、注册资本、成立日期、经营范围）。"</span>
+            <span class="str">"输入企业全名或统一社会信用代码。仅在做企业背景调查时调用。"</span>
+        ),
+        <span class="str">"input_schema"</span>: {
+            <span class="str">"type"</span>: <span class="str">"object"</span>,
+            <span class="str">"properties"</span>: {
+                <span class="str">"company_name"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>},
+                <span class="str">"credit_code"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"description"</span>: <span class="str">"统一社会信用代码，优先于公司名使用"</span>}
+            },
+            <span class="str">"required"</span>: [<span class="str">"company_name"</span>]  <span class="cmt">⚠️ credit_code 可选但推荐提供</span>
+        }
+    },
+
+    <span class="cmt"># Tool 2: 查询财务报表（多期对比）</span>
+    {
+        <span class="str">"name"</span>: <span class="str">"query_financials"</span>,
+        <span class="str">"description"</span>: (
+            <span class="str">"查询企业最近 3 年财务报表（营收、净利润、资产负债率、现金流）。"</span>
+            <span class="str">"返回标准化 JSON 格式的财务数据。用于评估企业偿债能力和盈利稳定性。"</span>
+        ),
+        <span class="str">"input_schema"</span>: {
+            <span class="str">"type"</span>: <span class="str">"object"</span>,
+            <span class="str">"properties"</span>: {
+                <span class="str">"company_id"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>, <span class="str">"description"</span>: <span class="str">"Knotel 内部企业 ID"</span>},
+                <span class="str">"years"</span>: {<span class="str">"type"</span>: <span class="str">"integer"</span>, <span class="str">"description"</span>: <span class="str">"查询最近 N 年，默认 3"</span>}
+            },
+            <span class="str">"required"</span>: [<span class="str">"company_id"</span>]
+        }
+    },
+
+    <span class="cmt"># Tool 3: 法律风险扫描</span>
+    {
+        <span class="str">"name"</span>: <span class="str">"scan_legal_risks"</span>,
+        <span class="str">"description"</span>: (
+            <span class="str">"扫描企业的法律诉讼、行政处罚、失信记录。"</span>
+            <span class="str">"重点关注合同纠纷、劳动争议、税务违规。返回风险等级和具体案件数。"</span>
+        ),
+        <span class="str">"input_schema"</span>: {
+            <span class="str">"type"</span>: <span class="str">"object"</span>,
+            <span class="str">"properties"</span>: {
+                <span class="str">"company_id"</span>: {<span class="str">"type"</span>: <span class="str">"string"</span>}
+            },
+            <span class="str">"required"</span>: [<span class="str">"company_id"</span>]
+        }
+    },
+]
+
+<span class="cmt"># ⭐ 关键设计要点：
+# 1. description 写了"何时调用"+"不调用场景"——大幅减少误触发
+# 2. 参数有明确的中文 description —— 模型靠这个理解语义
+# 3. credit_code 标记为可选但有优先级提示 —— 灵活但不模糊
+# 4. 3 个工具覆盖 DDAgent 尽调流程的 3 个核心维度</span></div>
+
+<div class="card intuition">
+<div class="card-label">工具定义的艺术</div>
+<p>模型完全依赖 <code>description</code> 来决定何时调用工具。上面 DDAgent 的例子展示了三个关键设计原则：</p>
+<ul style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>描述要包含"何时用"和"何时不该用"</strong>——减少无效调用 60%+</li>
+<li><strong>参数 description 要写人类能读懂的说明</strong>——不是给程序员看的，是给模型看的</li>
+<li><strong>工具粒度要匹配任务粒度</strong>——一个工具做一件事（单一职责），而不是一个万能工具</li>
+</ul>
+<p>Anthropic 数据显示：添加基础工具后在 LAB-Bench 和 SWE-bench 上通常超越人类专家基准（来源：Anthropic Tool Use 文档, 2026.04）。</p>
+</div>
+
+<h3>2.4 <code>stop_reason</code> / <code>finish_reason</code>：循环的生命线</h3>
+
+<p>每次 LLM 调用的返回值中都有一个关键字段，决定了循环的命运：</p>
+
+<table>
+<tr><th>值</th><th>含义</th><th>你的动作</th></tr>
+<tr>
+<td><code style="background:#E6F7F1;color:#0F6E56">tool_use</code></td>
+<td>模型要调用工具</td>
+<td>执行工具 → 将 result 作为 <code>tool_result</code> 追加到 messages → 继续循环</td>
+</tr>
+<tr>
+<td><code style="background:#EEEDFE;color:#534AB7">end_turn</code></td>
+<td>模型给出最终答案</td>
+<td>读取 content，退出循环，返回给用户</td>
+</tr>
+<tr>
+<td><code style="background:#FAEEDA;color:#BA7517">max_tokens</code></td>
+<td>达到输出上限</td>
+<td>截断处理或重新发送（带提示"请继续"）</td>
+</tr>
+<tr>
+<td><code style="background:#FDEEE8;color:#993C1D">refusal</code></td>
+<td>模型拒绝执行</td>
+<td>检查内容策略或换个方式提问</td>
+</tr>
+</table>
+
+<h3>【示例】TRSAgent 的 stop_reason 分支处理</h3>
+
+<p>TRSAgent（售后邮件分类 92.2%、准确率 93.2%）对每种 stop_reason 有不同的业务处理逻辑：</p>
+
+<div class="code-block"><span class="kw">def</span> <span class="fn">trs_agent_loop</span>(email_text: str) -> dict:
+    <span class="str">"""TRSAgent 核心：长循环 ReAct + 错误恢复"""</span>
+    messages = [<span class="fn">build_trs_prompt</span>(email_text)]
+    classification = {}
+    loop_count = 0
+
+    <span class="kw">while</span> loop_count &lt; <span class="var">10</span>:  <span class="cmt"># TRSAgent 可能需要更多轮次（KB检索+分类+生成回复）</span>
+        loop_count += 1
+        response = client.messages.<span class="fn">create</span>(
+            model=<span class="str">"claude-sonnet-4-20250514"</span>,
+            max_tokens=<span class="var">2048</span>,
+            messages=messages,
+            tools=TRS_TOOLS,  <span class="cmt"># classify_email + search_kb + query_order</span>
+        )
+
+        <span class="kw">if</span> response.stop_reason == <span class="str">"end_turn"</span>:
+            <span class="cmt"># ✅ 正常退出：提取分类结果和回复草稿</span>
+            final_text = response.content[0].text
+            classification[<span class="str">"reply_draft"</span>] = final_text
+            <span class="kw">break</span>
+
+        <span class="kw">elif</span> response.stop_reason == <span class="str">"tool_use"</span>:
+            <span class="cmt"># 🔧 执行工具调用（可能多个并行）</span>
+            <span class="kw">for</span> block <span class="kw">in</span> [b <span class="kw">for</span> b <span class="kw">in</span> response.content <span class="kw">if</span> b.type == <span class="str">"tool_use"</span>]:
+                <span class="kw">try</span>:
+                    result = <span class="fn">execute_trs_tool</span>(block.name, block.input)
+                    <span class="cmt"># ⚠️ 关键：即使工具报错也要返回结构化错误信息</span>
+                    messages.<span class="fn">append</span>({<span class="str">"role"</span>: <span class="str">"assistant"</span>, <span class="str">"content"</span>: [block]})
+                    messages.<span class="fn">append</span>({
+                        <span class="str">"role"</span>: <span class="str">"user"</span>,
+                        <span class="str">"content"</span>: [{
+                            <span class="str">"type"</span>: <span class="str">"tool_result"</span>,
+                            <span class="str">"tool_use_id"</span>: block.id,
+                            <span class="str">"content"</span>: <span class="fn">json</span>.dumps(result, ensure_ascii=False)
+                        }]
+                    })
+                <span class="kw">except</span> Exception as e:
+                    <span class="cmt"># 🚨 工具异常时返回错误而非跳过——防止消息格式校验失败</span>
+                    messages.<span class="fn">append</span>({
+                        <span class="str">"role"</span>: <span class="str">"user"</span>,
+                        <span class="str">"content"</span>: [{
+                            <span class="str">"type"</span>: <span class="str">"tool_result"</span>,
+                            <span class="str">"tool_use_id"</span>: block.id,
+                            <span class="str">"content"</span>: <span class="str">f"工具执行错误: {e}"</span>,
+                            <span class="str">"is_error"</span>: True  <span class="cmt"># 标记为错误，帮助模型理解</span>
+                        }]
+                    })
+
+        <span class="kw">elif</span> response.stop_reason == <span class="str">"max_tokens"</span>:
+            <span class="cmt"># ⚠️ 输出截断：将已有内容作为前缀继续生成</span>
+            messages.<span class="fn">append</span>({
+                <span class="str">"role"</span>: <span class="str">"assistant"</span>,
+                <span class="str">"content"</span>: response.content
+            })
+            messages.<span class="fn">append</span>({
+                <span class="str">"role"</span>: <span class="str">"user"</span>,
+                <span class="str">"content"</span>: <span class="str">"[请继续完成上一步未完成的回复]"</span>
+            })
+
+        <span class="kw">else</span>:  <span class="cmt"># refusal 等</span>
+            <span class="kw">return</span> {<span class="str">"error"</span>: <span class="str">f"模型停止原因: {response.stop_reason}"</span>}
+
+    <span class="kw">return</span> classification</div>
+
+<div class="card warning">
+<div class="card-label">TRSAgent 教训：3 个 P0 Bug 都在循环环节</div>
+<p>上面代码看起来正确，但 TRSAgent 实际运行中发现的问题都在循环的细节里：</p>
+<ul style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>P0-1 充值 T+1 规则遗漏</strong>：Thought 阶段选错了工具（没先查 KB 就直接分类）→ <strong>修复：在 tools description 中强调"必须先调用 search_kb"</strong></li>
+<li><strong>P0-2 忽略链边界</strong>：Build Prompt 时把独立邮件当连续对话 → <strong>修复：每封邮件初始化新的 messages 列表</strong></li>
+<li><strong>P0-3 系统错误混淆</strong>：不同工具的错误码格式不一致 → <strong>修复：统一 tool_result 格式为 `{status, error_code, message}`</strong></li>
+</ul>
+</div>
+</section>
+
+<!-- ====== §③ 为什么 ====== -->
+<section id="why">
+<h2><span class="sec-num">③</span> 为什么：第一性原理——为什么必须是"循环"？</h2>
+
+<h3>3.1 单次调用的根本缺陷</h3>
+
+<p>传统的 LLM 交互是<strong>一问一答</strong>：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 620 200" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="arr-s" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#993C1D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<text x="155" y="24" font-family="-apple-system,sans-serif" font-size="13" font-weight="600" fill="#993C1D" text-anchor="middle">传统单次调用：信息单向流动</text>
+<rect x="40" y="42" width="230" height="46" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+<text x="155" y="62" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#993C1D" text-anchor="middle">User Question</text>
+<text x="155" y="78" font-family="-apple-system,sans-serif" font-size="10" fill="#711B0C" text-anchor="middle">"这笔汇款到账了没？"</text>
+<line x1="155" y1="88" x2="155" y2="114" stroke="#993C1D" stroke-width="1.2" marker-end="url(#arr-s)"/>
+<rect x="40" y="118" width="230" height="46" rx="8" fill="#EEE" stroke="#999" stroke-width="0.8"/>
+<text x="155" y="138" font-family="-apple-system,sans-serif" font-size="11" fill="#555" text-anchor="middle">LLM（只能用训练知识回答）</text>
+<text x="155" y="154" font-family="-apple-system,sans-serif" font-size="10" fill="#888" text-anchor="middle">"抱歉，我无法查询实时订单状态..."</text>
+<line x1="270" y1="141" x2="350" y2="141" stroke="#ccc" stroke-width="0.8" stroke-dasharray="3,3"/>
+<text x="475" y="24" font-family="-apple-system,sans-serif" font-size="13" font-weight="600" fill="#1D9E75" text-anchor="middle">Agent Loop：信息闭环</text>
+<rect x="360" y="42" width="230" height="46" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.8"/>
+<text x="475" y="62" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#1D9E75" text-anchor="middle">User Question</text>
+<text x="475" y="78" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">"这笔汇款到账了没？"</text>
+<rect x="360" y="98" width="104" height="28" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.6"/>
+<text x="412" y="116" font-family="-apple-system,sans-serif" font-size="10" font-weight="500" fill="#534AB7" text-anchor="middle">query_order()</text>
+<rect x="484" y="98" width="106" height="28" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.6"/>
+<text x="537" y="116" font-family="-apple-system,sans-serif" font-size="10" font-weight="500" fill="#BA7517" text-anchor="middle">{"status":"到账"}</text>
+<rect x="360" y="136" width="230" height="46" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.8"/>
+<text x="475" y="156" font-family="-apple-system,sans-serif" font-size="11" fill="#1D9E75" text-anchor="middle">Final Answer（基于真实数据）</text>
+<text x="475" y="172" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">"您的汇款已于今日 14:30 到账 ✓"</text>
+<path d="M590 122 Q610 122 610 85 Q610 65 590 65" fill="none" stroke="#1D9E75" stroke-width="0.8" stroke-dasharray="3,2"/>
+<text x="618" y="96" font-family="-apple-system,sans-serif" font-size="9" fill="#1D9E75" writing-mode="tb">N轮</text>
+</svg>
+</div>
+
+<p><strong>单次调用的三大死穴：</strong></p>
+
+<div class="card warning">
+<div class="card-label">死穴 1：知识截止</div>
+<p>模型的训练数据有明确截止日期。它不知道今天发生了什么，不知道你公司系统的当前状态，不知道用户刚刚提交的那笔汇款的实时状态。<strong>单次调用无法突破这个天花板。</strong></p>
+</div>
+
+<div class="card warning">
+<div class="card-label">死穴 2：无法执行</div>
+<p>LLM 的输出只是文本。发邮件需要调用邮件 API，查数据库需要 SQL，改文件需要文件系统操作。<strong>模型本身永远不会触碰这些系统。</strong></p>
+</div>
+
+<div class="card warning">
+<div class="card-label">死穴 3：无法多步规划</div>
+<p>真实任务往往需要多步：先查状态 → 再确认规则 → 最后执行操作。单次调用无法在上一步的结果基础上自动启动下一步。</p>
+</div>
+
+<h3>3.2 为什么 ReAct 而非其他模式？</h3>
+
+<p>ReAct 只是设计空间中的一个点。理解它的定位，才能知道什么时候用它、什么时候不用它：</p>
+
+<table>
+<tr><th>模式</th><th>形状</th><th>优势</th><th>劣势</th><th>适用场景</th></tr>
+<tr>
+<td><strong>Pure CoT</strong></td>
+<td>Reason → Answer</td>
+<td>便宜、快速</td>
+<td>看不到外部世界</td>
+<td>数学推理、逻辑题</td>
+</tr>
+<tr>
+<td><strong>Tool-calling only</strong></td>
+<td>Act → Answer</td>
+<td>简单查询快</td>
+<td>无规划，容易误触发</td>
+<td>简单 API 查询（天气、汇率）</td>
+</tr>
+<tr>
+<td><strong>ReAct</strong></td>
+<td>Reason ↔ Act ↔ Observe</td>
+<td>平衡通用，可自适应</td>
+<td>可能循环多次，成本较高</td>
+<td>大多数 Agent 场景（默认选择）</td>
+</tr>
+<tr>
+<td><strong>Plan-and-Execute</strong></td>
+<td>Plan once → Act many</td>
+<td>高效、确定性</td>
+<td>计划错了全盘崩溃</td>
+<td>步骤明确的任务</td>
+</tr>
+<tr>
+<td><strong>Reflection</strong></td>
+<td>Act → Evaluate → Retry</td>
+<td>能从错误中学习</td>
+<td>需要显式的 critique 信号</td>
+<td>代码生成、写作优化</td>
+</tr>
+</table>
+
+<h3>【示例】同一任务的不同模式对比：BAAgent 经营分析</h3>
+
+<p>BAAgent 的月度经营分析可以用不同模式实现，效果差异显著：</p>
+
+<table>
+<tr><th>模式</th><th>实现方式</th><th>轮次</th><th>成本</th><th>质量</th></tr>
+<tr>
+<td><strong>Pure CoT</strong></td>
+<td>直接问模型"分析本月经营情况"<br>（无工具，纯靠模型记忆）</td>
+<td>1 轮</td>
+<td>$0.01</td>
+<td>❌ 编造数据<br>有价值率 ~20%</td>
+</tr>
+<tr>
+<td><strong>Tool-calling only</strong></td>
+<td>一次性调用 fbi_query + drill_down<br>（无规划，固定查询路径）</td>
+<td>1 轮</td>
+<td>$0.05</td>
+<td>⚠️ 数据真实但分析浅<br>有价值率 ~55%</td>
+</tr>
+<tr>
+<td><strong>ReAct（当前）</strong></td>
+<td>Thought→拉指标→Observation<br>→发现异动→钻取维度→...</td>
+<td>3-5 轮</td>
+<td>$0.15-0.25</td>
+<td>✅ 数据飞轮驱动<br>有价值率 85%</td>
+</tr>
+<tr>
+<td><strong>Plan-and-Execute</strong></td>
+<td>先生成分析计划→按计划逐项查询<br>（适合标准报告模板）</td>
+<td>1+N 轮</td>
+<td>$0.10-0.20</td>
+<td>✅ 结构稳定<br>但灵活性低于 ReAct</td>
+</tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">第一性原理总结</div>
+<p>ReAct 的本质价值在于<strong>信息闭环</strong>：模型不再是在真空中生成文本，而是每一步行动都获得真实世界的反馈，然后用这些反馈修正下一轮推理。</p>
+<p>这恰好对应了贯穿主线中的 <strong>问题5（如何让模型主动行动？）</strong>——答案是：给它一个循环，让它在每次循环中获得新的观测数据，从而逐步逼近正确答案。</p>
+<p><strong>Oracle Blog（2026）的精辟总结</strong>：六大 AI 公司（OpenAI/Anthropic/Google/Microsoft/Meta/LangChain）虽然命名不同、SDK 不同、哲学不同，但底层执行模式完全一致——<strong>LLM + tools in a loop</strong>。差异在工具目录和终止逻辑，不在拓扑。</p>
+</div>
+</section>
+
+<!-- ====== §④ 演进与对比 ====== -->
+<section id="evolution">
+<h2><span class="sec-num">④</span> 演进与对比：2022→2026 的 Agent 基础设施进化史</h2>
+
+<h3>4.1 时间线：四年四个里程碑</h3>
+
+<div class="diagram">
+<svg viewBox="0 0 720 300" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="arr-tl" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<line x1="50" y1="260" x2="670" y2="260" stroke="#ccc" stroke-width="2"/>
+<polygon points="670,255 682,260 670,265" fill="#ccc"/>
+<line x1="85" y1="260" x2="85" y2="230" stroke="#534AB7" stroke-width="1.5"/><circle cx="85" cy="260" r="6" fill="#534AB7"/>
+<text x="85" y="280" font-family="-apple-system,sans-serif" font-size="11" font-weight="600" fill="#534AB7" text-anchor="middle">2022</text>
+<rect x="18" y="156" width="134" height="68" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.8"/>
+<text x="85" y="176" font-family="-apple-system,sans-serif" font-size="11.5" font-weight="600" fill="#534AB7" text-anchor="middle">ReAct 论文</text>
+<text x="85" y="193" font-family="-apple-system,sans-serif" font-size="10" fill="#3C3489" text-anchor="middle">Yao et al.</text>
+<text x="85" y="212" font-family="-apple-system,sans-serif" font-size="9.5" fill="#777" text-anchor="middle">Thought+Action+Observation</text>
+<line x1="225" y1="260" x2="225" y2="230" stroke="#185FA5" stroke-width="1.5"/><circle cx="225" cy="260" r="6" fill="#185FA5"/>
+<text x="225" y="280" font-family="-apple-system,sans-serif" font-size="11" font-weight="600" fill="#185FA5" text-anchor="middle">2023</text>
+<rect x="158" y="156" width="134" height="68" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="225" y="176" font-family="-apple-system,sans-serif" font-size="11.5" font-weight="600" fill="#185FA5" text-anchor="middle">Function Calling</text>
+<text x="225" y="193" font-family="-apple-system,sans-serif" font-size="10" fill="#0C447C" text-anchor="middle">OpenAI / Anthropic</text>
+<text x="225" y="212" font-family="-apple-system,sans-serif" font-size="9.5" fill="#777" text-anchor="middle">原生 API 支持</text>
+<line x1="365" y1="260" x2="365" y2="230" stroke="#1D9E75" stroke-width="1.5"/><circle cx="365" cy="260" r="6" fill="#1D9E75"/>
+<text x="365" y="280" font-family="-apple-system,sans-serif" font-size="11" font-weight="600" fill="#1D9E75" text-anchor="middle">2024.11</text>
+<rect x="298" y="156" width="134" height="68" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.8"/>
+<text x="365" y="176" font-family="-apple-system,sans-serif" font-size="11.5" font-weight="600" fill="#1D9E75" text-anchor="middle">MCP 协议</text>
+<text x="365" y="193" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">Anthropic 开源</text>
+<text x="365" y="212" font-family="-apple-system,sans-serif" font-size="9.5" fill="#777" text-anchor="middle">工具标准化接口</text>
+<line x1="505" y1="260" x2="505" y2="230" stroke="#BA7517" stroke-width="1.5"/><circle cx="505" cy="260" r="6" fill="#BA7517"/>
+<text x="505" y="280" font-family="-apple-system,sans-serif" font-size="11" font-weight="600" fill="#BA7517" text-anchor="middle">2025.12</text>
+<rect x="438" y="156" width="134" height="68" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.8"/>
+<text x="505" y="176" font-family="-apple-system,sans-serif" font-size="11.5" font-weight="600" fill="#BA7517" text-anchor="middle">Advanced Tool Use</text>
+<text x="505" y="193" font-family="-apple-system,sans-serif" font-size="10" fill="#633806" text-anchor="middle">Anthropic SDK</text>
+<text x="505" y="212" font-family="-apple-system,sans-serif" font-size="9.5" fill="#777" text-anchor="middle">工具发现+组合+容错</text>
+<line x1="635" y1="260" x2="635" y2="230" stroke="#993C1D" stroke-width="1.5"/><circle cx="635" cy="260" r="6" fill="#993C1D"/>
+<text x="635" y="280" font-family="-apple-system,sans-serif" font-size="11" font-weight="600" fill="#993C1D" text-anchor="middle">2026</text>
+<rect x="568" y="84" width="134" height="58" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+<text x="635" y="104" font-family="-apple-system,sans-serif" font-size="11.5" font-weight="600" fill="#993C1D" text-anchor="middle">行业收敛</text>
+<text x="635" y="122" font-family="-apple-system,sans-serif" font-size="9.5" fill="#711B0C" text-anchor="middle">Linux Foundation · USB-C for AI</text>
+<line x1="635" y1="142" x2="635" y2="154" stroke="#993C1D" stroke-width="0.8" stroke-dasharray="3,2" marker-end="url(#arr-tl)"/>
+<path d="M152 192 L170 192" fill="none" stroke="#534AB7" stroke-width="1" marker-end="url(#arr-tl)"/>
+<path d="M292 192 L310 192" fill="none" stroke="#185FA5" stroke-width="1" marker-end="url(#arr-tl)"/>
+<path d="M432 192 L450 192" fill="none" stroke="#1D9E75" stroke-width="1" marker-end="url(#arr-tl)"/>
+<path d="M572 192 L610 148" fill="none" stroke="#BA7517" stroke-width="1" marker-end="url(#arr-tl)"/>
+</svg>
+</div>
+
+<h3>4.2 各大公司的实现对比</h3>
+
+<p>如前所述，六家顶级 AI 公司在 Agent Loop 上实现了<strong>拓扑等价</strong>的实现：</p>
+
+<table>
+<tr><th>公司</th><th>他们叫什么</th><th>核心模式</th><th>独特贡献</th></tr>
+<tr><td><strong>OpenAI</strong></td><td>Agents SDK / Codex SDK</td><td>Tool-calling loop</td><td>Code-first；反声明式图哲学</td></tr>
+<tr><td><strong>Anthropic</strong></td><td>Claude Agent SDK</td><td>Augmented LLM + tools in loop</td><td>Simplicity-first；Programmatic Tool Calling</td></tr>
+<tr><td><strong>Google</strong></td><td>Orchestration Layer</td><td>ReAct (T-A-O)</td><td>发明 CoT + 联合发明 ReAct；1M context</td></tr>
+<tr><td><strong>Microsoft</strong></td><td>Magentic-One / AutoGen</td><td>Think-Act-Learn</td><td>双循环 ledger planning；企业级编排</td></tr>
+<tr><td><strong>Meta</strong></td><td>Llama Stack Agents</td><td>ReAct via open-source</td><td>开源构建块；安全优先（Rule of Two）</td></tr>
+<tr><td><strong>LangChain</strong></td><td>Agent Executor / LangGraph</td><td>State machine workflow</td><td>图编排；中间件钩子用于控制流</td></tr>
+</table>
+
+<h3>4.3 2025-2026 关键进展</h3>
+
+<div class="card deepen">
+<div class="card-label">Programmatic Tool Calling（Anthropic，2025）</div>
+<p>Claude 不再逐个输出 tool_use block，而是<strong>写一段 Python 脚本来编排整个工作流</strong>。</p>
+<p><strong>效果</strong>：Token 减少 37%，推理次数减少 19+ 次/任务（来源：Zylos Research, 2026.01）。本质是把"多次串行 tool calling"压缩成一次脚本执行。</p>
+<p><strong>适用场景</strong>：复杂的多步骤任务（如 DDAgent 尽调流程中的多子Agent协调）。</p>
+</div>
+
+<div class="card deepen">
+<div class="card-label">Advanced Tool Use 套件（Anthropic，2025.12）</div>
+<p>MCP 协议发布一年后发现的问题：它只提供了统一的<strong>工具接口</strong>，但没有规定 Agent 如何<strong>发现、选择、组合</strong>这些工具。当企业挂载上百个内部工具时，Agent 会"迷路"。</p>
+<p>Advanced Tool Use 补齐了这块拼图：<strong>工具发现（Tool Search）+ 组合策略 + 容错机制</strong>。（详见下一章 A1.2 MCP协议）</p>
+</div>
+
+<div class="card deepen">
+<div class="card-label">Constrained Decoding 成为主流（2025）</div>
+<p>确保 LLM 输出的工具调用严格符合 JSON Schema：</p>
+<ul style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>Outlines</strong>：FSM-based，97% success rate，0.4% hallucination</li>
+<li><strong>XGrammar</strong>：Pushdown automaton 支持复杂语法</li>
+<li><strong>llguidance</strong>：超快速（50μs CPU/token）</li>
+</ul>
+</div>
+
+<div class="card deepen">
+<div class="card-label">MCP 成为事实标准（2025-2026）</div>
+<ul style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li>2024.11：Anthropic 发布 MCP 规范</li>
+<li>2025.03：OpenAI 宣布支持 MCP → 标准之争结束</li>
+<li>2025年中：Google/Microsoft 接入；npm 月下载超 5000 万</li>
+<li>2025.12：Anthropic 将 MCP 捐赠给 Linux Foundation Agentic AI Foundation</li>
+<li>2026.01：月下载约 9700 万；Registry 超 20,000 个 MCP Server</li>
+<li>被称为 "<strong>USB-C for AI</strong>"——一个连接器通吃所有 AI 产品</li>
+</ul>
+</div>
+
+<div class="card warning">
+<div class="card-label">当前未解决问题（2026）</div>
+<ol style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>认证标准缺失</strong>：MCP 无内置 auth 规范，每个 server 各自为战</li>
+<li><strong>运行时发现</strong>：Agent 无法在运行时搜索和选择最合适的 MCP server</li>
+<li><strong>成本与计费</strong>：协议不含定价信息，Agent 无法在做工具选择时考虑成本</li>
+<li><strong>工具数量诅咒</strong>：挂载工具越多，Agent 性能反而下降（上下文污染 + 选择困难）</li>
+</ol>
+</div>
+</section>
+
+<!-- ====== §⑤ 与产品连接 ====== -->
+<section id="connect">
+<h2><span class="sec-num">⑤</span> 与产品连接：Fitz 的生产级 Agent 全是 Agent Loop 实例</h2>
+
+<p>理解了 Agent Loop 的抽象机制后，回头看 Fitz 正在管理的 Agent 项目——<strong>每一个都是 ReAct 模式的具体实例化</strong>。</p>
+
+<h3>5.1 四个 Agent 的 ReAct 特征对照</h3>
+
+<table>
+<tr><th>Agent</th><th>领域</th><th>循环类型</th><th>典型轮次</th><th>工具数量</th><th>核心挑战</th></tr>
+<tr>
+<td><strong>DDAgent</strong></td>
+<td>企业尽调</td>
+<td>外层 Plan + 内层 ReAct</td>
+<td>5-15 轮</td>
+<td>6-10 个</td>
+<td>多子Agent协调 + 字段预填完整性</td>
+</tr>
+<tr>
+<td><strong>BAAgent</strong></td>
+<td>经营分析</td>
+<td>ReAct + 数据飞轮</td>
+<td>3-5 轮</td>
+<td>4-6 个</td>
+<td>四层递进报告 + 三层 Context 护城河</td>
+</tr>
+<tr>
+<td><strong>FXAgent</strong></td>
+<td>换汇咨询</td>
+<td>短循环 ReAct</td>
+<td>1-2 轮</td>
+<td>1-2 个</td>
+<td>高频低延迟 + 98-99.75% 采纳率维持</td>
+</tr>
+<tr>
+<td><strong>TRSAgent</strong></td>
+<td>售后邮件</td>
+<td>长循环 + 容错恢复</td>
+<td>3-8 轮</td>
+<td>3-4 个</td>
+<td>KB检索 + 分类准确 + 错误码统一</td>
+</tr>
+</table>
+
+<h3>5.2 【示例】DDAgent 的两层循环架构</h3>
+
+<p>DDAgent 是最复杂的案例——它在 ReAct 之上又包了一层 Planning：</p>
+
+<div class="code-block"><span class="kw">def</span> <span class="fn">ddagent_dispatch</span>(due_diligence_request: dict) -> dict:
+    <span class="str">"""
+    DDAgent 外层：Plan-and-Execute（Dispatcher）
+    
+    流程：
+    1. 接收尽调需求
+    2. LLM 拆分子任务（主体信息 / 财务 / 法律 / ...）
+    3. 为每个子任务分配内层 ReAct Agent
+    4. 收集结果 → 预填表单 → 验证完整性
+    """</span>
+    
+    <span class="cmt"># Step 1: 外层 LLM 做规划（Plan 阶段，不需要工具）</span>
+    plan_response = client.messages.<span class="fn">create</span>(
+        model=<span class="str">"claude-sonnet-4-20250514"</span>,
+        max_tokens=<span class="var">2048</span>,
+        system=<span class="str">"你是尽调任务拆分专家。将需求拆分为独立的子任务。"</span>,
+        messages=[{
+            <span class="str">"role"</span>: <span class="str">"user"</span>,
+            <span class="str">"content"</span>: <span class="str">f"拆分以下尽调任务: </span>{<span class="fn">json</span>.dumps(due_diligence_request)}"
+        }],
+    )
+    sub_tasks = <span class="fn">parse_sub_tasks</span>(plan_response.content[0].text)
+
+    <span class="cmt"># Step 2: 并行启动内层 ReAct Agent（Execute 阶段）</span>
+    results = {}
+    <span class="kw">for</span> task <span class="kw">in</span> sub_tasks:
+        <span class="cmt"># 每个 sub_task 由独立的 ReAct 循环处理</span>
+        results[task.id] = <span class="fn">subagent_react_loop</span>(
+            task_description=task.description,
+            tools=<span class="fn">select_tools_for_domain</span>(task.domain),
+            max_iterations=<span class="var">8</span>
+        )
+
+    <span class="cmt"># Step 3: 汇总 + 验证</span>
+    report = <span class="fn">assemble_dd_report</span>(results)
+    report[<span class="str">"completeness_score"</span>] = <span class="fn">check_completeness</span>(report)  <span class="cmt"># 83% 预填率的来源</span>
+    
+    <span class="kw">return</span> report
+
+
+<span class="kw">def</span> <span class="fn">subagent_react_loop</span>(task_description: str, tools: list, max_iterations: int):
+    <span class="str">"""内层：纯 ReAct 循环（与 FXAgent 同构但更复杂）"""</span>
+    messages = [{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: task_description}]
+    
+    <span class="kw">for</span> i <span class="kw">in</span> <span class="fn">range</span>(max_iterations):
+        resp = client.messages.<span class="fn">create</span>(
+            model=<span class="str">"claude-sonnet-4-20250514"</span>,
+            messages=messages, tools=tools, max_tokens=<span class="var">1024</span>
+        )
+        
+        <span class="kw">if</span> resp.stop_reason == <span class="str">"end_turn"</span>:
+            <span class="kw">return</span> {<span class="str">"fields"</span>: <span class="fn">parse_fields</span>(resp.content[0].text), <span class="str">"iterations"</span>: i+1}
+
+        <span class="cmt"># 执行工具并追加 observation</span>
+        <span class="kw">for</span> block <span class="kw">in</span> [b <span class="kw">for</span> b <span class="kw">in</span> resp.content <span class="kw">if</span> b.type == <span class="str">"tool_use"</span>]:
+            result = <span class="fn">dispatch_tool_execution</span>(block.name, block.input)
+            messages.<span class="fn">append</span>({<span class="str">"role"</span>: <span class="str">"assistant"</span>, <span class="str">"content"</span>: [block]})
+            messages.<span class="fn">append</span>({<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: [{
+                <span class="str">"type"</span>: <span class="str">"tool_result"</span>, <span class="str">"tool_use_id"</span>: block.id,
+                <span class="str">"content"</span>: <span class="fn">json</span>.dumps(result, ensure_ascii=False)
+            }]})
+
+    <span class="kw">return</span> {<span class="str">"error"</span>: <span class="str">"达到最大迭代次数"</span>, <span class="str">"partial"</span>: messages}</div>
+
+<div class="card takeaway">
+<div class="card-label">架构洞察</div>
+<p>注意 DDAgent 的<strong>同构性</strong>——外层 Dispatcher 和内层 SubAgent 使用完全相同的底层循环模式，区别只在：</p>
+<ul style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+<li>外层不需要 tools（纯规划），内层需要 tools（数据采集）</li>
+<li>外层输出是 task list，内层输出是结构化字段</li>
+<li>两层可以共享同一个 <code>react_loop()</code> 基础函数，通过参数控制行为</li>
+</ul>
+</div>
+
+<h3>5.3 Eval Agent：用 Agent Loop 评测 Agent Loop</h3>
+
+<p>Eval Agent 是一个<strong>元 Agent</strong>——它的任务是评测其他 Agent/Skill 资产的质量：</p>
+
+<div class="code-block"><span class="kw">def</span> <span class="fn">eval_agent_loop</span>(target_agent_name: str, test_cases: list) -> dict:
+    <span class="str">"""
+    Eval Agent = 元循环（Meta-loop）
+    
+    它本身就是一个 ReAct Agent，只不过它的"工具"是被测 Agent 和评测脚本。
+    """</span>
+    eval_results = {<span class="str">"L1_behavior"</span>: [], <span class="str">"L2_routing"</span>: [], <span class="str">"L3_knowledge"</span>: []}
+
+    <span class="kw">for</span> case <span class="kw">in</span> test_cases:
+        <span class="cmt">=== Eval Agent 自己的 ReAct 循环 ===</span>
+        messages = [{<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">f"评测 {target_agent_name} 在以下测试用例上的表现: "</span>{case}}]
+
+        <span class="cmt">--- Thought: 决定用什么评测工具 ---</span>
+        <span class="cmt">--- Action: 调用被测 Agent 并收集其循环日志 ---</span>
+        agent_output = <span class="fn">run_target_agent</span>(case.input)
+        messages.<span class="fn">append</span>({<span class="str">"role"</span>: <span class="str">"assistant"</span>, <span class="str">"content"</span>: <span class="str">"已收集被测 Agent 输出，开始分析..."</span>})
+        messages.<span class="fn">append</span>({<span class="str">"role"</span>: <span class="str">"user"</span>, <span class="str">"content"</span>: <span class="str">f"被测输出: </span>{agent_output}<span class="str">期望输出: </span>{case.expected}'})
+
+        <span class="cmt">--- Observation: 获取被测输出后，继续思考评分 ---</span>
+        score_resp = client.messages.<span class="fn">create</span>(
+            model=<span class="str">"claude-sonnet-4-20250514"</span>,
+            messages=messages,
+            tools=EVAL_TOOLS,  <span class="cmt"># compare_output / extract_facts / check_format</span>
+        )
+
+        <span class="cmt">--- 最终评分 ---</span>
+        scores = <span class="fn">parse_eval_scores</span>(score_resp.content[0].text)
+        eval_results[<span class="str">"L1_behavior"</span>].<span class="fn">append</span>(scores.behavior)   <span class="cmt"># 接受率 / 空填率</span>
+        eval_results[<span class="str">"L2_routing"</span>].<span class="fn">append</span>(scores.routing)      <span class="cmt"># 路由命中率</span>
+        eval_results[<span class="str">"L3_knowledge"</span>].<span class="fn">append</span>(scores.knowledge)    <span class="cmt"># 引用精度</span>
+
+    <span class="cmt"># 汇总所有测试用例的评分</span>
+    <span class="kw">return</span> {
+        <span class="str">"target"</span>: target_agent_name,
+        <span class="str">"L1_acceptance_rate"</span>: <span class="fn">mean</span>(eval_results[<span class="str">"L1_behavior"</span>]),
+        <span class="str">"L2_route_accuracy"</span>: <span class="fn">mean</span>(eval_results[<span class="str">"L2_routing"</span>]),
+        <span class="str">"L3_fact_precision"</span>: <span class="fn">mean</span>(eval_results[<span class="str">"L3_knowledge"</span>]),
+        <span class="str">"overall_grade"</span>: <span class="fn">compute_grade</span>(eval_results)
+    }</div>
+
+<div class="card insight">
+<div class="card-label">Eval Agent 的独特位置</div>
+<p>Eval Agent 本身也是一个 ReAct Agent：调用被测Agent → 收集其循环日志 → 分析质量 → 输出评分。<strong>套娃，但是是有意义的套娃</strong>——它证明了 Agent Loop 是一个足够通用的抽象，连"评测 Agent"都可以用同一个模式实现。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">本章核心收获</div>
+<ol style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>Agent = LLM + 循环 + 工具</strong>，架构本身不复杂，复杂度在工具设计和工程守卫</li>
+<li><strong>ReAct = Thought + Action + Observation 循环</strong>，是 2022 年提出、2026 年已成为行业默认标准的模式</li>
+<li><strong>Function Calling 是三方契约</strong>：开发者定义 schema → LLM 决策调用 → Runtime 执行并回传结果</li>
+<li><strong>stop_reason 决定循环生死</strong>：tool_use 继续，end_turn 结束，其他需异常处理</li>
+<li><strong>Fitz 的 4 个 Agent 是 ReAct 的四种变体</strong>：DDAgent（多层编排）、BAAgent（数据飞轮）、FXAgent（短循环）、TRSAgent（长循环+容错）</li>
+<li><strong>MCP 正在成为工具调用的 USB-C</strong>，但工具发现/认证/计费仍是开放问题</li>
+</ol>
+</div>
+</section>
+
+<!-- 底部导航 -->
+<div class="chapter-footer">
+<a href="../../../INDEX.html">← 返回知识图谱</a>
+<a href="A1.1-agent-loop-quiz.html">📝 做 Quiz（10 题）→</a>
+</div>
+
+</body>
+</html>

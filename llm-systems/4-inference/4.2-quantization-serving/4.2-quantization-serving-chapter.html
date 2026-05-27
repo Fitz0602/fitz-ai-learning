@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.2 量化蒸馏 + Serving · LLM系统学习</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F9F3;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDE8E0;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card:#FFFFFF;--border:#E8E8E4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px}
+.header{margin-bottom:32px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.tag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px;letter-spacing:.3px}
+.tag-t1{background:var(--purple-bg);color:var(--purple)}
+.tag-d4{background:var(--blue-bg);color:var(--blue)}
+.tag-new{background:var(--teal-bg);color:var(--teal)}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+h1{font-size:28px;font-weight:700;margin-bottom:6px;letter-spacing:-.5px}
+.subtitle{font-size:15px;color:var(--muted);margin-bottom:4px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+.progress-nav{display:flex;gap:4px;margin-top:16px}
+.progress-nav a{font-size:11px;padding:4px 10px;border-radius:8px;text-decoration:none;font-weight:500}
+.progress-nav .done{background:var(--purple-bg);color:var(--purple)}
+section{margin:40px 0}
+section h2{font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+section h2 .num{font-size:14px;font-weight:600;background:var(--purple);color:#fff;width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+section h3{font-size:16px;font-weight:600;margin:20px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:16px 18px;margin:16px 0;border-left:4px solid}
+.card.intuition{background:var(--teal-bg);border-color:var(--teal)}
+.card.takeaway{background:var(--purple-bg);border-color:var(--purple)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card.intuition::before{content:"💡 直觉";font-weight:700;display:block;margin-bottom:4px;color:var(--teal);font-size:13px}
+.card.takeaway::before{content:"📌 Takeaway";font-weight:700;display:block;margin-bottom:4px;color:var(--purple);font-size:13px}
+.card.warning::before{content:"⚠️ 误区";font-weight:700;display:block;margin-bottom:4px;color:var(--coral);font-size:13px}
+.diagram{margin:24px 0 8px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid var(--border);text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600}
+code{background:var(--purple-bg);padding:1px 5px;border-radius:4px;font-size:13px;color:var(--purple)}
+.formula{background:#f7f7f5;padding:12px 16px;border-radius:8px;margin:12px 0;overflow-x:auto}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-t1">T1 · LLM系统</span>
+<span class="tag tag-d4">D4 推理部署</span>
+<span class="tag tag-new">4.2</span>
+<a href="../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+<a href="4.2-quantization-serving-quiz.html" class="nav-link">Quiz →</a>
+</div>
+<h1>4.2 量化蒸馏 + Serving</h1>
+<p class="subtitle">从模型压缩到生产部署：让大模型跑得快、花得少、稳得住</p>
+<div class="spine-link">主线连接：推理部署 — Agent 成本控制的工程基础</div>
+<div class="progress-nav">
+<a href="#is" class="done">① 是什么</a>
+<a href="#how" class="done">② 怎么实现</a>
+<a href="#why" class="done">③ 为什么</a>
+<a href="#evolution" class="done">④ 演进</a>
+<a href="#connect" class="done">⑤ 产品</a>
+</div>
+</div>
+
+<!-- ====== 章节一览图 ====== -->
+<div class="diagram">
+<p style="font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px;">章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 340" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ov-arr42" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- ① 紫 -->
+<rect x="20" y="40" width="120" height="56" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="80" y="63" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="700">① 是什么</text>
+<text x="80" y="80" text-anchor="middle" font-size="10" fill="#534AB7">量化=有损压缩</text>
+<text x="80" y="92" text-anchor="middle" font-size="10" fill="#534AB7">蒸馏=知识迁移</text>
+<!-- ② 蓝 -->
+<rect x="165" y="40" width="120" height="56" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="225" y="63" text-anchor="middle" font-size="12" fill="#185FA5" font-weight="700">② 怎么实现</text>
+<text x="225" y="80" text-anchor="middle" font-size="10" fill="#185FA5">GPTQ/AWQ/GGUF/FP8</text>
+<text x="225" y="92" text-anchor="middle" font-size="10" fill="#185FA5">vLLM/SGLang/TRT-LLM</text>
+<!-- ③ 琥珀 -->
+<rect x="310" y="40" width="120" height="56" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="370" y="63" text-anchor="middle" font-size="12" fill="#BA7517" font-weight="700">③ 为什么</text>
+<text x="370" y="80" text-anchor="middle" font-size="10" fill="#BA7517">冗余权重+异常值</text>
+<text x="370" y="92" text-anchor="middle" font-size="10" fill="#BA7517">PagedAttention本质</text>
+<!-- ④ 紫 -->
+<rect x="455" y="40" width="120" height="56" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="515" y="63" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="700">④ 演进</text>
+<text x="515" y="80" text-anchor="middle" font-size="10" fill="#534AB7">INT4→FP8→NVFP4</text>
+<text x="515" y="92" text-anchor="middle" font-size="10" fill="#534AB7">2024→2026范式转移</text>
+<!-- ⑤ 绿 -->
+<rect x="237" y="230" width="140" height="56" rx="10" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="307" y="253" text-anchor="middle" font-size="12" fill="#1D9E75" font-weight="700">⑤ 与产品连接</text>
+<text x="307" y="270" text-anchor="middle" font-size="10" fill="#1D9E75">Agent GPU 成本 = f(模型, QPS)</text>
+<text x="307" y="282" text-anchor="middle" font-size="10" fill="#1D9E75">DDAgent/FXAgent 实例</text>
+<!-- 箭头连接 -->
+<line x1="140" y1="68" x2="165" y2="68" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr42)"/>
+<line x1="285" y1="68" x2="310" y2="68" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr42)"/>
+<line x1="430" y1="68" x2="455" y2="68" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr42)"/>
+<line x1="515" y1="96" x2="515" y2="150" stroke="#888780" stroke-width="1.5"/>
+<line x1="515" y1="150" x2="307" y2="150" stroke="#888780" stroke-width="1.5"/>
+<line x1="307" y1="150" x2="307" y2="228" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr42)"/>
+</svg>
+</div>
+
+<!-- ====== §① 是什么 ====== -->
+<section id="is">
+<h2><span class="num">1</span> 是什么：量化是有损压缩，蒸馏是知识迁移</h2>
+
+<div class="card intuition">
+把一个 70B 参数的大模型想象成一部 4K 高清电影。量化就是把电影从 4K 压缩到 1080p 甚至 720p——文件变小了，大部分时候你看不出区别，但极端场景下细节会丢失。蒸馏则是请导演写一份精简版剧本给新人演员照着演——新人没看过原片，但学会了导演的核心表达手法。
+</div>
+
+<h3>量化的核心直觉</h3>
+<p>神经网络中的每个参数（权重）在训练时用 FP32（32 位浮点数，约 $4.29 \times 10^9$ 个可能值）或 BF16（16 位）存储。<strong>量化（Quantization）</strong>的目标是用更少的比特表示这些权重：</p>
+<ul style="margin:8px 0 8px 20px">
+  <li><strong>INT8</strong>: 256 个可能值 → 模型体积缩小 ~50%</li>
+  <li><strong>INT4 / 4-bit</strong>: 16 个可能值 → 模型体积缩小 ~75%</li>
+  <li><strong>FP8</strong>: 用 8 位浮点保留动态范围 → 缩小 ~50%，质量损失极小</li>
+</ul>
+<p>关键洞察：<strong>不是所有参数都同等重要</strong>。LLM 的权重分布高度不均匀——大部分权重集中在接近 0 的区域（贡献小），少数"异常值"（outlier）承载了模型的关键能力。量化本质上是在<strong>"哪些精度可以牺牲"</strong>和<strong>"哪些必须保真"</strong>之间做权衡。</p>
+
+<h3>蒸馏的核心直觉</h3>
+<p><strong>知识蒸馏（Knowledge Distillation）</strong>是另一条路：不压缩同一个模型，而是训练一个更小的"学生模型"来模仿更大的"教师模型"。教师模型的输出（概率分布、中间层特征、推理链路）成为学生模型的学习信号。</p>
+<p>两者的关系可以用一张决策图概括：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 660 280" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs>
+  <marker id="ar1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<!-- 标题区 -->
+<text x="330" y="22" text-anchor="middle" font-size="13" fill="#534AB7" font-weight="700">量化 vs 蒸馏：两条不同的压缩路径</text>
+<!-- 左侧：量化路径 -->
+<rect x="30" y="45" width="160" height="90" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="110" y="70" text-anchor="middle" font-size="13" fill="#534AB7" font-weight="700">量化 Quantization</text>
+<text x="110" y="90" text-anchor="middle" font-size="11" fill="#534AB7">同一模型，降低精度</text>
+<text x="110" y="108" text-anchor="middle" font-size="11" fill="#534AB7">BF16 → INT4 / FP8</text>
+<text x="110" y="126" text-anchor="middle" font-size="10" fill="#888780">无损→有损压缩</text>
+<!-- 右侧：蒸馏路径 -->
+<rect x="470" y="45" width="160" height="90" rx="8" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="550" y="70" text-anchor="middle" font-size="13" fill="#1D9E75" font-weight="700">蒸馏 Distillation</text>
+<text x="550" y="90" text-anchor="middle" font-size="11" fill="#1D9E75">教师→学生模型</text>
+<text x="550" y="108" text-anchor="middle" font-size="11" fill="#1D9E75">70B → 7B 新模型</text>
+<text x="550" y="126" text-anchor="middle" font-size="10" fill="#888780">知识迁移+再训练</text>
+<!-- 中间对比表 -->
+<rect x="170" y="160" width="320" height="105" rx="8" fill="#FAFAF8" stroke="#E8E8E4" stroke-width="1"/>
+<text x="330" y="180" text-anchor="middle" font-size="12" fill="#BA7517" font-weight="700">核心差异</text>
+<text x="190" y="202" font-size="11" fill="#2D2D2D" font-weight="600">维度</text><text x="270" y="202" font-size="11" fill="#534AB7" font-weight="600">量化</text><text x="400" y="202" font-size="11" fill="#1D9E75" font-weight="600">蒸馏</text>
+<text x="190" y="222" font-size="11" fill="#888780">产物</text><text x="270" y="222" font-size="11" fill="#2D2D2D">同架构低精度版</text><text x="400" y="222" font-size="11" fill="#2D2D2D">全新小模型</text>
+<text x="190" y="242" font-size="11" fill="#888780">需要训练?</text><text x="270" y="242" font-size="11" fill="#2D2D2D">不需要(PTQ)</text><text x="400" y="242" font-size="11" fill="#2D2D2D">需要完整训练</text>
+<text x="190" y="258" font-size="11" fill="#888780">典型压缩比</text><text x="270" y="258" font-size="11" fill="#2D2D2D">4x (INT4)</text><text x="400" y="258" font-size="11" fill="#2D2D2D">10x (70B→7B)</text>
+<!-- 箭头 -->
+<line x1="190" y1="90" x2="170" y2="90" stroke="#888780" stroke-width="1.2"/>
+<line x1="470" y1="90" x2="450" y2="90" stroke="#888780" stroke-width="1.2"/>
+<line x1="330" y1="135" x2="330" y2="158" stroke="#888780" stroke-width="1.2" marker-end="url(#ar1)"/>
+</svg>
+</div>
+
+<div class="card takeaway">
+<b>PM 记忆点：</b>量化 = 同一部电影的低码率版本；蒸馏 = 导演教新演员演同一个故事。量化几分钟完成，蒸馏要重新训练。做 Agent 产品时两者通常<strong>叠加使用</strong>：先蒸馏出小模型，再量化部署。
+</div>
+</section>
+
+<!-- ====== §② 怎么实现 ====== -->
+<section id="how">
+<h2><span class="num">2</span> 怎么实现：四大量化方法 + 三大 Serving 引擎</h2>
+
+<h3>2.1 量化四巨头：GGUF / GPTQ / AWQ / FP8</h3>
+
+<p>2026 年的量化生态已经收敛到四个主流格式，各自占据明确的生态位：</p>
+
+<table>
+<tr><th>格式</th><th>定位</th><th>精度</th><th>硬件</th><th>代表工具</th></tr>
+<tr><td><b>GGUF</b></td><td>CPU / 端侧 / Apple Silicon 通用格式</td><td>Q2_K ~ Q8_0</td><td>CPU + GPU</td><td>llama.cpp, Ollama</td></tr>
+<tr><td><b>GPTQ</b></td><td>NVIDIA GPU 服务端推理先驱</td><td>INT4/INT8</td><td>NVIDIA only</td><td>vLLM, TGI</td></tr>
+<tr><td><b>AWQ</b></td><td>当前 GPU 生产部署最佳实践</td><td>INT4</td><td>NVIDIA (Marlin kernel)</td><td>vLLM, AutoGPTQ</td></tr>
+<tr><td><b>FP8</b></td><td>Hopper/Blackwell "准无损"标准</td><td>E4M3/E5M2</td><td>NVIDIA Ada+</td><td>vLLM native, TensorRT-LLM</td></tr>
+</table>
+
+<h4>GPTQ：GPU 量化的开拓者</h4>
+<p>GPTQ（Frantar et al., 2023）的核心思路：<strong>利用 Hessian 信息找到"可以安全降低精度"的权重</strong>。算法对权重矩阵按列逐个处理，每次量化一列后更新剩余列的误差——这是一个类似回溯的迭代过程。</p>
+
+<div class="formula">
+$$W_{quant} = \text{round}\left(\frac{w}{s}\right) \cdot s, \quad s = \frac{\max(|w|)}{2^{b-1}-1}$$
+</div>
+
+<p>其中 $s$ 是每组的缩放因子（scale），$b$ 是目标位数。GPTQ 的关键创新在于<strong>误差反馈</strong>：量化第 $i$ 列产生的残差会传播到后续未量化的列上。</p>
+<p><strong>优点</strong>：理论严谨，INT4 质量稳定。<strong>缺点</strong>：量化速度慢（70B 模型需 15-30 分钟），需要校准数据集敏感，仅支持 NVIDIA GPU。</p>
+
+<h4>AWQ：激活感知的实用主义</h4>
+<p>AWQ（Lin et al., 2023）换了一个角度：<strong>权重的 importance 不是由权重本身决定的，而是由它所连接的激活值（activation）幅度决定的</strong>。如果某通道的激活值总是很大，说明这个通道的权重对输出影响更大——这些权重应该被保护起来。</p>
+<div class="card intuition">
+AWQ 的直觉：想象你在整理书架。GPTQ 的方式是根据书的厚度决定是否压扁；AWQ 的方式是根据这本书被翻阅的频率决定是否压扁。常被翻阅的书（高激活通道的权重）即使薄也要好好保存。
+</div>
+
+<p>AWQ 的做法很简单：识别 top 1% 的"显著权重"（salient weights）保持高精度，其余激进量化到 INT4。实际效果：</p>
+<ul style="margin:8px 0 8px 20px">
+  <li>量化速度比 GPTQ 快 <strong>3-5×</strong>（无需反向传播）</li>
+  <li>相同 bit-width 下质量通常优于 GPTQ 1-3%</li>
+  <li>配合 Marlin 推理内核可达 <strong>~741 tok/s</strong>（H200 benchmark）</li>
+</ul>
+<p>截至 2026 年中，<strong>AWQ 已成为 vLLM 生产部署的首选 INT4 格式</strong>。HuggingFace 上 AWQ 格式下载量超过 1900 万次。</p>
+
+<h4>GGUF：端侧通吃的瑞士军刀</h4>
+<p>GGUF 是 llama.cpp 项目定义的文件格式——<strong>一个文件包含量化权重、tokenizer、元数据全部内容</strong>。下载一个 GGUF 文件就能在任何设备上运行。</p>
+<p>GGUF 的命名规则直接告诉你精度级别：</p>
+<table>
+<tr><th>级别</th><th>平均 bit/weight</th><th>7B 模型大小</th><th>适用场景</th></tr>
+<tr><td>Q2_K</td><td>~2.5</td><td>~2.3 GB</td><td>极限压缩，质量损失明显</td></tr>
+<tr><td>Q4_K_M</td><td>~4.5</td><td>~4.5 GB</td><td>推荐默认选项</td></tr>
+<tr><td>Q5_K_M</td><td>~5.5</td><td>~5.5 GB</td><td>质量优先</td></tr>
+<tr><td>Q8_0</td><td>8</td><td>~7 GB</td><td>近无损</td></tr>
+</table>
+
+<p><strong>K-quant 方法</strong>是 GGUF 的杀手锏：对不同层的权重使用不同精度（attention 层高精度、FFN 低精度），在总 bit 预算内最大化保留信息。Q4_K_M 在大多数任务上能保留原模型 <strong>95%+</strong> 的质量。</p>
+<p>GGUF 的生态统治力：Ollama、LM Studio、GPT4All 全部原生支持。但它的弱点也明确——<strong>GPU 推理性能不如 GPTQ/AWQ</strong>（因为设计初衷是 CPU-first）。</p>
+
+<h4>FP8：Hopper 时代的"准无损"新基准</h4>
+<p>FP8 是 2024-2026 年最大的范式转变之一。NVIDIA Hopper（H100/H200）和 Blackwell 架构原生支持 FP8 Transformer Engine，使得：</p>
+<ul style="margin:8px 0 8px 20px">
+  <li>相比 BF16：<strong>内存减半</strong>，速度提升 ~33%</li>
+  <li>质量损失：<strong>0.1-0.3%</strong> PPL 增加（几乎所有任务上近乎无损）</li>
+  <li>两种子格式：<b>E4M3</b>（精度优先，用于权重）和 <b>E5M2</b>（动态范围优先，用于梯度）</li>
+</ul>
+<div class="card takeaway">
+<b>2026 选型速查：</b>RTX 5090/4090 + Hopper 卡 → FP8 是"免费午餐"；RTX 3000 系列 → 无硬件加速，用 AWQ/GPTQ INT4；Apple Silicon / CPU → GGUF Q4_K_M。
+</div>
+
+<h3>2.2 KV Cache 量化：被忽视的显存黑洞</h3>
+<p>大多数人只关注权重量化，但<strong>KV Cache 才是长上下文场景的真正显存瓶颈</strong>。一个 Q4_K_M 量化的 7B 模型权重只占 ~4GB，但 32K context 的 KV Cache 可以轻松吃掉额外的 4-8GB——而且随着对话轮次增长持续膨胀。</p>
+<p>vLLM 和 llama.cpp 都支持独立的 KV Cache 量化：</p>
+<ul style="margin:8px 0 8px 20px">
+  <li><strong>QServe (MIT HAN Lab)</strong>: W4A8KV4 方案——4-bit 权重 + 8-bit 激活 + 4-bit KV Cache，端到端协同设计</li>
+  <li><strong>SpinQuant (Meta)</strong>: 学习正交旋转矩阵重塑激活分布，使 W+A+KV 统一到 4-bit 时损失 &lt;3%（此前同类方法降级 25%+）</li>
+  <li><strong>SmoothQuant</strong>: 将激活值的 outlier 迁移到权重上，数学等价变换使双方都更容易量化</li>
+</ul>
+
+<h3>2.3 Serving 引擎三强：vLLM / SGLang / TensorRT-LLM</h3>
+<p>光有量化还不够——你需要一个引擎把这些优化后的模型高效地服务出去。2026 年的生产级 LLM Serving 被<strong>三个引擎</strong>瓜分：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 660 380" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ar2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<text x="330" y="22" text-anchor="middle" font-size="13" fill="#534AB7" font-weight="700">三大 Serving 引擎选型地图</text>
+
+<!-- vLLM 卡片 -->
+<rect x="30" y="45" width="185" height="145" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="122" y="68" text-anchor="middle" font-size="14" fill="#534AB7" font-weight="700">vLLM</text>
+<text x="122" y="86" text-anchor="middle" font-size="10" fill="#888780">UC Berkeley → PyTorch Foundation</text>
+<line x1="35" y1="94" x2="210" y2="94" stroke="#E8E8E4" stroke-width="1"/>
+<text x="42" y="112" font-size="11" fill="#2D2D2D">✅ 生产默认首选</text>
+<text x="42" y="130" font-size="11" fill="#2D2D2D">✅ 最广泛硬件支持</text>
+<text x="42" y="148" font-size="11" fill="#2D2D2D">✅ PagedAttention</text>
+<text x="42" y="166" font-size="11" fill="#2D2D2D">✅ Continuous Batching</text>
+<text x="42" y="184" font-size="11" fill="#2D2D2D">⚠️ 结构化输出一般</text>
+
+<!-- SGLang 卡片 -->
+<rect x="237" y="45" width="185" height="145" rx="10" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="329" y="68" text-anchor="middle" font-size="14" fill="#1D9E75" font-weight="700">SGLang</text>
+<text x="329" y="86" text-anchor="middle" font-size="10" fill="#888780">LMSYS → xAI/DeepSeek 重度使用</text>
+<line x1="242" y1="94" x2="417" y2="94" stroke="#E8E8E4" stroke-width="1"/>
+<text x="249" y="112" font-size="11" fill="#2D2D2D">✅ RadixAttention 75-95%命中率</text>
+<text x="249" y="130" font-size="11" fill="#2D2D2D">✅ 结构化输出 2-3× 更快</text>
+<text x="249" y="148" font-size="11" fill="#2D2D2D">✅ Agent Loop 多步优势</text>
+<text x="249" y="166" font-size="11" fill="#2D2D2D">⚠️ 生态较小</text>
+<text x="249" y="184" font-size="11" fill="#2D2D2D">⚠️ 成熟度低于 vLLM</text>
+
+<!-- TRT-LLM 卡片 -->
+<rect x="444" y="45" width="185" height="145" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="536" y="68" text-anchor="middle" font-size="14" fill="#BA7517" font-weight="700">TensorRT-LLM</text>
+<text x="536" y="86" text-anchor="middle" font-size="10" fill="#888780">NVIDIA 官方极致性能</text>
+<line x1="449" y1="94" x2="624" y2="94" stroke="#E8E8E4" stroke-width="1"/>
+<text x="456" y="112" font-size="11" fill="#2D2D2D">✅ 单模型峰值吞吐最高</text>
+<text x="456" y="130" font-size="11" fill="#2D2D2D">✅ 自定义 CUDA Kernel</text>
+<text x="456" y="148" font-size="11" fill="#2D2D2D">✅ FP8/FP4/NVFP4 原生</text>
+<text x="456" y="166" font-size="11" fill="#2D2D2D">❌ 仅 NVIDIA</text>
+<text x="456" y="184" font-size="11" fill="#2D2D2D">❌ 编译 10-30 分钟</text>
+
+<!-- 底部选型指南 -->
+<rect x="30" y="215" width="600" height="150" rx="10" fill="#FAFAF8" stroke="#E8E8E4" stroke-width="1"/>
+<text x="330" y="238" text-anchor="middle" font-size="12" fill="#BA7517" font-weight="700">🎯 2026 选型决策树</text>
+<text x="50" y="262" font-size="11" fill="#534AB7" font-weight="600">聊天 / RAG / API</text>
+<text x="175" y="262" font-size="11" fill="#2D2D2D">→ vLLM（默认选择）</text>
+<text x="50" y="284" font-size="11" fill="#1D9E75" font-weight="600">Agent Loop / 结构化输出</text>
+<text x="220" y="284" font-size="11" fill="#2D2D2D">→ SGLang（吞吐优势 2-3×）</text>
+<text x="50" y="306" font-size="11" fill="#BA7517" font-weight="600">单一模型长期生产 / NVIDIA 全家桶</text>
+<text x="290" y="306" font-size="11" fill="#2D2D2D">→ TensorRT-LLM（峰值性能）</text>
+<text x="50" y="328" font-size="11" fill="#993C1D" font-weight="600">本地开发 / Mac / CPU</text>
+<text x="210" y="328" font-size="11" fill="#2D2D2D">→ Ollama + GGUF</text>
+<text x="50" y="350" font-size="11" fill="#888780">混合策略（多数团队）:</text>
+<text x="195" y="350" font-size="11" fill="#2D2D2D" font-weight="500">vLLM 主力 + SGLang 做 Agent 后端</text>
+</svg>
+</div>
+
+<h4>vLLM：为什么它是默认选择？</h4>
+<p>vLLM 的核心竞争力来自两个基石创新——它们直接回答了"为什么传统 serving 浪费了这么多 GPU 资源"：</p>
+
+<p><strong>PagedAttention：像操作系统管理内存一样管理 KV Cache</strong></p>
+<p>传统引擎为每个请求预分配最大可能的连续 KV Cache 内存块。如果 max context = 128K tokens 但平均只用 2K，<strong>98% 的内存闲置浪费</strong>——内部碎片高达 60-80%。</p>
+<p>PagedAttention 从操作系统的虚拟内存借鉴思路：将 KV Cache 切成固定大小的 page（通常 16 tokens/page），通过 block table 映射逻辑位置到物理内存，<strong>按需分配</strong>。结果：内存碎片降到 <strong>&lt;4%</strong>，同样 GPU 能塞下更多并发请求。</p>
+
+<p><strong>Continuous Batching：token 级调度消除空闲等待</strong></p>
+<p>传统 Static Batching 把 N 个请求凑一批，全部跑完才接下一批。如果某个请求生成 1000 token 其余只生成 10 个，GPU 就傻等着慢请求结束。Continuous Batching 在<strong>每个 token 步骤</strong>后重新组织 batch——完成的请求踢走，排队的新请求插入。GPU 利用率从 ~30% 飙升到 >90%。</p>
+
+<div class="card warning">
+常见误区："vLLM 比 Ollama 快所以应该用 vLLM。" —— 不对。vLLM 设计目标是<strong>高并发服务端</strong>（几十上百用户同时请求）。单用户交互式场景（你一个人跟 AI 聊天），Ollama + GGUF 的首 token 延迟可能更低，因为省去了 batching 开销。<b>匹配引擎到场景</b>才是正解。
+</div>
+
+<h4>SGLang：RadixAttention + 结构化输出的利器</h4>
+<p>SGLang（LMSYS Org，2024）的差异化来自 <strong>RadixAttention</strong>——一种基于前缀树（radix tree）的 KV Cache 共享机制。当多个请求共享系统提示、tool schema 或多轮对话历史时，RadixAttention 自动去重共享前缀，<strong>缓存命中率 75-95%</strong>，在这些场景下吞吐比 vLLM 再高 10-20%。</p>
+<p>此外 SGLang 有自己的前端编程语言（SGLang program），支持声明式的结构化输出和复杂多步生成模式，在 Agent Loop 场景中有 <strong>2-3× 吞吐优势</strong>。xAI 和 DeepSeek 内部重度使用。</p>
+
+<h4>TensorRT-LLM：NVIDIA 的终极武器</h4>
+<p>TensorRT-LLM 通过自定义 CUDA kernel fusion、tensor layout 优化、硬件特定指令调度榨干每一滴 GPU 性能。代价是：</p>
+<ul style="margin:8px 0 8px 20px">
+  <li>每次更换模型需要 10-30 分钟编译</li>
+  <li>仅支持 NVIDIA GPU（且模型覆盖有限，需要转换）</li>
+  <li>工具链深度绑定 NVIDIA 生态，可移植性差</li>
+</ul>
+<p><strong>适合的场景</strong>：单一模型长期运行、不频繁更换、追求极致吞吐（如大规模在线 API 服务）。Clarifai benchmark：GPT-OSS-120B 在 2×H100 上，TensorRT-LLM 单请求吞吐最高，但 vLLM 在高并发（100 requests）下达到 4741 tok/s 且 TTFT 最快。</p>
+</section>
+
+<!-- ====== §③ 为什么 ====== -->
+<section id="why">
+<h2><span class="num">3</span> 为什么：第一性原理——量化为什么不会崩？</h2>
+
+<h3>3.1 权重冗余的结构性来源</h3>
+<p>神经网络之所以能被大幅量化而不崩塌，根因在于<strong>权重的结构性冗余</strong>。这不是巧合——它是训练过程的自然产物：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 640 260" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ar3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<text x="320" y="22" text-anchor="middle" font-size="13" fill="#534AB7" font-weight="700">量化安全的三大结构基础</text>
+
+<!-- 1. 过参数化 -->
+<rect x="30" y="45" width="175" height="95" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="117" y="68" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="700">① 过参数化 Over-param.</text>
+<text x="117" y="88" text-anchor="middle" font-size="11" fill="#2D2D2D">参数量远超所需自由度</text>
+<text x="117" y="106" text-anchor="middle" font-size="11" fill="#2D2D2D">70B 模型的有效秩可能</text>
+<text x="117" y="124" text-anchor="middle" font-size="11" fill="#2D2D2D">只有几百万</text>
+<text x="117" y="128" text-anchor="middle" font-size="9" fill="#888780">(信息论冗余)</text>
+
+<!-- 2. 异常值稀疏性 -->
+<rect x="232" y="45" width="175" height="95" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="319" y="68" text-anchor="middle" font-size="12" fill="#185FA5" font-weight="700">② Outlier 稀疏性</text>
+<text x="319" y="88" text-anchor="middle" font-size="11" fill="#2D2D2D">少量权重承载主要信息</text>
+<text x="319" y="106" text-anchor="middle" font-size="11" fill="#2D2D2D">~1% 权重 = 95%+ 贡献</text>
+<text x="319" y="124" text-anchor="middle" font-size="11" fill="#2D2D2D">保护这 1% 就够了</text>
+<text x="319" y="128" text-anchor="middle" font-size="9" fill="#888780">(AWQ 核心假设)</text>
+
+<!-- 3. 误差各向抵消 -->
+<rect x="434" y="45" width="175" height="95" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="521" y="68" text-anchor="middle" font-size="12" fill="#BA7517" font-weight="700">③ 误差各向抵消</text>
+<text x="521" y="88" text-anchor="middle" font-size="11" fill="#2D2D2D">量化噪声非系统性偏移</text>
+<text x="521" y="106" text-anchor="middle" font-size="11" fill="#2D2D2D">正负误差在深层网络中</text>
+<text x="521" y="124" text-anchor="middle" font-size="11" fill="#2D2D2D">趋向相互中和</text>
+<text x="521" y="128" text-anchor="middle" font-size="9" fill="#888780">(GPTQ 误差反馈原理)</text>
+
+<!-- 底部公式区 -->
+<rect x="30" y="160" width="580" height="85" rx="8" fill="#f7f7f5" stroke="#E8E8E4" stroke-width="1"/>
+<text x="320" y="182" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="700">量化误差的数学视角</text>
+<text x="55" y="206" font-size="12" fill="#2D2D2D">量化引入的 MSE 误差:</text>
+<text x="55" y="228" font-size="13" fill="#534AB7" font-style="italic">  ε = ||W - round(W/s)·s||²₂  ≈ O(Δ²)  where Δ = max|w| / 2^(b-1)</text>
+<text x="55" y="245" font-size="11" fill="#888780">误差与 2^(2b) 成反比 — 从 BF16→INT8 误差增 ~65000×，但因为过参数化+outlier保护，实际感知退化 &lt;3%</text>
+</svg>
+</div>
+
+<h3>3.2 为什么不能无限压？质量悬崖</h3>
+<p>量化不是免费的——存在明确的<strong>质量悬崖（Quality Cliff）</strong>。研究（ParetoQ, 2026）揭示了一个反直觉的发现：</p>
+
+<div class="card takeaway">
+<b>ParetoQ 的核心发现（2026）</b>：bit 数和准确率的关系不是平滑曲线。在 3-4 bits 区间，量化行为像"压缩"——去掉冗余信息；但在 ≤2 bits 时，模型学到了<strong>根本不同的表征</strong>（different representations）。这意味着：固定预算下，用一个更大的模型压到 2-bit，效果反而比用一半参数量的模型压到 4-bit 更好。
+</div>
+
+<table>
+<tr><th>Bit 宽度</th><th>典型 PPL 退化</th><th>代码能力</th><th>长 CoT 推理</th><th>可用性判断</th></tr>
+<tr><td>BF16 (原始)</td><td>baseline</td><td>100%</td><td>100%</td><td>完美</td></tr>
+<tr><td>FP8</td><td>+0.1~0.3%</td><td>~99%</td><td>~99%</td><td>生产推荐</td></tr>
+<tr><td>INT4 (AWQ/GPTQ)</td><td>+1~3%</td><td>~95%</td><td>~93%</td><td>性价比最优</td></tr>
+<tr><td>INT3</td><td>+3~8%</td><td>~85%</td><td>~75%</td><td>边缘场景</td></tr>
+<tr><td>INT2 / 1.58-bit</td><td>+10%+</td><td>&lt;70%</td><td>&lt;50%</td><td>需从头训练(BitNet)</td></tr>
+</table>
+
+<h3>3.3 Serving 效率的本质：受限于 memory bandwidth</h3>
+<p>理解 Serving 性能的关键洞察：<strong>LLM 解码阶段是 memory-bound（内存带宽受限）而非 compute-bound</strong>。</p>
+<p>Decode 阶段每个新生成的 token 只需要做一次矩阵乘法（加载整个权重矩阵 × 一个向量），计算量很小但<strong>需要把所有权重从显存读到计算单元</strong>。因此：</p>
+<div class="formula">
+$$\text{Decode Throughput} \approx \frac{\text{Memory Bandwidth}}{\text{Model Size (bytes)}}$$
+</div>
+<p>这就是为什么：</p>
+<ul style="margin:8px 0 8px 20px">
+  <li><b>量化直接提速</b>：模型大小 ↓ 4x → 理论 decode throughput ↑ 4x（实际 2-3x，受 kernel 效率约束）</li>
+  <li><b>更好的 GPU 不一定更快 decode</b>：H100 vs A100 的计算峰值差 3×，但内存带宽只差 1.6×——decode 阶段差距没那么大</li>
+  <li><b>PagedAttention 的价值</b>：更多 batch → 更高的内存带宽利用率 → 更高有效吞吐</li>
+</ul>
+</section>
+
+<!-- ====== §④ 演进与对比 ====== -->
+<section id="evolution">
+<h2><span class="num">4</span> 演进与对比：2024→2026 的范式转移</h2>
+
+<h3>4.1 量化的三年演进</h3>
+
+<div class="diagram">
+<svg viewBox="0 0 660 300" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ar4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<text x="330" y="22" text-anchor="middle" font-size="13" fill="#534AB7" font-weight="700">量化技术演进时间线 (2024→2026)</text>
+
+<!-- 时间轴 -->
+<line x1="50" y1="270" x2="610" y2="270" stroke="#E8E8E4" stroke-width="2"/>
+
+<!-- 2024 -->
+<circle cx="100" cy="270" r="6" fill="#534AB7"/>
+<text x="100" y="290" text-anchor="middle" font-size="11" fill="#534AB7" font-weight="700">2024</text>
+<rect x="35" y="180" width="130" height="78" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="100" y="198" text-anchor="middle" font-size="11" fill="#534AB7" font-weight="700">INT4 黄金时代</text>
+<text x="100" y="216" text-anchor="middle" font-size="10" fill="#2D2D2D">GPTQ/AWQ 成熟</text>
+<text x="100" y="232" text-anchor="middle" font-size="10" fill="#2D2D2D">GGUF K-quant</text>
+<text x="100" y="248" text-anchor="middle" font-size="10" fill="#2D2D2D">vLLM PagedAttention</text>
+<line x1="100" y1="258" x2="100" y2="264" stroke="#534AB7" stroke-width="1.5"/>
+
+<!-- 2025 H1 -->
+<circle cx="250" cy="270" r="6" fill="#185FA5"/>
+<text x="250" y="290" text-anchor="middle" font-size="11" fill="#185FA5" font-weight="700">2025 H1</text>
+<rect x="185" y="170" width="130" height="88" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="250" y="188" text-anchor="middle" font-size="11" fill="#185FA5" font-weight="700">FP8 兴起</text>
+<text x="250" y="206" text-anchor="middle" font-size="10" fill="#2D2D2D">Hopper TE 原生支持</text>
+<text x="250" y="222" text-anchor="middle" font-size="10" fill="#2D2D2D">SpinQuant / SmoothQuant</text>
+<text x="250" y="238" text-anchor="middle" font-size="10" fill="#2D2D2D">KV Cache 量化</text>
+<text x="250" y="254" text-anchor="middle" font-size="10" fill="#2D2D2D">SGLang RadixAttention</text>
+<line x1="250" y1="258" x2="250" y2="264" stroke="#185FA5" stroke-width="1.5"/>
+
+<!-- 2025 H2 -->
+<circle cx="400" cy="270" r="6" fill="#1D9E75"/>
+<text x="400" y="290" text-anchor="middle" font-size="11" fill="#1D9E75" font-weight="700">2025 H2</text>
+<rect x="335" y="170" width="130" height="88" rx="6" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1"/>
+<text x="400" y="188" text-anchor="middle" font-size="11" fill="#1D9E75" font-weight="700">NVFP4/MXFP4 登场</text>
+<text x="400" y="206" text-anchor="middle" font-size="10" fill="#2D2D2D">Blackwell 硬件原生</text>
+<text x="400" y="222" text-anchor="middle" font-size="10" fill="#2D2D2D">BitNet b1.58 生产验证</text>
+<text x="400" y="238" text-anchor="middle" font-size="10" fill="#2D2D2D">Marlin/AWQ kernel 优化</text>
+<text x="400" y="254" text-anchor="middle" font-size="10" fill="#2D2D2D">vLLM V1 重构</text>
+<line x1="400" y1="258" x2="400" y2="264" stroke="#1D9E75" stroke-width="1.5"/>
+
+<!-- 2026 -->
+<circle cx="550" cy="270" r="6" fill="#BA7517"/>
+<text x="550" y="290" text-anchor="middle" font-size="11" fill="#BA7517" font-weight="700">2026</text>
+<rect x="485" y="170" width="130" height="88" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="550" y="188" text-anchor="middle" font-size="11" fill="#BA7517" font-weight="700">三足鼎立 + 全栈量化</text>
+<text x="550" y="206" text-anchor="middle" font-size="10" fill="#2D2D2D">NVFP4 / MXFP4 / FP4</text>
+<text x="550" y="222" text-anchor="middle" font-size="10" fill="#2D2D2D">ICLR'26: 91篇量化论文</text>
+<text x="550" y="238" text-anchor="middle" font-size="10" fill="#2D2D2D">Reasoning LLM 量化</text>
+<text x="550" y="254" text-anchor="middle" font-size="10" fill="#2D2D2D">W+A+KV+Optimizer 全4bit</text>
+<line x1="550" y1="258" x2="550" y2="264" stroke="#BA7517" stroke-width="1.5"/>
+
+<!-- 范式转移箭头 -->
+<text x="175" y="55" font-size="10" fill="#888780">"如何把 INT4 做对"</text>
+<text x="420" y="55" font-size="10" fill="#888780">"如何配好硬件"</text>
+<line x1="115" y1="45" x2="395" y2="45" stroke="#534AB7" stroke-width="1" stroke-dasharray="4 3"/>
+<text x="255" y="38" text-anchor="middle" font-size="10" fill="#534AB7" font-weight="600">核心问题转移</text>
+</svg>
+</div>
+
+<h3>4.2 ICLR 2026 的量化版图：91 篇论文揭示的方向</h3>
+<p>ICLR 2026 收录了 91 篇量化相关论文，分布在 13 个研究方向。这标志着领域从<strong>"如何把 INT4 做对"</strong>转向<strong>"如何在新的低位格式（NVFP4/MXFP4）上构建完整栈"</strong>：</p>
+
+<table>
+<tr><th>方向分类</th><th>论文数</th><th>关键词</th><th>产业信号</th></tr>
+<tr><td>PTQ（后训练量化）</td><td>38</td><td>GPTQ 改进 / 旋转补偿 / 结构化分析</td><td>INT4 仍在进化</td></tr>
+<tr><td>Hardware-aware</td><td>21</td><td>Blackwell kernel / NVFP4 原生</td><td>硬件协同是主战场</td></tr>
+<tr><td>Mixed-precision</td><td>20</td><td>层级差异化精度分配</td><td>一刀切量化过时了</td></tr>
+<tr><td>KV Cache 量化</td><td>15</td><td>Long-context VRAM 优化</td><td>Agent 场景刚需</td></tr>
+<tr><td>Diffusion/VLM 量化</td><td>12</td><td>跨架构扩展（非纯 LLM）</td><td>多模态统一趋势</td></tr>
+<tr><td>Reasoning LLM 量化</td><td>11</td><td>CoT 一致性 / 长链条推理</td><td>o1/R1 类模型新挑战</td></tr>
+<tr><td>QAT（量化感知训练）</td><td>8</td><td>Range learning / Pareto frontier</td><td>训练时量化回归</td></tr>
+<tr><td>Binary/Ternary</td><td>6</td><td>BitNet 后继 / 1-bit 网络</td><td>前沿探索</td></tr>
+</table>
+
+<h3>4.3 蒸馏的最新进展</h3>
+<p>知识蒸馏在 2025-2026 年有几个值得注意的动向：</p>
+
+<p><strong>发现 1：强老师未必更好（2026.05 最新论文）</strong></p>
+<p>Lu &amp; Liu (arXiv:2605.23857, 2026.05) 的实验挑战了常识：<strong>蒸馏预训练不一定需要强 teacher</strong>。通过控制模型大小和训练 token 量，他们创建了 strong→weak、same-level、weak→strong 三种 teacher-student 关系，发现：</p>
+<ul style="margin:8px 0 8px 20px">
+  <li>即使小而欠训练的 teacher 也能改善更大的 student</li>
+  <li>更强的 teacher 并不总是更好——push 太多可能饱和甚至反转收益</li>
+  <li>蒸馏对泛化能力（OOD / downstream）的提升大于 in-domain 拟合</li>
+</ul>
+
+<p><strong>发现 2：难度感知蒸馏（D2A2, Expert Systems 2026.05）</strong></p>
+<p>D2A2 框架将"问题的内在难度"（通过 LLM 决策不确定性度量）融入蒸馏过程：过滤阶段优先保留困难样本，训练阶段动态调整对困难样本的关注权重。<b>用更少的数据超越了现有方法</b>。</p>
+
+<p><strong>发现 3：Concrete Score Matching (CSD, arXiv:2509.25837)</strong></p>
+<p>提出离散分数匹配目标，克服 softmax 平滑和 logit shift 不变性两个限制，在 GPT-2/OpenLLaMA/Gemma 上一致超越近期 KD 目标。</p>
+
+<h3>4.4 Serving 引擎格局演变</h3>
+<table>
+<tr><th>时间</th><th>事件</th><th>意义</th></tr>
+<tr><td>2023.06</td><td>vLLM 发布</td><td>PagedAttention 定义新范式</td></tr>
+<tr><td>2024.01</td><td>SGLang 发布</td><td>RadixAttention + 结构化输出</td></tr>
+<tr><td>2025.01</td><td>vLLM V1 重构</td><td>Ground-up rewrite，成为 PyTorch Foundation 项目</td></tr>
+<tr><td>2025</td><td>DeepSeek/xAI 采用 SGLang</td><td>SGLang 从学术走向工业验证</td></tr>
+<tr><td>2026</td><td>H100 价格降至 ~$3/hr</td><td>自托管成本门槛大幅降低</td></tr>
+<tr><td>2026</td><td>FP8 成为生产标配</td><td>Hopper 卡 FP8 inference 成默认配置</td></tr>
+</table>
+</section>
+
+<!-- ====== §⑤ 与产品连接 ====== -->
+<section id="connect">
+<h2><span class="num">5</span> 与产品连接：Agent GPU 成本的工程实践</h2>
+
+<div class="card intuition">
+作为跨境支付方向的 PM 管理 6 个生产级 Agent，你不需要自己调 Marlin kernel，但你必须回答一个问题：<b>"我的 Agent 部署方案对吗？"</b>——选错引擎或量化方案，月成本可能差 5-10 倍。
+</div>
+
+<h3>5.1 Agent 推理成本的构成公式</h3>
+<p>一个 Agent 系统的月 GPU 成本可以这样分解：</p>
+<div class="formula">
+$$C_{monthly} = N_{gpu} \times C_{gpu/hr} \times 720 \approx \frac{QPS_{avg} \times T_{latency}}{U_{util}} \times C_{gpu/hr} \times 720$$
+</div>
+<p>其中 $U_{util}$ 是 GPU 利用率（vLLM continuous batching 可推到 80-90%），$T_{latency}$ 是单请求平均服务时间。关键杠杆：</p>
+
+<table>
+<tr><th>杠杆</th><th>手段</th><th>典型效果</th><th>你的 Agent 适用?</th></tr>
+<tr><td>模型体积</td><td>BINT4/AWQ 量化</td><td>-75% 显存 → 更多并发</td><td>All agents</td></tr>
+<tr><td>解码速度</td><td>FP8 + Speculative Decoding</td><td>↑ 2-3× throughput</td><td>FXAgent (高QPS)</td></tr>
+<tr><td>显存效率</td><td>PagedAttention + KV 量化</td><td>↓ 60-80% KV 碎片</td><td>DDAgent (长context)</td></tr>
+<tr><td>前缀复用</td><td>SGLang RadixAttention</td><td>↑ 10-20% (共享prompt场景)</td><td>BAAgent/KBAgent</td></tr>
+<tr><td>批处理效率</td><td>Continuous Batching</td><td>↑ 3-23× vs static</td><td>All agents</td></tr>
+</table>
+
+<h3>5.2 六个 Agent 的部署画像</h3>
+
+<p>基于 Fitz 管理的实际 Agent，给出具体建议：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 660 420" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ar5" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<text x="330" y="22" text-anchor="middle" font-size="13" fill="#534AB7" font-weight="700">Fitz 六大 Agent · 量化/Serving 选型映射</text>
+
+<!-- DDAgent -->
+<rect x="30" y="40" width="195" height="82" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="127" y="58" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="700">DDAgent (跨境汇款路由)</text>
+<text x="127" y="76" text-anchor="middle" font-size="10" fill="#2D2D2D">特征：长上下文(iwiki历史QA)</text>
+<text x="127" y="92" text-anchor="middle" font-size="10" fill="#2D2D2D">推荐：AWQ INT4 + vLLM</text>
+<text x="127" y="108" text-anchor="middle" font-size="10" fill="#1D9E75" font-weight="600">重点：KV Cache 量化</text>
+
+<!-- FXAgent -->
+<rect x="240" y="40" width="195" height="82" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="337" y="58" text-anchor="middle" font-size="12" fill="#185FA5" font-weight="700">FXAgent (汇率咨询)</text>
+<text x="337" y="76" text-anchor="middle" font-size="10" fill="#2D2D2D">特征：40万月活，250次/日</text>
+<text x="337" y="92" text-anchor="middle" font-size="10" fill="#2D2D2D">推荐：FP8 + Speculative Decode</text>
+<text x="337" y="108" text-anchor="middle" font-size="10" fill="#1D9E75" font-weight="600">重点：Throughput 优先</text>
+
+<!-- BAAgent -->
+<rect x="450" y="40" width="195" height="82" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="547" y="58" text-anchor="middle" font-size="12" fill="#BA7517" font-weight="700">BAAgent (经营分析)</text>
+<text x="547" y="76" text-anchor="middle" font-size="10" fill="#2D2D2D">特征：固定报表模板，重复 prompt</text>
+<text x="547" y="92" text-anchor="middle" font-size="10" fill="#2D2D2D">推荐：SGLang RadixAttention</text>
+<text x="547" y="108" text-anchor="middle" font-size="10" fill="#1D9E75" font-weight="600">重点：Prefix Cache 命中率</text>
+
+<!-- KBAgent -->
+<rect x="30" y="138" width="195" height="82" rx="8" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="127" y="156" text-anchor="middle" font-size="12" fill="#1D9E75" font-weight="700">KBAgent (知识库问答)</text>
+<text x="127" y="174" text-anchor="middle" font-size="10" fill="#2D2D2D">特征：443条HQAs，V5准确率~82%</text>
+<text x="127" y="190" text-anchor="middle" font-size="10" fill="#2D2D2D">推荐：AWQ INT4 + vLLM</text>
+<text x="127" y="206" text-anchor="middle" font-size="10" fill="#993C1D" font-weight="600">关注：量化后准确率变化</text>
+
+<!-- TRSAgent -->
+<rect x="240" y="138" width="195" height="82" rx="8" fill="#FDE8E0" stroke="#993C1D" stroke-width="1.5"/>
+<text x="337" y="156" text-anchor="middle" font-size="12" fill="#993C1D" font-weight="700">TRSAgent (售后工单)</text>
+<text x="337" y="174" text-anchor="middle" font-size="10" fill="#2D2D2D">特征：解决率85.9%，分类任务</text>
+<text x="337" y="190" text-anchor="middle" font-size="10" fill="#2D2D2D">推荐：GGUF Q4_K_M (轻量够用)</text>
+<text x="337" y="206" text-anchor="middle" font-size="10" fill="#993C1D" font-weight="600">注意：分类对量化鲁棒</text>
+
+<!-- 退税Agent -->
+<rect x="450" y="138" width="195" height="82" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="547" y="156" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="700">离境退税 Agent</text>
+<text x="547" y="174" text-anchor="middle" font-size="10" fill="#2D2D2D">特征：差异化定价，多渠道</text>
+<text x="547" y="190" text-anchor="middle" font-size="10" fill="#2D2D2D">推荐：AWQ/vLLM + 多租户隔离</text>
+<text x="547" y="206" text-anchor="middle" font-size="10" fill="#993C1D" font-weight="600">注意：成本敏感业务</text>
+
+<!-- 底部总结 -->
+<rect x="30" y="245" width="600" height="160" rx="10" fill="#f7f7f5" stroke="#E8E8E4" stroke-width="1"/>
+<text x="330" y="268" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="700">🎯 PM 行动清单</text>
+<text x="50" y="292" font-size="12" fill="#2D2D2D" font-weight="600">① 先问场景再选引擎</text>
+<text x="280" y="292" font-size="11" fill="#888780">高QPS? SGLang/vLLM | 单用户? Ollama | 长上下文? KV量化必做</text>
+<text x="50" y="315" font-size="12" fill="#2D2D2D" font-weight="600">② 量化是免费的午餐（大部分时候）</text>
+<text x="280" y="315" font-size="11" fill="#888780">INT4 省 75% 显存，&lt;3% 质量损失；FP8 在 Hopper 上几乎无损</text>
+<text x="50" y="338" font-size="12" fill="#2D2D2D" font-weight="600">③ 关注真正的瓶颈</text>
+<text x="280" y="338" font-size="11" fill="#888780">短 prompt → 权重量化就够了；长对话 → KV Cache 才是大头</text>
+<text x="50" y="361" font-size="12" fill="#2D2D2D" font-weight="600">④ 蒸馏是战略投资</text>
+<text x="280" y="361" font-size="11" fill="#888780">通用小模型(Qwen 7B)蒸馏后可替代 70B 处理 80% 场景</text>
+<text x="50" y="384" font-size="12" fill="#2D2D2D" font-weight="600">⑤ 监控量化后的"隐形退化"</text>
+<text x="280" y="384" font-size="11" fill="#888780">尤其关注长 CoT 推理和数值精度敏感任务（如汇率计算）</text>
+</svg>
+</div>
+
+<h3>5.3 从 Scaling Law 到产品决策</h3>
+<p>Scaling Law（详见 D5 deep-dive `5-d2-scaling-law-product.html`）告诉我们：模型能力随参数量和训练 token 量呈幂律增长。但对 PM 来说，更有用的结论是：</p>
+<ul style="margin:8px 0 8px 20px">
+  <li><b>小模型 + 蒸馏 &gt; 大模型量化</b>：在固定预算下，一个蒸馏好的 7B 模型往往优于压到 INT2 的 70B 模型（ParetoQ 结论）</li>
+  <li><b>QPS 每 ↑10x，成本非线性下降</b>：因为 GPU 固定成本分摊到更多请求上，continuous batching 让利用率突破 90%</li>
+  <li><b>长上下文的边际成本极高</b>：KV Cache 随序列长度线性增长，32K context 的 KV Cache 可能超过模型权重本身</li>
+</ul>
+
+<div class="card takeaway">
+<b>本章核心结论：</b>量化+Serving 是 Agent 产品的"基础设施税"。选对了（AWQ+vLLM+KV 量化），70B 模型可以在单张 H100 上以亚百毫秒延迟服务数百并发用户。选错了（BF16 原始模型 + naive serving），同样的硬件只能服务十几个用户。这个差距就是 PM 对技术选型的判断力的价值所在。
+</div>
+</section>
+
+<!-- 底部导航 -->
+<div class="chapter-footer">
+  <a href="../../INDEX.html">← 返回知识图谱</a>
+  <a href="4.2-quantization-serving-quiz.html">📝 去做 Quiz（10 题）→</a>
+</div>
+
+</body>
+</html>

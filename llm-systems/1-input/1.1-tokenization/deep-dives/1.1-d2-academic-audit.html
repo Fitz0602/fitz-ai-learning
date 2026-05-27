@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>1.1 Tokenization · 行业共识审计 v3 · 权威模型公司实证</title>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08); --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE; --amber: #BA7517; --amber-bg: #FAEEDA;
+  --blue: #185FA5; --blue-bg: #E6F1FB; --coral: #993C1D; --coral-bg: #FAECE7;
+  --red: #C41E3A; --red-bg: #FDE8EB;
+}
+* { box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.75; max-width: 800px; margin: 0 auto;
+  padding: 32px 24px 80px; font-size: 15px; }
+h1 { font-size: 22px; font-weight: 700; margin: 4px 0 8px; }
+.subtitle { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+h2 { font-size: 18px; font-weight: 600; margin: 36px 0 14px; padding-left: 12px; border-left: 4px solid var(--purple); }
+h3 { font-size: 15px; font-weight: 600; margin: 22px 0 10px; color: #333; }
+h4 { font-size: 13.5px; font-weight: 600; margin: 16px 0 8px; color: var(--purple); }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin: 16px 0; }
+.card.critical { background: var(--red-bg); border-color: rgba(196,30,58,0.2); }
+.card.warning { background: var(--coral-bg); border-color: rgba(153,60,29,0.15); }
+.card.deepen { background: var(--amber-bg); border-color: rgba(186,117,23,0.15); }
+.card.takeaway { background: var(--teal-bg); border-color: rgba(29,158,117,0.15); }
+.card.info { background: var(--blue-bg); border-color: rgba(24,95,165,0.15); }
+.card-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px; }
+.card.critical .card-title { color: var(--red); }
+.card.warning .card-title { color: var(--coral); }
+.card.deepen .card-title { color: var(--amber); }
+.card.takeaway .card-title { color: var(--teal); }
+.card.info .card-title { color: var(--blue); }
+table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13.5px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 600; background: #f7f7f4; color: var(--muted); font-size: 12px; white-space: nowrap; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: #f1f1ee; padding: 2px 6px; border-radius: 4px; color: #d63384; }
+strong { font-weight: 600; }
+em { color: #555; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+.tag.p0 { background: var(--red-bg); color: var(--red); }
+.tag.p1 { background: var(--coral-bg); color: var(--coral); }
+.tag.p2 { background: var(--amber-bg); color: var(--amber); }
+.tag.ok { background: var(--teal-bg); color: var(--teal); }
+.gap-table td:nth-child(2) { width: 70%; }
+.source-tag { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-left: 4px; }
+.source-tag.cn { background: #EEEDFE; color: #534AB7; }
+.source-tag.intl { background: #E6F1FB; color: #185FA5; }
+.verdict-box { padding: 16px 20px; border-radius: 10px; margin: 18px 0; }
+.verdict-pass { background: var(--teal-bg); border-left: 4px solid var(--teal); }
+.verdict-warn { background: var(--amber-bg); border-left: 4px solid var(--amber); }
+.verdict-fail { background: var(--red-bg); border-left: 4px solid var(--red); }
+.ref-list { font-size: 13.5px; line-height: 1.9; }
+.ref-list li { margin-bottom: 4px; }
+.changelog { font-size: 13px; }
+.changelog td:first-child { white-space: nowrap; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div style="border-bottom: 1px solid var(--border); padding-bottom: 18px; margin-bottom: 28px;">
+  <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+    <span class="tag" style="background:var(--purple-bg);color:var(--purple);">T1 LLM 系统</span>
+    <span class="tag" style="background:#f1f1f1;color:var(--muted);">1.1 Tokenization</span>
+    <span class="tag p0">Deep Dive · 行业共识审计 v3</span>
+    <a href="../1.1-tokenization-chapter.html" style="margin-left:auto;font-size:12px;color:#534AB7;text-decoration:none;border:1px solid #7F77DD;padding:3px 10px;border-radius:12px;font-weight:500;">← 返回 1.1 章节</a>
+  </div>
+  <h1>📋 Tokenizer 章节行业共识审计</h1>
+  <div class="subtitle">基于权威 AI 模型公司官方发布的 2025–2026 行业共识 · 非论文驱动</div>
+  <div style="font-size:12px;color:var(--muted);margin-top:8px;">
+    审计日期：2026-05-15 · 信息源优先级：① 中国头部开源（Qwen/DeepSeek/智谱）→ ② 国际头部（Meta/Google/OpenAI/Mistral/Anthropic）→ ③ 顶级会议论文仅补充
+  </div>
+</div>
+
+<!-- ============================================================ -->
+<h2>一、审计方法论 — 与 v2 的关键区别</h2>
+
+<div class="card info">
+  <div class="card-title">▎v2 → v3 的核心变化</div>
+  <table style="font-size:13px;">
+    <tr><th>维度</th><th>v2（已废弃）</th><th>v3（本次）</th></tr>
+    <tr><td><b>信息源定义</b></td><td>以学术论文为主要依据</td><td>以<strong>权威模型公司官方发布</strong>为主要依据</td></tr>
+    <tr><td><b>优先级</b></td><td>arXiv → 顶会 → 行业</td><td>① 中国头部开源（Qwen/DeepSeek/智谱）→ ② 国际头部（Meta/Google/OpenAI/Mistral/Anthropic）→ ③ 顶级会议论文仅补充</td></tr>
+    <tr><td><b>过滤规则</b></td><td>无</td><td>移除非权威来源（个人博客/未产品化的学术发现/第三方分析）</td></tr>
+    <tr><td><b>共识判定</b></td><td>1 篇论文 = "最新认知"</td><td>需多家权威公司<strong>行动一致</strong>才算行业共识</td></tr>
+  </table>
+</div>
+
+<div class="card critical" style="margin-top:16px;">
+  <div class="card-title">🔴 v2 的核心问题</div>
+  v2 引用了 10 篇文献，其中 8 篇是学术论文。关键问题：
+  <ul style="margin:6px 0;">
+    <li><b>GlitchMiner AAAI 2026</b> — 学术研究，尚无权威公司据此调整产品或 tokenizer 设计</li>
+    <li><b>Token Awareness 论文</b> — 学术发现，但行业已用行动验证（3 位数字切分），不需要论文来"证明"</li>
+    <li><b>Broken Tokens NeurIPS 2025</b> — 推理时干预 tokenization 是学术方向，无公司产品化</li>
+    <li><b>TokSuite</b> — 学术评估框架，无公司产品集成</li>
+  </ul>
+  <strong>v3 原则：论文发现 ≠ 行业共识。只有权威公司用行动验证的才算。</strong>
+</div>
+
+<!-- ============================================================ -->
+<h2>二、权威信息源总览</h2>
+
+<div class="card takeaway">
+  <div class="card-title">📚 v3 审计引用的权威来源（全部为公司官方发布）</div>
+  <table style="font-size:13px;">
+    <tr><th>来源</th><th>级别</th><th>关键信息</th></tr>
+    <tr><td><b>Qwen3 / Qwen3.5</b>（阿里通义，2025–2026）</td><td><span class="source-tag cn">🇨🇳 中国头部</span></td><td>Qwen3 词表 151,669（BBPE）；Qwen3.5 扩至 250K，官方称编码效率提升 10–60%，语言覆盖 119→201</td></tr>
+    <tr><td><b>DeepSeek-V3 / R2</b>（深度求索，2024–2026）</td><td><span class="source-tag cn">🇨🇳 中国头部</span></td><td>V3 词表 128K（BBPE），技术报告明确"byte-level BPE with extended vocabulary"</td></tr>
+    <tr><td><b>GPT-4o / GPT-5 / o3</b>（OpenAI，2024–2025）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>o200k_base 词表 ~200K（BBPE），tiktoken 库实现</td></tr>
+    <tr><td><b>LLaMA 4 Scout/Maverick</b>（Meta，2025-04）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>词表 202,048，<strong>从 SentencePiece 切换到 tiktoken</strong>，预分词用 O200K_PATTERN，特殊 token 256→2,048（含 reasoning token）</td></tr>
+    <tr><td><b>Gemini 3 / Gemma 3</b>（Google，2025）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>词表 262,144（SentencePiece Unigram），<strong>唯一仍用 SentencePiece 的头部模型</strong></td></tr>
+    <tr><td><b>Mistral Small 3.1</b>（Mistral AI，2025-03）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>Tekken tokenizer（BBPE via tiktoken），词表 131,072</td></tr>
+    <tr><td><b>Claude Opus 4.6 / Sonnet 4</b>（Anthropic，2025）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>专有 BPE 变体，词表 ~65K（<strong>头部模型中最小</strong>）</td></tr>
+    <tr><td><b>BLT / Fast BLT</b>（Meta + Stanford，2025–2026）</td><td><span class="source-tag intl">🌍 国际头部</span></td><td>ACL 2025 开源权重；2026-05 Fast BLT 解决逐字节生成瓶颈；<strong>尚无生产模型采用</strong></td></tr>
+    <tr><td><b>Over-Tokenized Transformer</b>（ByteDance，ICML 2025）</td><td><span class="source-tag cn">🇨🇳 中国头部</span></td><td>词表扩大到 2 倍可达到模型参数翻倍的效果，<strong>词表是 scaling law 的关键维度</strong></td></tr>
+  </table>
+</div>
+
+<!-- ============================================================ -->
+<h2>三、逐节审计结果</h2>
+
+<!-- ==================== §① 是什么 ==================== -->
+<h3 id="s1">§① 是什么 — 模型不识字，只识ID</h3>
+
+<table class="gap-table">
+<tr><th style="width:90px;">级别</th><th>审计结论</th></tr>
+<tr><td><span class="tag ok">OK</span></td><td>
+<strong>核心概念框架准确</strong>：Token / Vocabulary / Tokenizer / Embedding 四个术语定义正确。ID→token→embedding 的叙事链对 PM 友好。
+</td></tr>
+<tr><td><span class="tag p1">P1</span></td><td>
+<strong>词表大小数据严重过时</strong>。章节写"GPT-4 词表大约 100K，DeepSeek 大约 130K"，但 2025–2026 行业已巨变：
+<table style="font-size:13px;margin:8px 0;">
+<tr><th>模型</th><th>词表大小</th><th>Tokenizer</th><th>信息源</th></tr>
+<tr><td>GPT-4o / GPT-5</td><td>~200,000</td><td>tiktoken o200k_base</td><td>OpenAI 官方</td></tr>
+<tr><td>LLaMA 4</td><td>202,048</td><td>tiktoken</td><td>Meta 官方 / HuggingFace</td></tr>
+<tr><td>Gemini 3 / Gemma 3</td><td>262,144</td><td>SentencePiece</td><td>Google 官方博客</td></tr>
+<tr><td>Qwen3</td><td>151,669</td><td>BBPE</td><td>Qwen3 技术报告</td></tr>
+<tr><td>Qwen3.5</td><td>250,000</td><td>BBPE</td><td>Qwen3.5 官方博客</td></tr>
+<tr><td>DeepSeek-V3</td><td>128,000</td><td>BBPE</td><td>DeepSeek-V3 技术报告</td></tr>
+<tr><td>Mistral Tekken</td><td>131,072</td><td>tiktoken</td><td>Mistral 官方</td></tr>
+<tr><td>Claude</td><td>~65,536</td><td>专有 BPE</td><td>社区推断</td></tr>
+</table>
+<strong>3 年词表从 32K→262K（8 倍增长）</strong>，这是行业最重要的趋势之一。章节仍停留在"GPT-4 100K"时代。
+</td></tr>
+</table>
+
+<div class="verdict-box verdict-warn">
+  <strong>⚠️ §① 评级：通过+建议</strong>（1 处 P1：词表数据需全面更新）
+</div>
+
+<!-- ==================== §② 怎么实现 ==================== -->
+<h3 id="s2">§② 怎么实现 — 工业级 BPE 的真实流程</h3>
+
+<table class="gap-table">
+<tr><th style="width:90px;">级别</th><th>审计结论</th></tr>
+<tr><td><span class="tag ok">OK</span></td><td>
+<strong>4 阶段流水线框架正确</strong>：NFC 归一化 → 正则预分词 → UTF-8 字节化 → BPE 合并，与所有权威公司的实现一致。cl100k_base 正则代码展示也准确。
+</td></tr>
+<tr><td><span class="tag ok">OK</span></td><td>
+<strong>BPE 训练 6 步算法正确</strong>：频次统计 → 选最高频对 → 记录 merge → 替换 → 判断终止。merges.txt 顺序优先级（非贪心最长匹配）的澄清也是正确的。
+</td></tr>
+<tr><td><span class="tag p2">P2</span></td><td>
+<strong>仅展示 cl100k_base，未提 o200k_base / O200K_PATTERN</strong>。LLaMA 4 和 GPT-4o/GPT-5 均使用 O200K_PATTERN 预分词正则（Meta 官方 torchtune 源码确认），这是 2025 年后新模型的标准。章节只展示了 cl100k_base 的正则，建议补充说明 o200k_base 的存在和差异。
+</td></tr>
+</table>
+
+<div class="verdict-box verdict-pass">
+  <strong>✅ §② 评级：基本通过</strong>（1 处 P2：预分词正则需补充 o200k_base）
+</div>
+
+<!-- ==================== §③ 为什么 ==================== -->
+<h3 id="s3">§③ 为什么这样 — BPE 算法的设计哲学</h3>
+
+<table class="gap-table">
+<tr><th style="width:90px;">级别</th><th>审计结论</th></tr>
+<tr><td><span class="tag ok">OK</span></td><td>
+<strong>BPE 核心思想阐述准确</strong>：从字符级开始反复合并最高频相邻对 → 高频词整token、低频词子词组合、OOV 兜底。与所有权威公司实践一致。
+</td></tr>
+<tr><td><span class="tag ok">OK</span></td><td>
+<strong>信息论 + Zipf 定律视角正确</strong>：幂律分布 → BPE 子词策略是最优压缩，这一理论框架被行业广泛认可。
+</td></tr>
+<tr><td><span class="tag p1">P1</span></td><td>
+<strong>"BPE 与数字推理因果链"引用 3 篇论文作为支撑，但行业已用行动验证</strong>。章节写"2024-2025 多篇论文系统证实"，但更准确的说法是：
+<ul style="margin:4px 0;">
+<li><b>行业共识</b>：OpenAI（cl100k_base）、Meta（LLaMA 3/4）、DeepSeek-V3、Qwen3 <strong>全部采用 <code>\p{N}{1,3}</code> 数字 3 位切分</strong>——4+ 家权威公司行动一致，这才是真正的共识</li>
+<li><b>论文角色</b>：Singh & Strouse 2024 和 Token Awareness 论文是<b>学术解释</b>，非共识来源。行业是先做（GPT-4 用 3 位切分），论文后来解释为什么</li>
+</ul>
+建议：把叙事从"论文证明"改为"<b>行业先行动（4+ 家公司一致采用 3 位切分），学术后解释</b>"。
+</td></tr>
+<tr><td><span class="tag p2">P2</span></td><td>
+<strong>"GPT-2 时代允许任意长度数字合并 → 数学崩溃"表述过于简化</strong>。实际上 GPT-2 的 BPE 合并确实会让长数字成为整体 token，但"数学崩溃"的说法缺乏权威公司官方确认。更准确：GPT-2 词表 50K，长数字偶然合并导致表示不稳定，3 位规则是解决方案。
+</td></tr>
+<tr><td><span class="tag p1">P1</span></td><td>
+<strong>缺失：词表大小是 scaling law 的关键维度</strong>。ByteDance ICML 2025（<em>Over-Tokenized Transformer</em>）证明：<b>词表扩大到 2 倍 ≈ 模型参数翻倍的效果，且无额外推理成本</b>。Qwen3.5 官方数据也验证了这一点：词表 150K→250K，编码效率提升 10–60%。这是 §③ "为什么 BPE 有效" 的关键补充——不只是 Zipf 定律，词表大小本身是可 scaling 的维度。
+</td></tr>
+</table>
+
+<div class="verdict-box verdict-warn">
+  <strong>⚠️ §③ 评级：通过+建议</strong>（2 处 P1：叙事逻辑修正 + 词表 scaling law；1 处 P2）
+</div>
+
+<!-- ==================== §④ 演进 ==================== -->
+<h3 id="s4">§④ 演进与对比 — BPE 的几个变种</h3>
+
+<table class="gap-table">
+<tr><th style="width:90px;">级别</th><th>审计结论</th></tr>
+<tr><td><span class="tag p0">P0</span></td><td>
+<strong>演进表存在事实错误：LLaMA 列在 SentencePiece 下已过时</strong>。章节写：
+<table style="font-size:13px;margin:8px 0;">
+<tr><th>名字</th><th>使用者</th><th>核心区别</th></tr>
+<tr><td>Byte-level BPE</td><td>GPT-2/3/4, Claude, DeepSeek</td><td>…</td></tr>
+<tr><td>SentencePiece (Unigram)</td><td>Google T5/Gemma, LLaMA-1</td><td>…</td></tr>
+</table>
+<b>问题</b>：
+<ul style="margin:4px 0;">
+<li>"LLaMA-1"已过时——LLaMA 3/4 均使用 tiktoken（Byte-level BPE），这是 2024–2025 最重大的 tokenizer 切换之一</li>
+<li>"GPT-2/3/4"应更新为"GPT-2/3/4/4o/5"，GPT-4o/GPT-5 用 o200k_base</li>
+<li>遗漏 LLaMA 4 和 Mistral Tekken</li>
+</ul>
+<b>权威来源</b>：Meta 官方 torchtune 代码明确 LLaMA 4 使用 tiktoken + O200K_PATTERN；HuggingFace transformers 文档确认 LLaMA 4 词表 202,048。
+</td></tr>
+<tr><td><span class="tag p0">P0</span></td><td>
+<strong>缺失：Byte-level BPE 已成为行业主导标准</strong>。2025–2026 的明确格局：
+<table style="font-size:13px;margin:8px 0;">
+<tr><th>阵营</th><th>公司/模型</th><th>Tokenizer</th></tr>
+<tr><td><b>Byte-level BPE（主流）</b></td><td>OpenAI (GPT-4o/5) + Meta (LLaMA 3/4) + DeepSeek + Qwen + Mistral</td><td>tiktoken / BBPE</td></tr>
+<tr><td><b>SentencePiece（少数派）</b></td><td>Google (Gemini 3 / Gemma 3)</td><td>SentencePiece Unigram</td></tr>
+<tr><td><b>专有 BPE</b></td><td>Anthropic (Claude)</td><td>专有实现</td></tr>
+</table>
+<b>5 家头部公司使用 Byte-level BPE，1 家用 SentencePiece</b>——这是明确的行业共识。章节的演进表完全没有传达这个格局。
+</td></tr>
+<tr><td><span class="tag p0">P0</span></td><td>
+<strong>缺失：3 年词表 8 倍增长趋势</strong>。这是 2023–2026 tokenizer 领域最显著的变化，但章节完全没提：
+<table style="font-size:13px;margin:8px 0;">
+<tr><th>时间</th><th>模型</th><th>词表</th><th>增量</th></tr>
+<tr><td>2023</td><td>LLaMA 2</td><td>32,000</td><td>—</td></tr>
+<tr><td>2024-04</td><td>LLaMA 3</td><td>128,256</td><td>4×</td></tr>
+<tr><td>2024-12</td><td>DeepSeek-V3</td><td>128,000</td><td>—</td></tr>
+<tr><td>2025-03</td><td>Mistral Tekken</td><td>131,072</td><td>—</td></tr>
+<tr><td>2025-04</td><td>Qwen3</td><td>151,669</td><td>~1.2×</td></tr>
+<tr><td>2025-04</td><td>LLaMA 4</td><td>202,048</td><td>1.6×</td></tr>
+<tr><td>2024–25</td><td>GPT-4o/5</td><td>~200,000</td><td>2×（vs cl100k）</td></tr>
+<tr><td>2025</td><td>Gemini 3</td><td>262,144</td><td>行业最大</td></tr>
+<tr><td>2026-02</td><td>Qwen3.5</td><td>250,000</td><td>1.7×（vs Qwen3）</td></tr>
+</table>
+驱动力：<b>多语言支持 + 编码效率 + ByteDance ICML 2025 证明词表 scaling 性价比极高</b>。
+</td></tr>
+<tr><td><span class="tag p1">P1</span></td><td>
+<strong>BLT 时效更新不完整</strong>。章节在 §③ 提到 TokSuite 论文，但 §④ 演进节未更新 BLT 状态：
+<ul style="margin:4px 0;">
+<li>2024：原始论文发布</li>
+<li>2025-05：Meta 开源权重到 HuggingFace</li>
+<li>2025-09：HuggingFace transformers 正式集成</li>
+<li><b>2026-05：Meta + Stanford 发布 Fast BLT（BLT Diffusion）</b>，解决逐字节生成瓶颈，arxiv 2605.08044</li>
+</ul>
+<b>但</b>：截至 2026-05，<strong>仍无任何生产模型采用 BLT 作为主 tokenizer</strong>。所有头部公司（OpenAI/Meta/Google/DeepSeek/Qwen）仍使用 BPE。BLT 是重要的研究方向，但不是行业共识。
+</td></tr>
+<tr><td><span class="tag p1">P1</span></td><td>
+<strong>缺失：LLaMA 4 的特殊 token 扩展（reasoning token）</strong>。LLaMA 4 特殊 token 从 256→2,048（8 倍），新增 <code>thinking_start</code> / <code>thinking_end</code>。这是 tokenizer 支撑 reasoning 能力的新维度，章节 §④ 完全没提。
+</td></tr>
+</table>
+
+<div class="verdict-box verdict-fail">
+  <strong>❌ §④ 评级：需要重大修订</strong>（3 处 P0：演进表事实错误 + Byte-level BPE 主导格局 + 词表 8 倍增长趋势；2 处 P1）
+</div>
+
+<!-- ==================== §⑤ 产品 ==================== -->
+<h3 id="s5">§⑤ 与产品连接 — 你为什么要懂这些</h3>
+
+<table class="gap-table">
+<tr><th style="width:90px;">级别</th><th>审计结论</th></tr>
+<tr><td><span class="tag ok">OK</span></td><td>
+<strong>成本估算和上下文窗口规划逻辑正确</strong>：中文 token 比英文贵 2–3 倍、128K 上下文对中文实际容量更少——这些结论仍然成立。
+</td></tr>
+<tr><td><span class="tag p1">P1</span></td><td>
+<strong>模型选型建议需更新</strong>。章节写"不同模型的 tokenizer 差异很大——同一段文本在 GPT-4o 和 Qwen2 上的 token 数可能差 30%"，但数据已过时：
+<ul style="margin:4px 0;">
+<li>GPT-4o（o200k_base）中文已大幅改善——从 GPT-2 的 53 token 降到 15 token（降 70%）</li>
+<li>Qwen3.5 词表 250K，官方称编码效率提升 10–60%</li>
+<li>2025 年后，<b>头部模型的中文 token 效率差距在缩小</b>，而非扩大</li>
+</ul>
+建议：更新为"选模型时优先选大词表模型（200K+），中文场景下 o200k_base / Qwen3.5 / Gemini 3 的 token 效率已接近"。
+</td></tr>
+<tr><td><span class="tag p1">P1</span></td><td>
+<strong>缺失：词表大小直接影响推理成本（但非线性）</strong>。大词表 = embedding 矩阵更大 = 参数更多，但 ByteDance ICML 2025 证明词表扩大的性价比远超模型参数扩大。这是 PM 做模型选型时必须知道的：<b>选大词表模型不会显著增加推理延迟，但能显著降低 token 消耗</b>。
+</td></tr>
+<tr><td><span class="tag p2">P2</span></td><td>
+<strong>幻觉根因分析缺少 tokenizer 改进方向</strong>。章节建议"在 system prompt 里教模型这个词是什么"，但未提 o200k_base / Qwen3.5 大词表已经减少了专有名词被切碎的概率。选大词表模型本身就是解法之一。
+</td></tr>
+</table>
+
+<div class="verdict-box verdict-warn">
+  <strong>⚠️ §⑤ 评级：通过+建议</strong>（2 处 P1：模型选型更新 + 词表与推理成本关系；1 处 P2）
+</div>
+
+<!-- ============================================================ -->
+<h2>四、审计结论汇总</h2>
+
+<table>
+<tr><th>节</th><th>评级</th><th>P0</th><th>P1</th><th>P2</th><th>关键发现</th></tr>
+<tr><td>① 是什么</td><td>⚠️ Pass+</td><td>0</td><td>1</td><td>0</td><td>词表数据严重过时</td></tr>
+<tr><td>② 怎么实现</td><td>✅ Pass</td><td>0</td><td>0</td><td>1</td><td>4 阶段框架正确，缺 o200k_base</td></tr>
+<tr><td>③ 为什么</td><td>⚠️ Pass+</td><td>0</td><td>2</td><td>1</td><td>叙事逻辑修正 + 词表 scaling law</td></tr>
+<tr><td>④ 演进</td><td>❌ Fail</td><td>3</td><td>2</td><td>0</td><td>事实错误 + 缺主导格局 + 缺词表增长趋势</td></tr>
+<tr><td>⑤ 产品</td><td>⚠️ Pass+</td><td>0</td><td>2</td><td>1</td><td>模型选型更新 + 词表推理成本</td></tr>
+<tr><td><b>整体</b></td><td><b>⭐⭐⭐</b></td><td><b>3</b></td><td><b>7</b></td><td><b>3</b></td><td><b>§④ 是短板，基础框架扎实</b></td></tr>
+</table>
+
+<div class="card critical">
+  <div class="card-title">🔴 行业共识核心发现（权威公司行动验证）</div>
+  <ol style="margin:0;padding-left:20px;">
+  <li><b>Byte-level BPE 是绝对主流</b>：5/6 头部公司使用（OpenAI/Meta/DeepSeek/Qwen/Mistral），仅 Google 用 SentencePiece——<em>这是行业共识，不是论文观点</em></li>
+  <li><b>词表 3 年 8 倍增长</b>：32K→262K，所有权威公司在扩大词表——<em>Qwen3.5 官方称 150K→250K 效率提升 10–60%</em></li>
+  <li><b>3 位数字切分是共识</b>：4+ 家公司在预分词阶段强制 <code>\p{N}{1,3}</code>——<em>先有工程实践，后有学术解释</em></li>
+  <li><b>LLaMA 从 SentencePiece 切换到 tiktoken</b>：这是 2024 年最重大的 tokenizer 架构切换——<em>Meta 官方代码确认</em></li>
+  <li><b>词表是 scaling law 的关键维度</b>：ByteDance ICML 2025 证明，Qwen3.5 用行动验证——<em>大词表不显著增加推理延迟，但显著降低 token 消耗</em></li>
+  <li><b>BLT 尚未工业化</b>：2025 开源 + 2026 Fast BLT，但无生产模型采用——<em>研究前沿 ≠ 行业共识</em></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2>五、v2→v3 差异日志</h2>
+
+<table class="changelog">
+<tr><th>v2 结论</th><th>v3 变化</th><th>原因</th></tr>
+<tr><td>Glitch tokens：引用 AAAI 2026 论文</td><td><span class="tag p2">P2→移除</span></td><td>学术研究，无公司产品化，不符合"权威公司行动验证"标准</td></tr>
+<tr><td>数字推理因果链：引用 3 篇论文</td><td><span class="tag p1">P0→P1</span> 降级</td><td>行业已用行动验证（4+ 家公司 3 位切分），论文只是学术解释</td></tr>
+<tr><td>BLT："已工业化"（v2 修正 v1 的"未工业化"）</td><td><span class="tag p1">修正</span></td><td>2025 开源 ≠ 工业化。截至 2026-05 无生产模型采用，属于"研究前沿"而非"行业共识"</td></tr>
+<tr><td>TokSuite：引用为评估框架</td><td><span class="tag p2">P2→移除</span></td><td>学术工具，无公司产品集成</td></tr>
+<tr><td>推理时干预 tokenization：NeurIPS 2025</td><td><span class="tag p2">移除</span></td><td>学术方向，无公司产品化</td></tr>
+<tr><td>—</td><td><span class="tag p0">新增 P0</span></td><td>§④ LLaMA 列在 SentencePiece 下已过时（v2 未发现此问题）</td></tr>
+<tr><td>—</td><td><span class="tag p0">新增 P0</span></td><td>§④ 缺失 Byte-level BPE 主导格局（5/6 家公司）</td></tr>
+<tr><td>—</td><td><span class="tag p0">新增 P0</span></td><td>§④ 缺失词表 3 年 8 倍增长趋势</td></tr>
+<tr><td>—</td><td><span class="tag p1">新增 P1</span></td><td>§③ 词表 scaling law（ByteDance ICML 2025 + Qwen3.5 验证）</td></tr>
+<tr><td>—</td><td><span class="tag p1">新增 P1</span></td><td>§④ LLaMA 4 reasoning token（thinking_start/end）</td></tr>
+<tr><td>—</td><td><span class="tag p1">新增 P1</span></td><td>§⑤ 词表大小与推理成本关系</td></tr>
+</table>
+
+<!-- ============================================================ -->
+<h2>六、修订计划</h2>
+
+<div class="card critical">
+  <div class="card-title">🔴 P0 修订（必须立即执行）</div>
+  <ol style="margin:0;padding-left:20px;">
+  <li><b>§④ 演进表重写</b>：把 LLaMA 从 SentencePiece 行移到 Byte-level BPE 行；新增"LLaMA 3/4"和"Mistral Tekken"；明确标注 LLaMA 架构切换</li>
+  <li><b>§④ 新增"行业格局表"</b>：Byte-level BPE（5 家）vs SentencePiece（1 家）vs 专有（1 家），附词表大小对比</li>
+  <li><b>§④ 新增"词表增长趋势图"</b>：32K→262K 时间线，标注驱动力（多语言 + 效率 + scaling law）</li>
+  </ol>
+</div>
+
+<div class="card warning">
+  <div class="card-title">🟠 P1 修订（下一轮执行）</div>
+  <ol style="margin:0;padding-left:20px;">
+  <li>§① 更新词表数据表（8 个模型的最新词表大小）</li>
+  <li>§③ 将"论文证明数字推理"改为"行业先行动，学术后解释"</li>
+  <li>§③ 新增词表 scaling law 维度（ByteDance ICML 2025 + Qwen3.5 验证）</li>
+  <li>§④ 更新 BLT 时效（2026-05 Fast BLT），但明确标注"研究前沿 ≠ 行业共识"</li>
+  <li>§④ 新增 LLaMA 4 reasoning token</li>
+  <li>§⑤ 更新模型选型建议（大词表优先，中文效率差距缩小）</li>
+  <li>§⑤ 新增词表与推理成本关系</li>
+  </ol>
+</div>
+
+<div class="card deepen">
+  <div class="card-title">🟡 P2 修订（远期）</div>
+  <ol style="margin:0;padding-left:20px;">
+  <li>§② 补充 o200k_base / O200K_PATTERN 说明</li>
+  <li>§③ 修正"GPT-2 数学崩溃"的过于简化表述</li>
+  <li>§⑤ 补充大词表模型对专有名词的改善</li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2>七、参考文献</h2>
+
+<div class="ref-list">
+<ol>
+<li><b>Qwen3 Technical Report</b>. arxiv 2505.09388, 2025-05. 词表 151,669, BBPE. <span class="source-tag cn">🇨🇳</span></li>
+<li><b>Qwen3.5 官方博客</b>. qwen.ai/blog?id=qwen3.5, 2026-02. 词表 250K, 编码效率 +10–60%. <span class="source-tag cn">🇨🇳</span></li>
+<li><b>DeepSeek-V3 Technical Report</b>. arxiv 2412.19437, 2024-12. 词表 128K, BBPE. <span class="source-tag cn">🇨🇳</span></li>
+<li><b>Over-Tokenized Transformer: Vocabulary is Generally Worth Scaling</b>. ByteDance Seed, ICML 2025. <span class="source-tag cn">🇨🇳</span></li>
+<li><b>Meta torchtune: Llama4Tokenizer</b>. meta-pytorch.org. tiktoken + O200K_PATTERN, 词表 202,048. <span class="source-tag intl">🌍</span></li>
+<li><b>Google Developer Blog: Gemma explained</b>. developers.googleblog.com, 2025. Gemma 3 词表 262K, SentencePiece. <span class="source-tag intl">🌍</span></li>
+<li><b>Mistral Tokenization Guide</b>. docs.mistral.ai. Tekken tokenizer, BBPE, 词表 131K. <span class="source-tag intl">🌍</span></li>
+<li><b>tiktoken library</b>. github.com/openai/tiktoken. o200k_base 词表 ~200K. <span class="source-tag intl">🌍</span></li>
+<li><b>Fast Byte Latent Transformer</b>. Meta + Stanford, arxiv 2605.08044, 2026-05. BLT Diffusion. <span class="source-tag intl">🌍</span></li>
+<li><b>Byte Latent Transformer: Patches Scale Better Than Tokens</b>. Pagnoni et al., ACL 2025. <span class="source-tag intl">🌍</span></li>
+<li>Sennrich, Haddow, Birch. <em>Neural Machine Translation of Rare Words with Subword Units</em>. ACL 2016.（BPE 经典论文，保留为基础参考）</li>
+<li>Gage. <em>A New Algorithm for Data Compression</em>. The C Users Journal, 1994.（BPE 算法起源，保留）</li>
+</ol>
+</div>
+
+</body>
+</html>

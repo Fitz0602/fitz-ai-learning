@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Fitz AI 学习图谱 · T1+T2</title>
+<style>
+:root {
+  --bg: #fafaf7;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7;
+  --purple-bg: #EEEDFE;
+  --teal: #1D9E75;
+  --teal-bg: #E1F5EE;
+  --amber: #BA7517;
+  --amber-bg: #FAEEDA;
+  --blue: #185FA5;
+  --blue-bg: #E6F1FB;
+  --coral: #993C1D;
+  --coral-bg: #FAECE7;
+  --pink: #993556;
+  --pink-bg: #FBEAF0;
+  --green: #3B6D11;
+  --green-bg: #EAF3DE;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+  font-size: 14px;
+}
+
+/* ===== 顶部逻辑链 ===== */
+.spine-section {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 28px;
+}
+.spine-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--purple);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin: 0 0 14px;
+}
+.spine-chain {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.spine-node {
+  flex: 1;
+  min-width: 110px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.spine-node .q { font-size: 10px; font-weight: 600; opacity: 0.7; margin-bottom: 3px; text-transform: uppercase; letter-spacing: 0.05em; }
+.spine-node .t { font-weight: 600; font-size: 12px; line-height: 1.3; margin-bottom: 3px; }
+.spine-node .d { font-size: 10px; opacity: 0.75; line-height: 1.4; }
+.spine-node .badge { font-size: 10px; font-weight: 500; padding: 1px 5px; border-radius: 8px; margin-top: 4px; display: inline-block; }
+.spine-arr { display: flex; align-items: center; padding: 0 6px; color: #b4b2a9; font-size: 14px; flex-shrink: 0; }
+.spine-divider { width: 100%; text-align: center; padding: 8px 0; font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+.spine-divider::before, .spine-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ===== Header ===== */
+.header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 24px; }
+h1 { font-size: 22px; font-weight: 600; margin: 4px 0; }
+.subtitle { color: var(--muted); font-size: 13px; }
+.progress-row { display: flex; gap: 20px; margin-top: 12px; flex-wrap: wrap; }
+.progress-item { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.bar-track { width: 120px; height: 6px; background: #e8e8e3; border-radius: 3px; overflow: hidden; }
+.bar-fill-t1 { height: 100%; background: var(--teal); border-radius: 3px; }
+.bar-fill-t2 { height: 100%; background: var(--green); border-radius: 3px; }
+
+/* ===== Next Up ===== */
+.next-up { background: var(--purple-bg); border: 1px solid var(--purple); border-radius: 10px; padding: 14px 18px; margin: 0 0 24px; }
+.next-up-label { font-size: 11px; font-weight: 600; color: var(--purple); text-transform: uppercase; letter-spacing: 1px; }
+.next-up-title { font-size: 16px; font-weight: 600; margin: 4px 0; }
+.next-up-meta { font-size: 12px; color: var(--muted); }
+
+/* ===== Domain & Chapters ===== */
+h2 { font-size: 15px; font-weight: 600; margin: 28px 0 12px; padding-left: 10px; border-left: 3px solid currentColor; display: flex; align-items: center; gap: 8px; }
+.domain-label { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 8px; letter-spacing: 0.04em; }
+.chapter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-bottom: 6px; }
+.chapter {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-decoration: none;
+  color: inherit;
+  display: block;
+  transition: all 0.15s;
+}
+.chapter:hover { border-color: var(--purple); transform: translateY(-1px); }
+.chapter.done { border-left: 3px solid var(--teal); }
+.chapter.partial { border-left: 3px solid var(--amber); }
+.chapter.empty { border-left: 3px solid #d3d1c7; opacity: 0.6; cursor: default; }
+.chapter.next-chapter { border-left: 3px solid var(--purple); border-color: var(--purple); }
+.chapter-num { font-size: 10px; font-weight: 600; color: var(--muted); margin-bottom: 2px; }
+.chapter-title { font-weight: 600; font-size: 13px; margin-bottom: 3px; }
+.chapter-subtitle { color: var(--muted); font-size: 11px; margin-bottom: 6px; line-height: 1.4; }
+.chapter-spine { font-size: 10px; color: var(--purple); background: var(--purple-bg); padding: 2px 6px; border-radius: 5px; margin-bottom: 6px; display: inline-block; }
+.section-row { display: flex; gap: 3px; }
+.section-pill { flex: 1; height: 4px; border-radius: 2px; background: #e8e8e3; }
+.section-pill.done { background: var(--teal); }
+.section-pill.partial { background: var(--amber); }
+
+/* T2 章节用绿色边框 */
+.chapter.t2-done { border-left: 3px solid var(--green); }
+.chapter.t2-empty { border-left: 3px solid #c0dd97; opacity: 0.6; cursor: default; }
+.chapter.t2-next { border-left: 3px solid var(--green); border-color: #639922; }
+
+/* ===== Legend ===== */
+.legend { display: flex; gap: 16px; font-size: 11px; color: var(--muted); margin: 0 0 16px; flex-wrap: wrap; align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-pill { width: 20px; height: 4px; border-radius: 2px; }
+
+/* ===== Deep dives ===== */
+.deep-dives-section { background: #f7f7f4; border-radius: 10px; padding: 14px 18px; margin-top: 32px; font-size: 13px; }
+.deep-dives-section h3 { margin: 0 0 8px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.deep-dives-section a { color: var(--purple); text-decoration: none; margin-right: 16px; display: inline-block; margin-bottom: 4px; }
+
+/* ===== Footer ===== */
+.footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<!-- ===== 顶部逻辑链 ===== -->
+<div class="spine-section">
+  <div class="spine-title">贯穿主线 · 从 Token 到可靠任务执行系统</div>
+  <div class="spine-chain">
+    <div class="spine-node" style="background:#EEEDFE;">
+      <div class="q">问题 1</div>
+      <div class="t" style="color:#534AB7">信息如何进入模型？</div>
+      <div class="d">文本→Token→向量→位置→长上下文</div>
+      <span class="badge" style="background:#534AB7;color:#fff;">T1 D1 ✓</span>
+    </div>
+    <div class="spine-arr">→</div>
+    <div class="spine-node" style="background:#E6F1FB;">
+      <div class="q">问题 2</div>
+      <div class="t" style="color:#185FA5">模型内部如何处理？</div>
+      <div class="d">Attention提取→FFN存储→MoE激活</div>
+      <span class="badge" style="background:#185FA5;color:#fff;">T1 D2 ✓</span>
+    </div>
+    <div class="spine-arr">→</div>
+    <div class="spine-node" style="background:#FAEEDA;">
+      <div class="q">问题 3</div>
+      <div class="t" style="color:#BA7517">模型如何学会"对"？</div>
+      <div class="d">预训练→SFT→RLHF/DPO对齐</div>
+      <span class="badge" style="background:#1D9E75;color:#fff;">T1 D3 ✅</span>
+    </div>
+    <div class="spine-arr">→</div>
+    <div class="spine-node" style="background:#EAF3DE;">
+      <div class="q">问题 4</div>
+      <div class="t" style="color:#3B6D11">如何高效推理输出？</div>
+      <div class="d">KV Cache→量化→Serving</div>
+      <span class="badge" style="background:#3B6D11;color:#fff;">T1 D4 ✅</span>
+    </div>
+  </div>
+
+  <div class="spine-divider">以上是"一个聪明的模型"，以下是"一个可以做事的系统"</div>
+
+  <div class="spine-chain">
+    <div class="spine-node" style="background:#FAECE7;">
+      <div class="q">问题 5</div>
+      <div class="t" style="color:#993C1D">如何让模型主动行动？</div>
+      <div class="d">Agent Loop+Tool Use+MCP</div>
+      <span class="badge" style="background:#993C1D;color:#fff;">T2 A1 ▸</span>
+    </div>
+    <div class="spine-arr">→</div>
+    <div class="spine-node" style="background:#FBEAF0;">
+      <div class="q">问题 6</div>
+      <div class="t" style="color:#993556">如何让模型想清楚？</div>
+      <div class="d">CoT→o1/R1→Planning→反思</div>
+      <span class="badge" style="background:#993556;color:#fff;">T2 A2 ✅</span>
+    </div>
+    <div class="spine-arr">→</div>
+    <div class="spine-node" style="background:#EEEDFE;">
+      <div class="q">问题 7</div>
+      <div class="t" style="color:#534AB7">如何管好模型看到什么？</div>
+      <div class="d">Prompt→Context→Memory</div>
+      <span class="badge" style="background:#534AB7;color:#fff;">T2 A3 ✅</span>
+    </div>
+    <div class="spine-arr">→</div>
+    <div class="spine-node" style="background:#EAF3DE;">
+      <div class="q">问题 8</div>
+      <div class="t" style="color:#3B6D11">如何让系统可靠运行？</div>
+      <div class="d">Harness六组件+Multi-Agent</div>
+      <span class="badge" style="background:#3B6D11;color:#fff;">T2 A4 ✅</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Header ===== -->
+<div class="header">
+  <h1>Fitz AI 学习图谱</h1>
+  <div class="subtitle">T1 LLM 系统 14 章 · T2 Agent 工程 8 章 · 两轨交替</div>
+  <div class="progress-row">
+    <div class="progress-item">
+      <span style="font-weight:600;color:var(--teal);">T1: 70/70 节</span>
+      <div class="bar-track"><div class="bar-fill-t1" style="width:100%"></div></div>
+      <span style="color:var(--teal);font-weight:600">100%</span>
+    </div>
+    <div class="progress-item">
+      <span style="font-weight:600;color:var(--green);">T2: 40/40 节</span>
+      <div class="bar-track"><div class="bar-fill-t2" style="width:100%"></div></div>
+      <span style="color:var(--green);font-weight:600">100%</span>
+    </div>
+  </div>
+</div>
+
+<div class="next-up" style="background:var(--green-bg);border-color:var(--green);">
+  <div class="next-up-label" style="color:var(--green);">🎉 全部完成</div>
+  <div class="next-up-title">T1 + T2 完整闭环！</div>
+  <div class="next-up-meta">T1 LLM 系统 14 章（70/70 节）+ T2 Agent 工程 8 章（40/40 节）= 22 章 · 110 节</div>
+</div>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-pill" style="background:var(--teal);"></div>T1 已完成</div>
+  <div class="legend-item"><div class="legend-pill" style="background:var(--green);"></div>T2 已完成</div>
+  <div class="legend-item"><div class="legend-pill" style="background:var(--amber);"></div>进行中</div>
+  <div class="legend-item"><div class="legend-pill" style="background:#e8e8e3;"></div>待填</div>
+</div>
+
+<!-- ==================== T1 LLM 系统 ==================== -->
+
+<div class="domain-d1">
+<h2 style="color:var(--purple);">
+  <span class="domain-label" style="background:var(--purple-bg);color:var(--purple)">D1</span>
+  输入侧 · 文本如何变成模型能运算的向量序列
+</h2>
+<div class="chapter-grid">
+  <a class="chapter done" href="llm-systems/1-input/1.1-tokenization/1.1-tokenization-chapter.html">
+    <div class="chapter-num">1.1</div>
+    <div class="chapter-title">Tokenization</div>
+    <div class="chapter-subtitle">文本→Token ID · BPE/WordPiece</div>
+    <div class="chapter-spine">主线：文本切片的边界在哪里</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter done" href="llm-systems/1-input/1.2-embedding/1.2-embedding-chapter.html">
+    <div class="chapter-num">1.2</div>
+    <div class="chapter-title">Embedding</div>
+    <div class="chapter-subtitle">Token ID→高维语义向量 · MRL/稀疏</div>
+    <div class="chapter-spine">主线：语义如何被压缩进向量空间</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter done" href="llm-systems/1-input/1.3-positional-encoding/1.3-positional-encoding-chapter.html">
+    <div class="chapter-num">1.3</div>
+    <div class="chapter-title">位置编码</div>
+    <div class="chapter-subtitle">RoPE / ALiBi · 让模型感知顺序</div>
+    <div class="chapter-spine">主线：顺序信息如何注入向量</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter done" href="llm-systems/1-input/1.4-long-context/1.4-long-context-chapter.html">
+    <div class="chapter-num">1.4</div>
+    <div class="chapter-title">长上下文扩展</div>
+    <div class="chapter-subtitle">YaRN / NTK · 从 4K 到 1M Token</div>
+    <div class="chapter-spine">主线：Agent记忆边界如何扩展</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+</div>
+</div>
+
+<div class="domain-d2">
+<h2 style="color:var(--blue);">
+  <span class="domain-label" style="background:var(--blue-bg);color:var(--blue)">D2</span>
+  模型骨架 · Transformer 内部发生了什么
+</h2>
+<div class="chapter-grid">
+  <a class="chapter done" href="llm-systems/2-architecture/2.1-attention/2.1-attention-chapter.html">
+    <div class="chapter-num">2.1</div>
+    <div class="chapter-title">Attention 机制</div>
+    <div class="chapter-subtitle">Q/K/V · Scaled Dot-Product · √dₖ 原理</div>
+    <div class="chapter-spine">主线：Token如何动态关注彼此</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter done" href="llm-systems/2-architecture/2.2-multihead-variants/2.2-multihead-variants-chapter.html">
+    <div class="chapter-num">2.2</div>
+    <div class="chapter-title">多头变种 GQA/MQA/Flash</div>
+    <div class="chapter-subtitle">长上下文推理成本的根因</div>
+    <div class="chapter-spine">主线：长上下文推理成本的根因</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter done" href="llm-systems/2-architecture/2.3-ffn-moe/2.3-ffn-moe-chapter.html">
+    <div class="chapter-num">2.3</div>
+    <div class="chapter-title">FFN + 归一化 + MoE</div>
+    <div class="chapter-subtitle">SwiGLU / RMSNorm / DeepSeek-V3 专家路由</div>
+    <div class="chapter-spine">主线：知识存储与按需激活</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+</div>
+</div>
+
+<div class="domain-d3">
+<h2 style="color:var(--amber);">
+  <span class="domain-label" style="background:var(--amber-bg);color:var(--amber)">D3</span>
+  训练流水线 · 模型如何学会"对"的行为
+</h2>
+<div class="chapter-grid">
+  <a class="chapter done" href="llm-systems/3-training/3.1-pretrain-sft/3.1-pretrain-sft-chapter.html">
+    <div class="chapter-num">3.1</div>
+    <div class="chapter-title">预训练 + SFT</div>
+    <div class="chapter-subtitle">下一Token预测 · 监督微调 · LoRA</div>
+    <div class="chapter-spine">主线：建世界观 + 教指令格式</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter done" href="llm-systems/3-training/3.2-rlhf-dpo/3.2-rlhf-dpo-chapter.html">
+    <div class="chapter-num">3.2</div>
+    <div class="chapter-title">RLHF · DPO · RL推理对齐</div>
+    <div class="chapter-subtitle">GRPO · DeepSeek-R1 · 模型行为品味</div>
+    <div class="chapter-spine">主线：行为价值观 → Agent品味判断力理论基础</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+</div>
+</div>
+
+<div class="domain-d4">
+<h2 style="color:var(--teal);">
+  <span class="domain-label" style="background:var(--teal-bg);color:var(--teal)">D4</span>
+  推理与部署 · 训练好的模型如何高效运行
+</h2>
+<div class="chapter-grid">
+  <a class="chapter done" href="llm-systems/4-inference/4.1-inference-kvcache/4.1-inference-kvcache-chapter.html">
+    <div class="chapter-num">4.1</div>
+    <div class="chapter-title">推理流程 + KV Cache</div>
+    <div class="chapter-subtitle">Prefill/Decode · PagedAttention · PD分离</div>
+    <div class="chapter-spine">主线：KV Cache是Context工程的物理约束</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter done" href="llm-systems/4-inference/4.2-quantization-serving/4.2-quantization-serving-chapter.html">
+    <div class="chapter-num">4.2</div>
+    <div class="chapter-title">量化蒸馏 + Serving</div>
+    <div class="chapter-subtitle">GPTQ/AWQ/GGUF/FP8 · vLLM/SGLang/TRT-LLM</div>
+    <div class="chapter-spine">主线：Agent 成本控制的工程基础</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+</div>
+</div>
+
+<div class="domain-d5">
+<h2 style="color:var(--coral);">
+  <span class="domain-label" style="background:var(--coral-bg);color:var(--coral)">D5</span>
+  基础设施附录 · 背景知识（Deep-dives Only）
+</h2>
+<div class="chapter-grid">
+  <a class="chapter done" href="llm-systems/5-infra/deep-dives/5-d1-gpu-memory-agent-cost.html">
+    <div class="chapter-num">d1</div>
+    <div class="chapter-title">GPU 显存与 Agent 成本</div>
+    <div class="chapter-subtitle">H100/A100 · 显存墙 · 六Agent成本画像</div>
+    <div class="chapter-spine">主线：理解推理为什么这么贵</div>
+  </a>
+  <a class="chapter done" href="llm-systems/5-infra/deep-dives/5-d2-scaling-law-product.html">
+    <div class="chapter-num">d2</div>
+    <div class="chapter-title">Scaling Law 与产品决策</div>
+    <div class="chapter-subtitle">Kaplan→Chinchilla→Inference-optimal · MoE</div>
+    <div class="chapter-spine">主线：模型选型的算力背景</div>
+  </a>
+</div>
+</div>
+
+<div class="domain-d6">
+<h2 style="color:var(--pink);">
+  <span class="domain-label" style="background:var(--pink-bg);color:var(--pink)">D6</span>
+  评测与对齐 · 模型和 Agent 好不好用怎么判断
+</h2>
+<div class="chapter-grid">
+  <a class="chapter done" href="llm-systems/6-eval/6.1-benchmark-judge/6.1-benchmark-judge-chapter.html">
+    <div class="chapter-num">6.1</div>
+    <div class="chapter-title">Benchmark + LLM-as-Judge</div>
+    <div class="chapter-subtitle">MMLU / Arena / SWE-bench Pro · Agent三层评测</div>
+    <div class="chapter-spine">主线：评测是判断模型能力的唯一通用语言</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter done" href="llm-systems/6-eval/6.2-alignment-hallucination/6.2-alignment-hallucination-chapter.html">
+    <div class="chapter-num">6.2</div>
+    <div class="chapter-title">安全对齐 + 幻觉</div>
+    <div class="chapter-subtitle">DPO · Constitutional AI · 幻觉分类与缓解</div>
+    <div class="chapter-spine">主线：行为不稳定 → Harness Gate+Evaluate动机</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+</div>
+</div>
+
+
+<!-- ==================== T2 Agent 工程 ==================== -->
+
+<div style="margin-top:36px;border-top:2px solid var(--green-bg);padding-top:20px;">
+<div style="font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;">T2 · Agent 工程（T1 D2 完成后启动）</div>
+
+<h2 style="color:var(--coral);">
+  <span class="domain-label" style="background:var(--coral-bg);color:var(--coral)">A1</span>
+  基础机制 · 如何让模型主动行动
+</h2>
+<div class="chapter-grid">
+  <a class="chapter t2-done" href="agent-engineering/A1-loop-tools/A1.1-agent-loop-react/A1.1-agent-loop-chapter.html">
+    <div class="chapter-num">A1.1 ✅</div>
+    <div class="chapter-title">Agent Loop · ReAct · Tool Use</div>
+    <div class="chapter-subtitle">感知→规划→行动→观察 循环</div>
+    <div class="chapter-spine" style="color:var(--coral);background:var(--coral-bg)">主线：单次输出→循环执行</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter t2-done" href="agent-engineering/A1-loop-tools/A1.2-mcp-skills/A1.2-mcp-skills-chapter.html">
+    <div class="chapter-num">A1.2 ✅</div>
+    <div class="chapter-title">MCP 协议 · Tools vs Skills</div>
+    <div class="chapter-subtitle">AI时代的USB-C · 渐进式披露</div>
+    <div class="chapter-spine" style="color:var(--coral);background:var(--coral-bg)">主线：工具标准化+Skills上下文控制</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+</div>
+
+<h2 style="color:var(--pink);">
+  <span class="domain-label" style="background:var(--pink-bg);color:var(--pink)">A2</span>
+  推理规划 · 如何让模型想清楚再行动
+</h2>
+<div class="chapter-grid">
+  <a class="chapter t2-done" href="agent-engineering/A2-reasoning-planning/A2.1-cot-reasoning-o1/A2.1-cot-reasoning-chapter.html">
+    <div class="chapter-num">A2.1 ✅</div>
+    <div class="chapter-title">CoT · o1/R1 · Test-time Compute</div>
+    <div class="chapter-subtitle">推理链涌现 · GRPO · 慢思考成本</div>
+    <div class="chapter-spine" style="color:var(--pink);background:var(--pink-bg)">主线：多想一步的系统工程原理</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter t2-done" href="agent-engineering/A2-reasoning-planning/A2.2-planning-reflection/A2.2-planning-reflection-chapter.html">
+    <div class="chapter-num">A2.2 ✅</div>
+    <div class="chapter-title">Planning · 任务分解 · 反思循环</div>
+    <div class="chapter-subtitle">Plan-Act-Reflect · SPIRAL · DDAgent理论</div>
+    <div class="chapter-spine" style="color:var(--pink);background:var(--pink-bg)">主线：DDAgent多步尽调链的理论</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+</div>
+
+<h2 style="color:var(--purple);">
+  <span class="domain-label" style="background:var(--purple-bg);color:var(--purple)">A3</span>
+  上下文与记忆 · 如何管好模型能看到什么
+</h2>
+<div class="chapter-grid">
+  <a class="chapter t2-done" href="agent-engineering/A3-context-memory/A3.1-prompt-context-eng/A3.1-prompt-context-eng-chapter.html">
+    <div class="chapter-num">A3.1 ✅</div>
+    <div class="chapter-title">Prompt → Context Engineering</div>
+    <div class="chapter-subtitle">选择/检索/压缩/持久化 · 100:1比例</div>
+    <div class="chapter-spine" style="color:var(--purple);background:var(--purple-bg)">主线：信息管理是Agent成本的核心</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+  <a class="chapter t2-done" href="agent-engineering/A3-context-memory/A3.2-memory-system/A3.2-memory-system-chapter.html">
+    <div class="chapter-num">A3.2 ✅</div>
+    <div class="chapter-title">Memory 机制（四层架构）</div>
+    <div class="chapter-subtitle">情景/语义/程序性 · Mem0/Letta/KBA</div>
+    <div class="chapter-spine" style="color:var(--purple);background:var(--purple-bg)">主线：无状态→跨会话持久化</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+</div>
+
+<h2 style="color:var(--green);">
+  <span class="domain-label" style="background:var(--green-bg);color:var(--green)">A4</span>
+  Harness 工程 · 如何让系统可靠运行
+</h2>
+<div class="chapter-grid">
+  <div class="chapter t2-done" onclick="location.href='agent-engineering/A4-harness-multiagent/A4.1-harness-six-components/A4.1-harness-six-components-chapter.html'" style="cursor:pointer">
+    <div class="chapter-num">A4.1 ✅</div>
+    <div class="chapter-title">Harness 六组件 · Fitz框架对比</div>
+    <div class="chapter-subtitle">意图建模+上下文+工具+编排+评估+治理</div>
+    <div class="chapter-spine" style="color:var(--green);background:var(--green-bg)">主线：原创框架 vs 行业最新实践</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </div>
+  <a class="chapter t2-done" href="agent-engineering/A4-harness-multiagent/A4.2-multiagent-ops/A4.2-multiagent-ops-chapter.html">
+    <div class="chapter-num">A4.2 ✅</div>
+    <div class="chapter-title">Multi-Agent · Subagent · AgentOps</div>
+    <div class="chapter-subtitle">Orchestrator-Worker · Tracing · 可观测</div>
+    <div class="chapter-spine" style="color:var(--green);background:var(--green-bg)">主线：从Demo到Production的跨越</div>
+    <div class="section-row"><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div><div class="section-pill done"></div></div>
+  </a>
+</div>
+</div>
+
+<!-- ===== Deep dives ===== -->
+<div class="deep-dives-section">
+<h3>已沉淀的支线 Deep-dives</h3>
+<a href="llm-systems/1-input/1.1-tokenization/deep-dives/1.1-d1-deployment-anatomy.html">大模型部署文件解剖（DeepSeek-V3）</a>
+<a href="llm-systems/1-input/1.1-tokenization/deep-dives/1.1-d2-academic-audit.html">1.1 Tokenizer vs 行业共识审计</a>
+<a href="llm-systems/1-input/1.2-embedding/deep-dives/1.2-d2-academic-audit.html">1.2 Embedding vs 2025-2026 共识审计</a>
+<a href="llm-systems/5-infra/deep-dives/5-d1-gpu-memory-agent-cost.html">D5-d1 GPU显存与Agent成本</a>
+<a href="llm-systems/5-infra/deep-dives/5-d2-scaling-law-product.html">D5-d2 Scaling Law与产品决策</a>
+</div>
+
+<div class="footer">
+启动: 2026-05-14 · v4 重构: 2026-05-19 · D2完成: 2026-05-21 · D6完成: 2026-05-20 · T2 A1 完成: 2026-05-22 · 4.1完成: 2026-05-25 · T1完成(4.2+D5): 2026-05-26<br>
+T2 A2+A3 完成: 2026-06-26 🎉<br>
+T2 A4 完成（闭环）: 2026-06-26 🏆<br>
+T1 路径 <code>learning/llm-systems/</code> · T2 路径 <code>learning/agent-engineering/</code> · 详细进度见各轨道 PROGRESS.md
+</div>
+
+</body>
+</html>

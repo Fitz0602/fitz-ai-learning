@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3.2 RLHF·DPO·RL推理对齐 Quiz · T1 LLM 系统</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+h1{font-size:22px;font-weight:700;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:20px}
+.quiz-item{background:#fff;border:1px solid #E8E8E4;border-radius:10px;padding:16px 18px;margin:16px 0}
+.quiz-id{font-size:10px;font-weight:600;color:var(--purple);background:var(--purple-bg);padding:2px 6px;border-radius:6px;display:inline-block;margin-bottom:8px}
+.quiz-q{font-size:15px;font-weight:600;margin-bottom:12px;line-height:1.5}
+.quiz-opts{display:flex;flex-direction:column;gap:6px}
+.opt-btn{display:block;width:100%;text-align:left;padding:10px 14px;border:1px solid #E0E0DC;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;line-height:1.5;transition:all 0.15s}
+.opt-btn:hover{border-color:var(--purple);background:var(--purple-bg)}
+.opt-btn.correct{border-color:var(--teal);background:var(--teal-bg);color:var(--teal)}
+.opt-btn.wrong{border-color:var(--coral);background:var(--coral-bg);color:var(--coral)}
+.opt-btn:disabled{cursor:default;opacity:0.8}
+.explain{margin-top:10px;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.6;display:none}
+.explain.show{display:block}
+.explain.correct-exp{background:var(--teal-bg);border-left:3px solid var(--teal)}
+.explain.wrong-exp{background:var(--coral-bg);border-left:3px solid var(--coral)}
+.score-section{margin-top:32px;padding:20px;border-radius:10px;text-align:center;background:var(--purple-bg);display:none}
+.score-section.show{display:block}
+.score-num{font-size:36px;font-weight:700;color:var(--purple)}
+.score-label{font-size:14px;color:var(--muted);margin-top:4px}
+.score-feedback{font-size:14px;margin-top:8px;color:var(--text)}
+a{color:var(--purple);text-decoration:none}
+.back-link{display:inline-block;margin-bottom:16px;font-size:13px}
+</style>
+</head>
+<body>
+
+<a href="3.2-rlhf-dpo-chapter.html" class="back-link">← 返回章节</a>
+<h1>3.2 RLHF · DPO · RL 推理对齐 · Quiz</h1>
+<p class="subtitle">10 题 · 每节 2 题 · 点击选项查看即时反馈</p>
+
+<!-- Q1: §① 概念辨析 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.2-①-a</div>
+<div class="quiz-q">SFT 和偏好对齐（如 DPO）最核心的区别是什么？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q1')">A. SFT 需要更多数据，DPO 只需几千条</button>
+<button class="opt-btn" onclick="check(this, true, 'q1')">B. SFT 教模型"怎么模仿好回答"，偏好对齐教模型"哪种回答更好"</button>
+<button class="opt-btn" onclick="check(this, false, 'q1')">C. SFT 用交叉熵损失，DPO 用均方误差损失</button>
+<button class="opt-btn" onclick="check(this, false, 'q1')">D. SFT 可以从零开始训练，DPO 必须基于预训练+ SFT 后的模型</button>
+</div>
+<div class="explain" id="q1-exp"></div>
+</div>
+
+<!-- Q2: §① 判断/应用 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.2-①-b</div>
+<div class="quiz-q">你的团队有一个客服 Agent，当前输出格式正确但语气过于机械，用户满意度不高。应该优先使用哪种对齐方法？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q2')">A. GRPO + 可验证奖励（因为推理能力需要提升）</button>
+<button class="opt-btn" onclick="check(this, true, 'q2')">B. DPO 或其变体（风格/语气对齐是 DPO 的最佳场景，成本低且稳定）</button>
+<button class="opt-btn" onclick="check(this, false, 'q2')">C. 完整的 RLHF + PPO 流水线（追求最后 1-3% 的质量）</button>
+<button class="opt-btn" onclick="check(this, false, 'q2')">D. 不需要对齐，增加 SFT 数据量即可解决</button>
+</div>
+<div class="explain" id="q2-exp"></div>
+</div>
+
+<!-- Q3: §② 概念辨析 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.2-②-a</div>
+<div class="quiz-q">关于 DPO（Direct Preference Optimization），以下哪个说法最准确？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, true, 'q3')">A. DPO 通过数学技巧将 RLHF 目标函数转化为仅依赖偏好对的闭式解，无需训练奖励模型和运行 RL 循环</button>
+<button class="opt-btn" onclick="check(this, false, 'q3')">B. DPO 是一种全新的优化目标，与 RLHF 在数学上完全不同</button>
+<button class="opt-btn" onclick="check(this, false, 'q3')">C. DPO 需要 Reference Model 但不需要 Policy Model</button>
+<button class="opt-btn" onclick="check(this, false, 'q3')">D. DPO 只能处理成对的偏好数据，不支持单个 thumbs up/down 数据（那是 KTO 做的事，DPO 不行）</button>
+</div>
+<div class="explain" id="q3-exp"></div>
+</div>
+
+<!-- Q4: §② 判断/应用 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.2-②-b</div>
+<div class="quiz-q">GRPO 中，对于同一 prompt 采样的 G=8 个输出，奖励分别为 [0, 1, 0, 1, 1, 0, 0, 1]。组内均值 = 0.5，标准差 ≈ 0.53。哪个输出的优势函数值最高（即被最强激励）？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q4')">A. 得分为 1 的所有输出（它们的 A_i 相同且最高）</button>
+<button class="opt-btn" onclick="check(this, true, 'q4')">B. 无法确定——GRPO 优势函数 A_i = (r_i - r_bar) / s，所有得分为 1 的输出 A_i 都相同（≈0.94），没有"哪个最高"</button>
+<button class="opt-btn" onclick="check(this, false, 'q4')">C. 第一个得分为 1 的输出（因为采样顺序影响奖励）</button>
+<button class="opt-btn" onclick="check(this, false, 'q4')">D. 得分为 0 的输出（因为 GRPO 会惩罚低分输出，惩罚越大意味着更新幅度越大）</button>
+</div>
+<div class="explain" id="q4-exp"></div>
+</div>
+
+<!-- Q5: §③ 概念辨析 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.2-③-a</div>
+<div class="quiz-q">BearPlex 2026 的分析明确指出 "DPO is RL"。这句话的理论基础是什么？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q5')">A. DPO 内部也用了 PPO 优化器，只是名字不同</button>
+<button class="opt-btn" onclick="check(this, true, 'q5')">B. 在 Bradley-Terry 偏好模型 + KL 正则化假设下，DPO 和 RLHF 优化的是完全相同的目标函数——区别仅在算法实现（offline vs online）</button>
+<button class="opt-btn" onclick="check(this, false, 'q5')">C. DPO 是 RL 的一种特例，当奖励模型退化为恒等函数时两者等价</button>
+<button class="opt-btn" onclick="check(this, false, 'q5')">D. 这只是一个 marketing 说法，实际两者效果差距很大</button>
+</div>
+<div class="explain" id="q5-exp"></div>
+</div>
+
+<!-- Q6: §③ 判断/应用 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.2-③-b</div>
+<div class="quiz-q">DeepSeek-R1-Zero 跳过了 SFT 冷启动阶段，直接用纯 GRPO 训练就涌现了强大的推理能力。但完整版 R1 仍然加入了 SFT 冷启动步骤。为什么？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q6')">A. 因为纯 GRPO 训练成本太高，SFT 可以降低后续 RL 的计算量</button>
+<button class="opt-btn" onclick="check(this, true, 'q6')">B. R1-Zero 有语言混杂、可读性差、安全性不足三个问题；SFT 冷启动用几千条高质量 CoT 数据让模型先学会正确的 <tspan font-weight="700">...</tspan> 输出格式，大幅改善这些问题</button>
+<button class="opt-btn" onclick="check(this, false, 'q6')">C. 因为 DeepSeek 团队不信任纯 RL 的结果，想用 SFT 来确保可控性</button>
+<button class="opt-btn" onclick="check(this, false, 'q6')">D. 因为 Nature 论文审稿人要求必须有 SFT 步骤才能发表</button>
+</div>
+<div class="explain" id="q6-exp"></div>
+</div>
+
+<!-- Q7: §④ 概念辨析 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.2-④-a</div>
+<div class="quiz-q">2025 年被称为对齐技术的"分水岭"。以下哪个事件最能代表这一分水岭的本质特征？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q7')">A. OpenAI 发布 GPT-4o，多模态能力大幅提升</button>
+<button class="opt-btn" onclick="check(this, false, 'q7')">B. Meta 发布 Llama 3.1 405B，开源模型首次逼近闭源水平</button>
+<button class="opt-btn" onclick="check(this, true, 'q7')">C. DeepSeek-R1 用 GRPO 纯 RL 涌现推理能力并登上 Nature 封面，同时 HuggingFace TRL 原生支持 GRPOTrainer——奖励模型从必需品变成可选品</button>
+<button class="opt-btn" onclick="check(this, false, 'q7')">D. Anthropic 发布 Claude 3.5 Sonnet，在编程任务上超越 GPT-4</button>
+</div>
+<div class="explain" id="q7-exp"></div>
+</div>
+
+<!-- Q8: §④ 判断/应用 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.2-④-b</div>
+<div class="quiz-q">你的团队要构建一个代码生成 Agent，代码可以编译运行并有测试用例验证正确性。根据 2026 行业共识的算法选择决策树，最优方案是什么？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q8')">A. DPO + 人工标注的代码偏好对（因为 DPO 是生产默认选择）</button>
+<button class="opt-btn" onclick="check(this, true, 'q8')">B. GRPO + Rule-based Reward（代码通过率作为 Outcome Reward，测试用例通过数作为 Process Reward）</button>
+<button class="opt-btn" onclick="check(this, false, 'q8')">C. 完整 RLHF + PPO（追求前沿质量，投入 $50K+ 训练奖励模型）</button>
+<button class="opt-btn" onclick="check(this, false, 'q8')">D. Constitutional AI 方法（定义一套"代码质量宪法"让 AI 自我对齐）</button>
+</div>
+<div class="explain" id="q8-exp"></div>
+</div>
+
+<!-- Q9: §⑤ 概念辨析 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.2-⑤-a</div>
+<div class="quiz-q">Fitz 主导的 EvalAgent 使用"1 系统提示词 + 1 Eval Skill + 1 配置表 + N 测评集"架构。这个架构中的组件与 RLHF 流水线的对应关系是什么？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q9')">A. 系统提示词 = PPO Optimizer / Eval Skill = Value Model / 配置表 = Reward Model</button>
+<button class="opt-btn" onclick="check(this, true, 'q9')">B. 系统提示词 = Constitution（判断标准原则）/ Eval Skill = Reward Function（执行评判逻辑）/ 测评集 = Preference Dataset</button>
+<button class="opt-btn" onclick="check(this, false, 'q9')">C. 系统提示词 = Reference Model / Eval Skill = Policy Model / 配置表 = KL Temperature</button>
+<button class="opt-btn" onclick="check(this, false, 'q9')">D. EvalAgent 与 RLHF 完全无关，只是巧合地使用了类似术语</button>
+</div>
+<div class="explain" id="q9-exp"></div>
+</div>
+
+<!-- Q10: §⑤ 判断/应用 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.2-⑤-b</div>
+<div class="quiz-q">KBAgent 当前 V5 准确率约 82%（基线 ~72%）。如果 Fitz 决定进一步优化 KBAgent 的回答质量，根据本章的对齐方法论，以下哪种方案最合理？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q10')">A. 直接上 GRPO + 可验证奖励（因为 GRPO 是 2025 最火的方法）</button>
+<button class="opt-btn" onclick="check(this, true, 'q10')">B. 构建 HQA 偏好数据集（好回答 vs 差回答），用 DPO/SimPO 进行品味级对齐——KBAgent 的"好坏"是主观偏好而非客观可验证的答案</button>
+<button class="opt-btn" onclick="check(this, false, 'q10')">C. 回去做一轮大规模领域 SFT，把数据量翻 10 倍</button>
+<button class="opt-btn" onclick="check(this, false, 'q10')">D. 采用 Constitutional AI 方式，写一份 23,000 字的知识库宪法</button>
+</div>
+<div class="explain" id="q10-exp"></div>
+</div>
+
+<!-- 得分区 -->
+<div class="score-section" id="scoreSection">
+<div class="score-num" id="scoreNum">0</div>
+<div class="score-label">/ 10</div>
+<div class="score-feedback" id="scoreFeedback"></div>
+</div>
+
+<script>
+let score = 0;
+let answered = 0;
+const total = 10;
+
+const explanations = {
+  q1: { correct: 'B', text: 'SFT 本质上是条件似然最大化（模仿训练数据分布），无法表达"相对偏好"。偏好对齐显式建模偏好的序关系 P(y_w > y_l | x)，教给模型的是品味判断力而非格式模仿力。→ 详见 §① 是什么' },
+  q2: { correct: 'B', text: '语气/风格调整是 DPO 的最佳场景：成本低（$100-2000）、单 GPU 可跑、稳定不易崩。GRPO 适合有客观答案的任务，PPO 过于重量级，SFT 无法解决"品味"问题。→ 详见 §①+④ 演进格局' },
+  q3: { correct: 'A', text: 'DPO 的核心贡献是在 Bradley-Terry + KL 正则化假设下推导出闭式解，将两阶段的 RM训练+RL优化合并为单阶段的偏好对直接优化。B 错在两者目标函数等价；C 错在 DPO 需要 Policy Model（被优化的对象）；D 错在对数据格式的描述不是 DPO 的限制而是 KTO 的差异化场景。→ 详见 §② 怎么实现' },
+  q4: { correct: 'B', text: 'GRPO 优势函数 A_i = (r_i - r_bar) / s。所有得分为 1 的输出：(1 - 0.5) / 0.53 ≈ 0.94，完全相同。这是 GRPO 的一个特性也是局限——组内同分样本无法区分优劣。DAPO 的 Dynamic Sampling 就是为了过滤这种"全对或全错"的无效组。→ 详见 §② GRPO 算法' },
+  q5: { correct: 'B', text: '"DPO is RL" 不是比喻而是严格的数学结论。在 Bradley-Terry 偏好模型 + KL 正则化约束下，DPO 的损失函数正是 RLHF 目标函数的重参数化形式。TheoremPath 明确指出：差异纯粹是算法层面的（offline vs online, 是否有探索能力）。→ 详见 §③ 为什么' },
+  q6: { correct: 'B', text: 'R1-Zero 的三个真实问题来自 DeepSeek 技术报告：语言混杂（中英文混合）、可读性差、安全性不足。SFT 冷启动用数千条高质量 CoT 数据让模型先学会 <tspan font-weight="700">...</tspan> 格式和单一语言输出，这些问题在 R1 完整版中得到修复。这不是对纯 RL 能力的否定，而是工程实用性的权衡。→ 详见图见 §② R1 训练流程' },
+  q7: { correct: 'C', text: '2025 分水岭的本质是"奖励模型消亡"成为行业共识。R1 登上 Nature 证明纯 RL 不需要 RM 也能达到顶尖水平；TRL 库原生支持 GRPOTrainer 意味着任何团队都能低成本使用这一范式。其他选项都是重要事件但不代表范式转移。→ 详见 §④ 演进格局' },
+  q8: { correct: 'B', text: '决策树第一步："任务是否有可验证的正确答案？" → 代码可以编译运行且有测试用例 → Yes → GRPO + Rule-based Reward。Outcome Reward = 测试通过率，Process Reward = 逐个用例通过情况，Format Reward = 代码规范性。这正是 DeepSeek-R1 在编程任务上的成功路径。→ 详见 §④ 算法决策树' },
+  q9: { correct: 'B', text: 'EvalAgent 架构是 RLHF 循环的产品化封装：系统提示词定义"什么是对的"（类似 CAI 宪法），Eval Skill 执行评判逻辑（类似奖励函数），测评集提供评判样本（类似偏好数据集）。Fitz 的判断逻辑拆分（System Prompt 放标准/法律，Skill 放流程/执法）正是对齐工程中 Constitution + Reward 分离思想的体现。→ 详见 §⑤ 连接 1+2' },
+  q10: { correct: 'B', text: 'KBAgent 输出的 HQA 质量判断是主观偏好（"这条知识是否准确、完整、有帮助"），没有像数学/代码那样的自动验证标准。因此应走 DPO 路线：构建偏好数据集（优质 HQA vs 劣质 HQA），用 DPO/SimPO 进行品味级对齐。GRPO 的优势在有可验证奖励的场景才能发挥。→ 详见 §⑤ 连接 3+4' }
+};
+
+function check(btn, isCorrect, qId) {
+  const item = btn.closest('.quiz-item');
+  const btns = item.querySelectorAll('.opt-btn');
+  const expEl = document.getElementById(qId + '-exp');
+
+  // Disable all buttons in this question
+  btns.forEach(b => b.disabled = true);
+
+  if (isCorrect) {
+    btn.classList.add('correct');
+    score++;
+    expEl.className = 'explain show correct-exp';
+    expEl.innerHTML = '✅ ' + explanations[qId].text;
+  } else {
+    btn.classList.add('wrong');
+    // Highlight correct answer
+    btns.forEach(b => {
+      if (b.textContent.charAt(0) === explanations[qId].correct) {
+        b.classList.add('correct');
+      }
+    });
+    expEl.className = 'explain show wrong-exp';
+    expEl.innerHTML = '❌ 正确答案是 ' + explanations[qId].correct + '。' + explanations[qId].text;
+  }
+
+  answered++;
+  if (answered === total) {
+    showScore();
+  }
+}
+
+function showScore() {
+  const sec = document.getElementById('scoreSection');
+  sec.classList.add('show');
+  document.getElementById('scoreNum').textContent = score;
+
+  let fb = '';
+  if (score <= 4) fb = '建议重读章节，重点关注 §① 四种方法直觉和 §③ DPO/GRPO 核心原理';
+  else if (score <= 7) fb = '良好！建议回顾错题对应的章节小节，特别是算法选择决策树';
+  else if (score <= 9) fb = '扎实！对 RLHF/DPO/GRPO 的理解已到位，可以开始思考如何应用到你的 Agent 项目中';
+  else fb = '满分！你已完全掌握对齐技术的第一性原理——可以去设计 EvalAgent 的奖励函数了';
+
+  document.getElementById('scoreFeedback').textContent = fb;
+}
+</script>
+
+</body>
+</html>

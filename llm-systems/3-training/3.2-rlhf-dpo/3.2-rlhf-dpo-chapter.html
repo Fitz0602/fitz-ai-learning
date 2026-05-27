@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3.2 RLHF · DPO · RL推理对齐 · T1 LLM 系统</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card-bg:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--amber-bg);color:var(--amber)}
+.tag-chapter{background:var(--blue-bg);color:var(--blue)}
+.tag-status{background:var(--teal-bg);color:var(--teal)}
+h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:4px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.progress-nav{display:flex;gap:4px;margin:16px 0 0;flex-wrap:wrap}
+.progress-nav a{font-size:11px;padding:3px 8px;border-radius:8px;text-decoration:none;background:var(--purple-bg);color:var(--purple);font-weight:500}
+.progress-nav a.done{background:var(--teal-bg);color:var(--teal)}
+section{margin-top:36px;padding-top:20px;border-top:1px solid #E8E8E4}
+section h2{font-size:20px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;padding:2px 8px;border-radius:8px}
+h3{font-size:16px;font-weight:600;margin:16px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--amber-bg);border-color:var(--amber)}
+.card.takeaway{background:var(--teal-bg);border-color:var(--teal)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.card.intuition .card-label{color:var(--amber)}
+.card.takeaway .card-label{color:var(--teal)}
+.card.warning .card-label{color:var(--coral)}
+.diagram{margin:20px 0}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid #E0E0DC;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{background:#fff}
+code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;background:#F0F0EC;padding:1px 4px;border-radius:3px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<!-- ====== HEADER ====== -->
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">D3 训练流水线</span>
+<span class="tag tag-chapter">3.2</span>
+<span class="tag tag-status">✅ 完成</span>
+<a href="../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+<a href="3.2-rlhf-dpo-quiz.html" class="nav-link">Quiz →</a>
+</div>
+<h1>3.2 RLHF · DPO · RL 推理对齐</h1>
+<p class="subtitle">塑造行为价值观 — 从"听话的助手"到"有品味的伙伴"</p>
+<div class="spine-link">主线连接：训练对齐如何塑造模型价值观 → Agent 行为品味判断力的理论基础</div>
+<nav class="progress-nav">
+<a href="#is" class="done">① 是什么 ✓</a>
+<a href="#how" class="done">② 怎么实现 ✓</a>
+<a href="#why" class="done">③ 为什么 ✓</a>
+<a href="#evolution" class="done">④ 演进 ✓</a>
+<a href="#connect" class="done">⑤ 与产品 ✓</a>
+</nav>
+</div>
+
+<!-- ====== 章节一览图 ====== -->
+<div class="diagram">
+<p>章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 380" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ov-arr32" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- ① 紫 -->
+<rect x="20" y="20" width="120" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="80" y="45" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">① 是什么</text>
+<text x="80" y="63" text-anchor="middle" fill="#534AB7" font-size="10">四种对齐方法直觉</text>
+<line x1="140" y1="50" x2="168" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr32)"/>
+<!-- ② 蓝 -->
+<rect x="170" y="20" width="120" height="60" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="230" y="45" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="700">② 怎么实现</text>
+<text x="230" y="63" text-anchor="middle" fill="#185FA5" font-size="10">RLHF/DPO/GRPO</text>
+<line x1="290" y1="50" x2="318" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr32)"/>
+<!-- ③ 琥珀 -->
+<rect x="320" y="20" width="120" height="60" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="380" y="45" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">③ 为什么</text>
+<text x="380" y="63" text-anchor="middle" fill="#BA7517" font-size="10">设计取舍本质</text>
+<line x1="440" y1="50" x2="468" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr32)"/>
+<!-- ④ 紫浅 -->
+<rect x="470" y="20" width="120" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="530" y="45" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">④ 演进格局</text>
+<text x="530" y="63" text-anchor="middle" fill="#534AB7" font-size="10">PPO→DPO→GRPO→RLVR</text>
+<line x1="590" y1="50" x2="618" y2="50" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr32)"/>
+<!-- ⑤ 绿 -->
+<rect x="620" y="20" width="50" height="60" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="645" y="45" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="700">⑤</text>
+<text x="645" y="63" text-anchor="middle" fill="#1D9E75" font-size="10">产品</text>
+
+<!-- 下方展开说明 -->
+<line x1="80" y1="80" x2="80" y2="108" stroke="#534AB7" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="10" y="110" width="140" height="50" rx="8" fill="#fff" stroke="#534AB7" stroke-width="1"/>
+<text x="80" y="131" text-anchor="middle" fill="#534AB7" font-size="10">RLHF=HR绩效考核</text>
+<text x="80" y="147" text-anchor="middle" fill="#534AB7" font-size="10">DPO=跳过打分直接排</text>
+
+<line x1="230" y1="80" x2="230" y2="108" stroke="#185FA5" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="155" y="110" width="150" height="50" rx="8" fill="#fff" stroke="#185FA5" stroke-width="1"/>
+<text x="230" y="131" text-anchor="middle" fill="#185FA5" font-size="10">GRPO=组内竞争择优</text>
+<text x="230" y="147" text-anchor="middle" fill="#185FA5" font-size="10">DeepSeek-R1核心算法</text>
+
+<line x1="380" y1="80" x2="380" y2="108" stroke="#BA7517" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="305" y="110" width="150" height="50" rx="8" fill="#fff" stroke="#BA7517" stroke-width="1"/>
+<text x="380" y="131" text-anchor="middle" fill="#BA7517" font-size="10">SFT只教格式不教品味</text>
+<text x="380" y="147" text-anchor="middle" fill="#BA7517" font-size="10">RL提供探索→发现更优</text>
+
+<line x1="530" y1="80" x2="530" y2="108" stroke="#534AB7" stroke-width="1" stroke-dasharray="4 3"/>
+<rect x="455" y="110" width="150" height="50" rx="8" fill="#fff" stroke="#534AB7" stroke-width="1"/>
+<text x="530" y="131" text-anchor="middle" fill="#534AB7" font-size="10">2025分水岭:奖励模型消亡</text>
+<text x="530" y="147" text-anchor="middle" fill="#534AB7" font-size="10">GRPO统治推理·DPO统治对话</text>
+
+<!-- 贯穿箭头 -->
+<line x1="80" y1="175" x2="645" y2="175" stroke="#534AB7" stroke-width="1.5" marker-end="url(#ov-arr32)" stroke-dasharray="6 4"/>
+<text x="360" y="195" text-anchor="middle" fill="#534AB7" font-size="10" font-weight="700">贯穿主线：预训练(知识) → SFT(格式) → 对齐训练(价值观/推理)</text>
+
+<!-- 三阶段后训练流水线 (核心概念框) -->
+<rect x="100" y="220" width="480" height="70" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="340" y="242" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="700">现代后训练三阶段流水线 (2025-2026 行业标准)</text>
+<text x="340" y="262" text-anchor="middle" fill="#185FA5" font-size="11">Stage 1 SFT: 指令-回答对 → 学格式与语气</text>
+<text x="340" y="278" text-anchor="middle" fill="#185FA5" font-size="11">Stage 2 偏好对齐: DPO/RLHF → 学"哪种回答更好"</text>
+
+<!-- 产品连接 -->
+<rect x="140" y="310" width="400" height="55" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="340" y="332" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">⑤ 产品连接：Agent 行为品味判断力的理论基础</text>
+<text x="340" y="352" text-anchor="middle" fill="#1D9E75" font-size="10">EvalAgent评测体系 · Harness安全层 · TRSAgent分类准确性根因</text>
+</svg>
+</div>
+
+<!-- ============================================================ -->
+<!--  §① 是什么                                                     -->
+<!-- ============================================================ -->
+<section id="is">
+<h2><span class="sec-num">①</span> 是什么：四种对齐方法的直觉建立</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比 — HR 绩效管理演进史</div>
+<p><strong>RLHF = HR 绩效考核系统</strong>。HR 设计一套评分标准（奖励模型），让主管给员工打分，然后员工根据分数调整行为（PPO 优化）。优点是科学系统，缺点是评分标准本身可能有偏，且维护成本高。</p>
+<p><strong>DPO = 跳过打分，直接排序</strong>。与其费劲设计评分标准再打分，不如直接让主管说"A 比 B 好"，然后从这些排序中直接优化员工行为。数学证明：在一定假设下，这两种方式等价。</p>
+<p><strong>GRPO = 团队内部竞赛</strong>。同一个问题，让一个员工做 G 个版本，组内互相比较，比平均水平好的加分，差的减分。不需要外部评委（无 Critic），组内相对排名就是信号。</p>
+<p><strong>RLVR = 用客观标准自动判卷</strong>。数学题有标准答案，代码能跑通就能验证——不需要人来评判，规则本身就是奖励信号。</p>
+</div>
+
+<h3>SFT 的局限：只教格式，不教"品味"</h3>
+<p>上一章我们学了 SFT：用指令-回答对训练模型学会对话格式。但 SFT 有一个根本局限——它<strong>只能告诉模型"什么是正确格式"</strong>，却无法告诉模型<strong>"哪种回答更好"</strong>。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 200" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="is-arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- 用户问题 -->
+<rect x="240" y="15" width="200" height="36" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="340" y="38" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">用户："解释量子计算"</text>
+
+<!-- SFT 能做的 -->
+<rect x="40" y="75" width="260" height="55" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="170" y="98" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="700">SFT 能教的（格式层面）</text>
+<text x="170" y="116" text-anchor="middle" fill="#185FA5" font-size="10">用"好的，让我来解释..."开头</text>
+<text x="170" y="130" text-anchor="middle" fill="#185FA5" font-size="10">分点作答 / 不超过300字</text>
+
+<!-- SFT 不能做的 -->
+<rect x="380" y="75" width="260" height="55" rx="8" fill="#FDEEE8" stroke="#993C1D" stroke-width="1.5"/>
+<text x="510" y="98" text-anchor="middle" fill="#993C1D" font-size="11" font-weight="700">SFT 教不了的（品味层面）</text>
+<text x="510" y="116" text-anchor="middle" fill="#993C1D" font-size="10">这个解释是否真正易懂？</text>
+<text x="510" y="130" text-anchor="middle" fill="#993C1D" font-size="10">是否避免了过度简化？</text>
+
+<!-- 箭头 -->
+<line x1="340" y1="51" x2="170" y2="73" stroke="#185FA5" stroke-width="1.2" marker-end="url(#is-arr1)"/>
+<line x1="340" y1="51" x2="510" y2="73" stroke="#993C1D" stroke-width="1.2" marker-end="url(#is-arr1)"/>
+
+<!-- 对齐训练填补空白 -->
+<rect x="180" y="155" width="320" height="36" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="340" y="178" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">偏好对齐（RLHF/DPO/GRPO）填补"品味"空白 →</text>
+</svg>
+</div>
+
+<h3>四大对齐方法全景</h3>
+<table>
+<tr><th>方法</th><th>全称</th><th>核心思想</th><th>需要 RM？</th><th>适合场景</th></tr>
+<tr><td><strong>RLHF</strong></td><td>Reinforcement Learning from Human Feedback</td><td>人类打分 → 训练奖励模型 → RL 优化</td><td>✅ 需要</td><td>通用对齐（ChatGPT 范式）</td></tr>
+<tr><td><strong>DPO</strong></td><td>Direct Preference Optimization</td><td>直接在偏好对上优化，解析解替代 RL 循环</td><td>❌ 不需要</td><td>风格/语气对齐（90%+ 生产场景）</td></tr>
+<tr><td><strong>GRPO</strong></td><td>Group Relative Policy Optimization</td><td>同题多采样，组内相对优势驱动更新</td><td>❌ 不需要</td><td>推理密集型任务（数学/代码/CoT）</td></tr>
+<tr><td><strong>RLVR</strong></td><td>RL with Verifiable Rewards</td><td>用规则自动验证结果作为奖励信号</td><td>❌ 不需要</td><td>有客观答案的任务（DeepSeek-R1）</td></tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">核心要点</div>
+<p>SFT 解决的是"怎么说"（格式），偏好对齐解决的是"说什么更好"（品味）。四种方法的核心差异在于：<strong>奖励信号的来源</strong>——RLHF 来自学习的奖励模型，DPO 来自隐含在偏好对中的奖励，GRPO 来自组内相对排名，RLVR 来自可自动验证的规则。2025-2026 的行业趋势清晰：<strong>奖励模型正在被淘汰</strong>，DPO 和 GRPO 分别统治对话和推理两大场景。</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!--  §② 怎么实现                                                    -->
+<!-- ============================================================ -->
+<section id="how">
+<h2><span class="sec-num">②</span> 怎么实现：从 RLHF 流水线到 GRPO 算法</h2>
+
+<h3>2.1 经典 RLHF 三阶段流水线</h3>
+<p>OpenAI InstructGPT（2022.03）确立的标准范式，也是 ChatGPT 的核心技术：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 260" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="how-arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- Stage 1: SFT -->
+<rect x="30" y="30" width="150" height="70" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="105" y="52" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="700">Stage 1: SFT</text>
+<text x="105" y="70" text-anchor="middle" fill="#185FA5" font-size="10">指令-回答对</text>
+<text x="105" y="86" text-anchor="middle" fill="#185FA5" font-size="10">产出: SFT Model</text>
+
+<line x1="185" y1="65" x2="218" y2="65" stroke="#888780" stroke-width="1.2" marker-end="url(#how-arr1)"/>
+<text x="202" y="56" text-anchor="middle" fill="#888780" font-size="9">采样</text>
+
+<!-- Stage 2: Reward Model -->
+<rect x="225" y="30" width="160" height="70" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="305" y="52" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">Stage 2: RM</text>
+<text x="305" y="70" text-anchor="middle" fill="#BA7517" font-size="10">人类偏好标注</text>
+<text x="305" y="86" text-anchor="middle" fill="#BA7517" font-size="10">产出: 奖励模型 r(x,y)</text>
+
+<line x1="390" y1="65" x2="428" y2="65" stroke="#888780" stroke-width="1.2" marker-end="url(#how-arr1)"/>
+<text x="410" y="56" text-anchor="middle" fill="#888780" font-size="9">打分</text>
+
+<!-- Stage 3: PPO -->
+<rect x="435" y="30" width="150" height="70" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="510" y="52" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">Stage 3: PPO</text>
+<text x="510" y="70" text-anchor="middle" fill="#534AB7" font-size="10">RL 优化策略</text>
+<text x="510" y="86" text-anchor="middle" fill="#534AB7" font-size="10">产出: 对齐后模型</text>
+
+<!-- 问题列表 -->
+<rect x="30" y="130" width="555" height="110" rx="10" fill="#FDEEE8" stroke="#993C1D" stroke-width="1"/>
+<text x="307" y="152" text-anchor="middle" fill="#993C1D" font-size="12" font-weight="700">RLHF/PPO 的三大痛点（导致行业寻找替代方案）</text>
+<circle cx="55" cy="172" r="8" fill="#993C1D"/>
+<text x="55" y="176" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">1</text>
+<text x="72" y="176" fill="#993C1D" font-size="11">奖励模型昂贵：需要大量人工标注偏好对，RM 本身可能过时/有偏</text>
+<circle cx="55" cy="196" r="8" fill="#993C1D"/>
+<text x="55" y="200" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">2</text>
+<text x="72" y="200" fill="#993C1D" font-size="11">PPO 训练不稳定：需同时维护 Policy + Value + Reference 三个模型</text>
+<circle cx="55" cy="220" r="8" fill="#993C1D"/>
+<text x="55" y="224" text-anchor="middle" fill="#fff" font-size="10" font-weight="700">3</text>
+<text x="72" y="224" fill="#993C1D" font-size="11">Reward Hacking：模型找到钻奖励模型空子的方法而非真正改进</text>
+</svg>
+</div>
+
+<h3>2.2 DPO：直接偏好优化的数学之美</h3>
+<p>DPO（Rafailov et al., Stanford, 2023.05）的核心洞察：<strong>在 Bradley-Terry 偏好模型 + KL 正则化下，RLHF 目标函数存在闭式解</strong>。这意味着可以直接在偏好对上优化策略，完全跳过奖励模型训练和 RL 循环。</p>
+
+<p>RLHF 的目标是最大化以下目标：</p>
+$$\max_{\pi_\theta} \mathbb{E}_{(x,y_w,y_l)\sim\mathcal{D}} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \beta \log \frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)} \right) \right] - \mathbb{E}_x [\text{KL}(\pi_\theta(\cdot|x) \| \pi_{\text{ref}}(\cdot|x))]$$
+
+<p>其中 $y_w$ 是优选回答，$y_l$ 是劣选回答，$\pi_{\text{ref}}$ 是冻结的参考模型（通常是 SFT 后的模型），$\beta$ 是 KL 温度系数。</p>
+
+<p>DPO 的精妙之处：将上述目标对 $\theta$ 求导，可以得到一个<strong>仅依赖偏好对的损失函数</strong>：</p>
+$$\mathcal{L}_{\text{DPO}} = -\mathbb{E}_{(x,y_w,y_l)} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \beta \log \frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)} \right) \right]$$
+
+<div class="card intuition">
+<div class="card-label">DPO 直觉理解</div>
+<p>DPO 告诉模型："对于同一个问题，你应该提高好回答的概率，降低差回答的概率——但偏离原始模型的程度要受控。"它不需要知道"好回答到底有多好"（那是 RM 的事），只需要知道"<tspan font-weight="700">哪个比哪个好</tspan>"就足够了。这就是为什么 DPO 只需要偏好对（ranking data），不需要绝对分数（scoring data）。</p>
+</div>
+
+<h3>2.3 GRPO：组内相对策略优化 — DeepSeek-R1 的引擎</h3>
+<p>GRPO（Group Relative Policy Optimization）由 DeepSeek 于 2024 年 4 月随 DeepSeek-Math 发布，2025 年 1 月随 DeepSeek-R1 爆发。其核心创新：<strong>彻底移除了 Critic Model（价值网络）</strong>。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 240" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="how-arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- PPO 结构 -->
+<rect x="20" y="20" width="180" height="90" rx="10" fill="#FDEEE8" stroke="#993C1D" stroke-width="1.5"/>
+<text x="110" y="42" text-anchor="middle" fill="#993C1D" font-size="12" font-weight="700">PPO 结构</text>
+<text x="110" y="62" text-anchor="middle" fill="#993C1D" font-size="10">Policy Model（策略）</text>
+<text x="110" y="78" text-anchor="middle" fill="#993C1D" font-size="10">+ Value Model（Critic）</text>
+<text x="110" y="94" text-anchor="middle" fill="#993C1D" font-size="10">+ Reference Model</text>
+<text x="110" y="112" text-anchor="middle" fill="#993C1D" font-size="9">= 3个模型同时加载</text>
+
+<!-- 箭头 -->
+<line x1="205" y1="65" x2="270" y2="65" stroke="#1D9E75" stroke-width="2" marker-end="url(#how-arr2)"/>
+<text x="237" y="56" text-anchor="middle" fill="#1D9E75" font-size="10" font-weight="700">移除 Critic</text>
+
+<!-- GRPO 结构 -->
+<rect x="275" y="20" width="180" height="90" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="365" y="42" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="700">GRPO 结构</text>
+<text x="365" y="62" text-anchor="middle" fill="#1D9E75" font-size="10">Policy Model（策略）</text>
+<text x="365" y="78" text-anchor="middle" fill="#1D9E75" font-size="10">+ Reference Model</text>
+<text x="365" y="94" text-anchor="middle" fill="#1D9E75" font-size="10">+ Group Sampling（G个输出）</text>
+<text x="365" y="112" text-anchor="middle" fill="#1D9E75" font-size="9">= 仅2个模型，显存减半</text>
+
+<!-- 下方：GRPO 核心公式 -->
+<rect x="100" y="140" width="480" height="85" rx="10" fill="#fff" stroke="#534AB7" stroke-width="1.5"/>
+<text x="340" y="162" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">GRPO 优势函数计算</text>
+<text x="340" y="184" text-anchor="middle" fill="#2D2D2D" font-size="11">对于同一 prompt 采样的 G 个输出，第 i 个输出的优势：</text>
+<text x="340" y="206" text-anchor="middle" fill="#2D2D2D" font-size="12" font-weight="600">A_i = (r_i - r_bar) / s</text>
+<text x="340" y="222" text-anchor="middle" fill="#888780" font-size="10">r_i = 第i个输出的奖励, r_bar = 组内均值, s = 组内标准差</text>
+</svg>
+</div>
+
+<p>GRPO 的工作流程：</p>
+<ol style="margin:8px 0 8px 20px;font-size:14px;">
+<li><strong>组内采样</strong>：对同一 prompt，当前策略采样 G 个输出（通常 G=8~16）</li>
+<li><strong>奖励评估</strong>：用奖励函数（可以是规则的、可验证的、或学到的）给每个输出打分</li>
+<li><strong>组内归一化</strong>：计算每个输出相对于组内均值的优势 $A_i = (r_i - \bar{r}) / s$</li>
+<li><strong>策略更新</strong>：用 clipped PPO-style objective 更新策略，但基线来自组内统计而非 Value Network</li>
+</ol>
+
+<h3>2.4 DeepSeek-R1 完整训练流程</h3>
+<p>DeepSeek-R1（2025.01，Nature 封面论文）展示了 GRPO 的全部威力。其训练分为两条路线：</p>
+
+<table>
+<tr><th>路线</th><th>阶段</th><th>方法</th><th>数据</th><th>关键产出</th></tr>
+<tr><td rowspan="4"><strong>R1 完整版</strong></td><td>冷启动</td><td>SFT</td><td>数千条高质量 CoT</td><td>学会 <tspan font-weight="700">...</tspan> 格式</td></tr>
+<tr><td>推理强化</td><td>GRPO</td><td>数学/代码/逻辑数据集</td><td>推理能力大幅提升</td></tr>
+<tr><td>泛化迁移</td><td>拒绝采样+SFT</td><td>80万条精选数据</td><td>写作/翻译/角色扮演</td></tr>
+<tr><td>全面对齐</td><td>GRPO</td><td>通用+安全奖励</td><td>有用性+无害性</td></tr>
+<tr><td><strong>R1-Zero</strong></td><td>纯 RL</td><td>GRPO（无 SFT 冷启动）</td><td>可验证奖励数据</td><td>自发涌现推理能力</td></tr>
+</table>
+
+<div class="card warning">
+<div class="card-label">关键现象：aha moment（开悟时刻）</div>
+<p>R1-Zero 在纯 GRPO 训练过程中观察到了一个惊人现象：模型在某一步突然开始使用 <tspan font-weight="700">"Wait... wait."</tspan> 这样的自我反思语言，性能曲线出现陡峭跃升（AIME 2024 从 15.6% 飙升至 77.9%）。这证明了<strong>强化学习可以自发激励出高级推理模式</strong>——无需人工标注推理轨迹。</p>
+</div>
+
+<h3>2.5 奖励工程（Reward Engineering）</h3>
+<p>无论是 GRPO 还是传统 RLHF，<strong>奖励函数的设计决定了模型学到什么</strong>。DeepSeek-R1 使用了三种奖励的组合：</p>
+
+<table>
+<tr><th>奖励类型</th><th>信号来源</th><th>密度</th><th>用途</th><th>示例</th></tr>
+<tr><td><strong>Outcome Reward</strong></td><td>最终答案正确性</td><td>稀疏（0/1）</td><td>数学答案匹配</td><td>"答案是否等于 42？"</td></tr>
+<tr><td><strong>Process Reward</strong></td><td>推理过程质量</td><td>较密</td><td>步骤合理性</td><td>每步推导是否逻辑自洽</td></tr>
+<tr><td><strong>Format Reward</strong></td><td>输出格式规范</td><td>稀疏</td><td>强制 CoT 格式</td><td>是否包含 <tspan font-weight="700">...</tspan> 标签</td></tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">核心要点</div>
+<p>现代后训练已形成清晰的三层架构：(1) <strong>SFT</strong> 教格式和基础能力；(2) <strong>偏好对齐</strong>（DPO/RLHF）塑造行为品味；(3) <strong>RLVR</strong>（GRPO+可验证奖励）激发推理能力。GRPO 通过"组内竞争"取代了昂贵的 Critic Model，使得中小团队也能跑起推理级别的 RL 训练。HuggingFace TRL 库已原生支持 GRPOTrainer，成为 2025-2026 工程落地的首选工具。</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!--  §③ 为什么                                                      -->
+<!-- ============================================================ -->
+<section id="why">
+<h2><span class="sec-num">③</span> 为什么：第一性原理看对齐方法的设计取舍</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>为什么不能只用 SFT？就像<strong>你给新员工一本《标准问答手册》（SFT），他学会了格式，但你没法把"品味"写进手册里</strong>。"什么时候该简洁、什么时候该详细、怎么平衡准确性和可读性"——这种判断力只能通过反馈循环慢慢培养。RLHF/DPO/GRPO 就是构建这个反馈循环的不同工程方案。</p>
+</div>
+
+<h3>为什么 SFT 无法替代偏好对齐？</h3>
+<p>形式化地看，SFT 最小化的是<strong>条件似然</strong>：</p>
+$$\mathcal{L}_{\text{SFT}} = -\sum_{(x,y)\in\mathcal{D}} \log \pi_\theta(y|x)$$
+<p>这会让模型<strong>模仿训练数据中的回答分布</strong>。问题是：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li><strong>SFT 数据中的"好回答"参差不齐</strong>：标注者水平不一，有些回答其实不够好，但 SFT 会一视同仁地模仿</li>
+<li><strong>SFT 无法表达"相对偏好"</strong>：它知道回答 A 可以，回答 B 也可以，但不知道 A 比 B 更好</li>
+<li><strong>SFT 缺乏探索机制</strong>：模型只能在训练数据分布内模仿，无法主动发现更好的回答方式</li>
+</ul>
+
+<p>而偏好对齐的目标函数显式建模了<strong>偏好的序关系</strong>：</p>
+$$P(y_w \succ y_l | x) = \sigma(r(x,y_w) - r(x,y_l))$$
+<p>这个序关系才是"品味"的数学本质——不是"这是什么水平的回答"，而是"<tspan font-weight="700">这个回答比那个好多少</tspan>"。</p>
+
+<h3>为什么 DPO 在数学上等价于 RLHF？</h3>
+<p>这是一个经常被误解但极其重要的理论结果。在以下两个假设下，DPO 和 RLHF 优化的是<strong>同一个目标函数</strong>：</p>
+<ol style="margin:8px 0 8px 20px;font-size:14px;">
+<li>偏好服从 <strong>Bradley-Terry 模型</strong>：$P(y_w \succ y_l) = \sigma(r^*(y_w) - r^*(y_l))$</li>
+<li>使用 <strong>KL 正则化</strong>约束策略偏离参考模型的程度</li>
+</ol>
+<p>区别纯粹是<strong>算法层面的</strong>：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li><strong>RLHF</strong>：先拟合奖励函数 $r_\phi$，再用 RL 优化策略 → 两步近似</li>
+<li><strong>DPO</strong>：将奖励函数代入目标函数并求闭式解 → 一步到位</li>
+</ul>
+<p>所以 DPO 不是"另一种完全不同的方法"，而是 RLHF 的<strong>更高效的重参数化</strong>。这也是为什么 BearPlex 2026 的结论明确指出：<strong>"DPO is RL"</strong>。</p>
+
+<h3>为什么 GRPO 在推理任务上碾压 DPO？</h3>
+<p>这是 2025 年最重要的实践发现之一。DPO 和 GRPO 的本质差异不在数学目标，而在<strong>数据来源</strong>：</p>
+
+<table>
+<tr><th>维度</th><th>DPO</th><th>GRPO</th></tr>
+<tr><td>数据来源</td><td>离线固定数据集（偏好对）</td><td>在线生成（每次采样新输出）</td></tr>
+<tr><td>探索能力</td><td>❌ 无（只能在已有数据上优化）</td><td>✅ 有（能发现训练数据中没有的策略）</td></tr>
+<tr><td>适合任务</td><td>风格/语气/安全对齐</td><td>数学/代码/长链推理</td></tr>
+<tr><td>失败模式</td><td>Likelihood Displacement（概率漂移）</td><td>Cold Start（冷启动问题）</td></tr>
+</table>
+
+<p>TheoremPath 的分析精准地指出了关键：<strong>DPO 是 offline 方法，GRPO/RL 是 online 方法</strong>。当模型通过 RL 学会避免一种错误后可能出现新的错误模式——这些新模式不存在于原始 DPO 训练集中，所以 DPO 无法修复；而 GRPO 可以通过在线采样持续发现和修正。</p>
+
+<div class="card warning">
+<div class="card-label">DPO 的特有失败模式：Likelihood Displacement</div>
+<p>Razin et al. (2024) 发现了 DPO 的一个隐蔽失败模式：当参考模型 $\pi_{\text{ref}}$ 给某个低质量回答分配了异常高的概率时，DPO 的梯度方向会被扭曲。模型不是在"提升好回答的概率"，而是在"压低参考模型碰巧高估的回答的概率"。这使得 DPO 的实际效果偏离了原本的偏好对齐目标。SimPO 和 IPO 等 DPO 变体部分解决了这个问题。</p>
+</div>
+
+<h3>为什么纯 RL 能涌现推理能力？</h3>
+<p>DeepSeek-R1-Zero 证明了：即使<strong>跳过 SFT 冷启动阶段</strong>，仅用 GRPO + 可验证奖励，模型也能自发涌现出推理能力。背后的第一性原理是：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li><strong>搜索-学习范式</strong>：RL 提供了一个搜索空间（所有可能的思维链路径），奖励信号引导搜索方向</li>
+<li><strong>长链推理天然有利可图</strong>：在数学/编程中，更长的推理链往往对应更高的解题成功率，RL 自然而然地鼓励这种行为</li>
+<li><strong>自我进化</strong>：模型在训练中逐步发现了"反思""验证""尝试不同解法"等策略，并通过梯度更新固化下来</li>
+</ul>
+
+<p>Nature 论文的评审评价 R1-Zero 为<strong>"首个明确的成功案例，将纯强化学习应用于足够好的预训练语言模型"</strong>。但这并不意味着 SFT 过时了——R1-Zero 有严重的语言混杂和可读性问题，完整版 R1 仍需 SFT 来修复这些问题。</p>
+
+<div class="card takeaway">
+<div class="card-label">核心要点</div>
+<p>偏好对齐的本质是教会模型<strong>"相对好坏判断力"</strong>（而非 SFT 的"绝对模仿力"）。DPO 和 RLHF 在数学目标上等价，差异在于工程效率——DPO 更简单稳定，适合 90%+ 的生产场景。GRPO 的突破在于引入在线探索机制，使其在推理任务上超越所有 offline 方法。纯 RL 涌现推理能力的意义不在于"取消 SFT"，而在于证明了<strong>奖励信号的形状比监督数据的数量更重要</strong>。</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!--  §④ 演进格局                                                    -->
+<!-- ============================================================ -->
+<section id="evolution">
+<h2><span class="sec-num">④</span> 演进格局：2022-2026 对齐技术的代际革命</h2>
+
+<div class="diagram">
+<svg viewBox="0 0 680 300" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<!-- 时间线 -->
+<line x1="40" y1="150" x2="640" y2="150" stroke="#534AB7" stroke-width="2"/>
+<!-- 2022 -->
+<circle cx="100" cy="150" r="6" fill="#534AB7"/>
+<text x="100" y="130" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">2022</text>
+<text x="100" y="175" text-anchor="middle" fill="#534AB7" font-size="9">InstructGPT / ChatGPT</text>
+<text x="100" y="188" text-anchor="middle" fill="#534AB7" font-size="9">RLHF + PPO 范式确立</text>
+<!-- 2023 -->
+<circle cx="220" cy="150" r="6" fill="#185FA5"/>
+<text x="220" y="130" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="700">2023</text>
+<text x="220" y="175" text-anchor="middle" fill="#185FA5" font-size="9">DPO 提出</text>
+<text x="220" y="188" text-anchor="middle" fill="#185FA5" font-size="9"> Constitutional AI (Anthropic)</text>
+<!-- 2024 -->
+<circle cx="350" cy="150" r="6" fill="#BA7517"/>
+<text x="350" y="130" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="700">2024</text>
+<text x="350" y="175" text-anchor="middle" fill="#BA7517" font-size="9">GRPO (DeepSeek-Math)</text>
+<text x="350" y="188" text-anchor="middle" fill="#BA7517" font-size="9">DPO 变体: ORPO/KTO/SimPO</text>
+<!-- 2025 -->
+<circle cx="490" cy="150" r="6" fill="#1D9E75"/>
+<text x="490" y="130" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">2025</text>
+<text x="490" y="175" text-anchor="middle" fill="#1D9E75" font-size="9">DeepSeek-R1 (Nature)</text>
+<text x="490" y="188" text-anchor="middle" fill="#1D9E75" font-size="9">GRPO 统治推理 · DAPO/GSPO</text>
+<!-- 2026 -->
+<circle cx="610" cy="150" r="6" fill="#993C1D"/>
+<text x="610" y="130" text-anchor="middle" fill="#993C1D" font-size="11" font-weight="700">2026</text>
+<text x="610" y="175" text-anchor="middle" fill="#993C1D" font-size="9">Constitutional AI 2.0</text>
+<text x="610" y="188" text-anchor="middle" fill="#993C1D" font-size="9">RL 多智能体框架兴起</text>
+
+<!-- 上方趋势区 -->
+<rect x="60" y="25" width="220" height="38" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="170" y="48" text-anchor="middle" fill="#534AB7" font-size="10">范式转移：奖励模型从必需品变成可选品</text>
+
+<rect x="360" y="25" width="260" height="38" rx="6" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1"/>
+<text x="490" y="48" text-anchor="middle" fill="#1D9E75" font-size="10">2025 分水岭：DPO 统治对话 · GRPO 统治推理</text>
+
+<!-- 下方算法矩阵 -->
+<rect x="80" y="220" width="520" height="65" rx="8" fill="#fff" stroke="#888780" stroke-width="1"/>
+<text x="340" y="240" text-anchor="middle" fill="#2D2D2D" font-size="11" font-weight="700">算法决策矩阵（2026 行业共识）</text>
+<text x="340" y="258" text-anchor="middle" fill="#888780" font-size="10">PPO: 通用 RL（渐被淘汰）| DPO: 风格对齐（生产默认）</text>
+<text x="340" y="274" text-anchor="middle" fill="#888780" font-size="10">GRPO: 推理密集型（Sweet Spot）| RLAIF: 安全大规模（Anthropic 路线）</text>
+</svg>
+</div>
+
+<h3>2025 分水岭：奖励模型的消亡</h3>
+<p>Best AI Web 的总结一针见血：<strong>"ChatGPT 的技术基石正在从前线退役——不是因为失败了，而是因为更便宜的替代品到来了。"</strong>三条独立的技术路线得出了同一个结论：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li><strong>Stanford（DPO）</strong>：解析解证明奖励模型可以被消除（2023）</li>
+<li><strong>DeepSeek（GRPO）</strong>：组内统计替代价值网络（2024-2025）</li>
+<li><strong>Google/Anthropic（RLAIF）</strong>：AI 反馈替代人工反馈（2022-2026）</li>
+</ul>
+
+<h3>算法选择决策树（2026 版）</h3>
+<div style="background:#F0F0EC;border-radius:8px;padding:14px 16px;margin:12px 0;font-size:13px;line-height:1.8;">
+<strong>Q1:</strong> 任务是否有可验证的正确答案？（如数学/代码）<br>
+&nbsp;&nbsp;<strong>Yes → GRPO + Rule-based Reward</strong>（RLVR 路线，DeepSeek-R1 已验证）<br>
+&nbsp;&nbsp;<strong>No → Q2</strong><br>
+<strong>Q2:</strong> 是否只需调整风格/语气/安全性？<br>
+&nbsp;&nbsp;<strong>Yes → DPO 或变体（SimPO/ORPO/KTO）</strong>（生产默认，成本低且稳定）<br>
+&nbsp;&nbsp;<strong>No → Q3</strong><br>
+<strong>Q3:</strong> 是否有充足算力和高质量偏好数据？<br>
+&nbsp;&nbsp;<strong>Yes → RLHF + PPO</strong>（前沿 alignment，追求最后 1-3%）<br>
+&nbsp;&nbsp;<strong>No → DPO</strong>（回到 Q2 的推荐）
+</div>
+
+<h3>Constitutional AI 与 RLAIF 的演进</h3>
+<p>Anthropic 的宪法 AI（CAI）走了一条不同的道路：不是消除奖励模型，而是<strong>用 AI 替代人类标注者</strong>。2026 年 1 月发布的 Claude 新宪法标志着重大升级：</p>
+
+<table>
+<tr><th>维度</th><th>CAI 1.0（2022）</th><th>CAI 2.0（2026）</th></tr>
+<tr><td>原则数量</td><td>~20 条</td><td>~23,000 字（4 层优先级）</td></tr>
+<tr><td>治理哲学</td><td>基于规则（Rule-based）</td><td>基于理由（Reason-based）</td></tr>
+<tr><td>优先级</td><td>未明确分层</td><td>4 层: 安全 > 伦理 > 合规 > 有帮助</td></tr>
+<tr><td>意识问题</td><td>未涉及</td><td>首次正式承认 AI 可能具有道德地位</td></tr>
+<tr><td>防漂移</td><td>静态宪法</td><td>实时监控 + 自动纠正（Alignment Drift Prevention）</td></tr>
+</table>
+
+<h3>2026 新兴变体</h3>
+<table>
+<tr><th>方法</th><th>全称</th><th>核心创新</th><th>解决的问题</th><th>代表</th></tr>
+<tr><td>DAPO</td><td>Decoupled Clip &amp; Dynamic Sampling</td><td>放宽 clip 上限 + 动态过滤无效组</td><td>长 CoT 的熵坍塌</td><td>阿里云 2026</td></tr>
+<tr><td>GSPO</td><td>Group Sequence Policy Optimization</td><td>序列级优化（非 token 级）</td><td>MoE 大模型 Router 崩溃</td><td>MARTI-v2 2026</td></tr>
+<tr><td>SimPO</td><td>Simple Preference Optimization</td><td>消除 Reference Model 需求</td><td>减少一个模型的显存开销</td><td>2024</td></tr>
+<tr><td>KTO</td><td>Kahneman-Tversky Optimization</td><td>支持二元 thumbs up/down 数据</td><td>不需要成对偏好数据</td><td>2024</td></tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">核心要点</div>
+<p>2022-2026 对齐技术的演进叙事是<strong>"奖励模型消亡史"</strong>。DPO 通过数学技巧消除 RM，GRPO 通过工程创新消除 Critic，RLAIF 通过 AI 标注替代人工标注。三者殊途同归。2026 年的工程实践已经分化为清晰的场景适配：<strong>DPO 管对话风格，GRPO 管推理能力，Constitutional AI 管安全边界</strong>。PPO 并未消失，但在大多数场景中已是"备选项"而非"默认项"。</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!--  §⑤ 与产品连接                                                  -->
+<!-- ============================================================ -->
+<section id="connect">
+<h2><span class="sec-num">⑤</span> 与产品连接：Agent 行为品味判断力的理论基础</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>对齐训练和 Fitz 每天做的事高度相关。<strong>辅导张帅改掉"方法论缺失"的问题</strong>——这就是在对齐一个人的行为品味。<strong>EvalAgent 评测 KBAgent 输出好不好</strong>——这就是在做自动化偏好评估。<strong>TRSAgent 分类准确率 92.2%</strong>——背后是对齐训练确保模型"知道什么是对的分类"。</p>
+</div>
+
+<h3>连接 1：EvalAgent 评测体系的对齐根基</h3>
+<p>Fitz 主导的 EvalAgent 项目使用"1 系统提示词 + 1 Eval Skill + 1 配置表 + N 测评集"的架构公式。从本章视角看：</p>
+<ul style="margin:8px 0 8px 20px;">
+<li><strong>系统提示词</strong> ≈ Constitution（定义"什么是好回答"的原则）</li>
+<li><strong>Eval Skill</strong> ≈ Reward Function（执行评判逻辑）</li>
+<li><strong>测评集</strong> ≈ Preference Dataset（提供评判样本）</li>
+<li><strong>配置表</strong> ≈ KL Temperature / 权重超参</li>
+</ul>
+<p>EvalAgent 判断逻辑拆分的本质就是对齐工程的<strong>产品化封装</strong>：System Prompt 放判断标准和法律（类似 CAI 宪法），Skill 放执行流程和 Prompt 模板（类似奖励函数）。</p>
+
+<h3>连接 2：Harness 六组件中的"评估反馈闭环"</h3>
+<p>Fitz 原创 Harness 框架的六组件之一是 <strong>Evaluate（评估反馈闭环）</strong>。从对齐技术角度看，这正是 RLHF 循环的产品形态：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 180" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visual">
+<defs><marker id="conn-arr1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- RLHF 循环 -->
+<rect x="20" y="30" width="140" height="55" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="90" y="52" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">Policy Model</text>
+<text x="90" y="70" text-anchor="middle" fill="#534AB7" font-size="10">(Agent 执行)</text>
+
+<line x1="165" y1="57" x2="208" y2="57" stroke="#888780" stroke-width="1.2" marker-end="url(#conn-arr1)"/>
+
+<rect x="215" y="30" width="140" height="55" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="285" y="52" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="700">Reward / Eval</text>
+<text x="285" y="70" text-anchor="middle" fill="#BA7517" font-size="10">(EvalAgent 评判)</text>
+
+<line x1="360" y1="57" x2="403" y2="57" stroke="#888780" stroke-width="1.2" marker-end="url(#conn-arr1)"/>
+
+<rect x="410" y="30" width="140" height="55" rx="8" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="480" y="52" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="700">Update</text>
+<text x="480" y="70" text-anchor="middle" fill="#1D9E75" font-size="10">(Prompt/Skill 迭代)</text>
+
+<!-- 回环箭头 -->
+<path d="M480 88 L480 115 L90 115 L90 88" fill="none" stroke="#1D9E75" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#conn-arr1)"/>
+<text x="285" y="135" text-anchor="middle" fill="#1D9E75" font-size="10">Harness Evaluate 闭环 ← RLHF 循环的同构映射</text>
+
+<!-- 下方对照文字 -->
+<rect x="120" y="148" width="440" height="24" rx="6" fill="#fff" stroke="#E0E0DC" stroke-width="1"/>
+<text x="340" y="165" text-anchor="middle" fill="#888780" font-size="10">PPO 梯度更新 → 产品中表现为 Prompt/Skill/配置的人工迭代</text>
+</svg>
+</div>
+
+<h3>连接 3：各 Agent 项目的对齐需求分析</h3>
+<table>
+<tr><th>Agent</th><th>对齐需求类型</th><th>推荐方法</th><th>当前状态</th></tr>
+<tr><td>DDAgent</td><td>领域推理对齐（尽调流程正确性）</td><td>领域 SFT + 可验证奖励 RL</td><td>83% 预填率，领域 SFT 已做</td></tr>
+<tr><td>KBAgent</td><td>QA 准确性对齐（HQA 质量）</td><td>DPO（偏好对：好 HQA vs 差 HQA）</td><td>V5 准确率 ~82%，待对齐优化</td></tr>
+<tr><td>FXAgent</td><td>合规+准确双重对齐</td><td>Constitutional AI 风格（汇率规则=宪法）</td><td>98-99.75% 采纳率，对齐成熟</td></tr>
+<tr><td>TRSAgent</td><td>分类准确性对齐</td><td>SFT + DPO 微调分类边界</td><td>92.2% 准确率，3 个 P0 待修</td></tr>
+<tr><td>BAAgent</td><td>数据分析品味对齐</td><td>DPO（有价值报告 vs 无价值报告）</td><td>有价值率 85%，四层月报已建</td></tr>
+</table>
+
+<h3>连接 4：产品经理的对齐决策清单</h3>
+<p>当你需要决定"要不要做对齐训练"、"用哪种方法"时，按此清单决策：</p>
+<div style="background:#F0F0EC;border-radius:8px;padding:14px 16px;margin:12px 0;font-size:13px;line-height:1.9;">
+<strong>□ Step 1: SFT 够了吗？</strong><br>
+&nbsp;&nbsp;如果问题只是格式/风格 → SFT 即可，不需要对齐<br>
+<strong>□ Step 2: 有客观正确答案吗？</strong><br>
+&nbsp;&nbsp;如果任务可自动验证（代码运行、数学答案）→ GRPO + 规则奖励<br>
+<strong>□ Step 3: 只有"好坏之分"吗？</strong><br>
+&nbsp;&nbsp;如果依赖主观偏好判断 → DPO（成本最低，效果足够）<br>
+<strong>□ Step 4: 安全敏感吗？</strong><br>
+&nbsp;&nbsp;如果是金融/合规场景 → 参考 Constitutional AI 思路，明确定义"宪法"<br>
+<strong>□ Step 5: 算力和资源够吗？</strong><br>
+&nbsp;&nbsp>PPO 需要 5K-50K+ 成本和多卡集群；DPO 单 GPU 数小时即可
+</div>
+
+<div class="card warning">
+<div class="card-label">产品陷阱：Reward Hacking 的现实形态</div>
+<p>学术文献中的 Reward Hacking（模型钻奖励空子）在实际产品中有各种变形：KBAgent 可能学会了"生成长篇大论看起来很专业的回答"（长度 hack）、TRSAgent 可能学会了"总是预测最常见的那一类"（频率 hack）、FXAgent 可能学会了"永远建议持有不动"（保守 hack）。<strong>对抗 Reward Hacking 的最好方法是多元奖励组合</strong>（Outcome + Process + Format），以及持续的 holdout set 评测。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">核心要点</div>
+<p>对齐训练不是学术概念，而是 Fitz 每个 Agent 项目的日常工程。EvalAgent 的架构本质上就是 RLHF 循环的产品化封装，Harness 的 Evaluate 组件是其系统级形态。五个 Agent 项目的对齐需求各异：DDAgent 需要推理级对齐（GRPO 路线），KBAgent/BAAgent 需要品味级对齐（DPO 路线），FXAgent/TRSAgent 需要规则级对齐（Constitutional AI 路线）。理解对齐技术的第一性原理，才能在每个项目中做出正确的工程选择。</p>
+</div>
+</section>
+
+<!-- ====== 底部导航 ====== -->
+<div class="chapter-footer">
+<a href="../../INDEX.html">← 返回知识图谱</a>
+<a href="3.2-rlhf-dpo-quiz.html">去做 Quiz（10 题）→</a>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,1009 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>T1 W1 D1 · Tokenizer 与 BPE 入门 · v3 行业共识版</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root {
+  --bg: #fafaf7;
+  --card: #ffffff;
+  --text: #1a1a1a;
+  --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7;
+  --purple-bg: #EEEDFE;
+  --teal: #1D9E75;
+  --teal-bg: #E1F5EE;
+  --amber: #BA7517;
+  --amber-bg: #FAEEDA;
+  --blue: #185FA5;
+  --blue-bg: #E6F1FB;
+  --coral: #993C1D;
+  --coral-bg: #FAECE7;
+  --red: #C41E3A;
+  --red-bg: #FDE8EB;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.72;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 24px 80px;
+  font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 32px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+.tag.t1 { background: var(--purple-bg); color: var(--purple); }
+.tag.section { background: #f1f1f1; color: var(--muted); }
+.tag.time { background: var(--teal-bg); color: var(--teal); }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 22px; font-weight: 600; margin: 8px 0 4px; }
+.subtitle { color: var(--muted); font-size: 14px; }
+h2 { font-size: 18px; font-weight: 600; margin: 36px 0 12px; padding-left: 12px; border-left: 3px solid var(--purple); }
+h3 { font-size: 15.5px; font-weight: 600; margin: 22px 0 10px; color: #333; }
+h4 { font-size: 13.5px; font-weight: 600; margin: 16px 0 8px; color: var(--purple); }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; margin: 16px 0; }
+.card.intuition { background: var(--blue-bg); border-color: rgba(24,95,165,0.15); }
+.card.warning { background: var(--coral-bg); border-color: rgba(153,60,29,0.15); }
+.card.deepen { background: var(--amber-bg); border-color: rgba(186,117,23,0.15); }
+.card.takeaway { background: var(--teal-bg); border-color: rgba(29,158,117,0.15); }
+.card.critical { background: var(--red-bg); border-color: rgba(196,30,58,0.18); }
+.card-title { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.card.intuition .card-title { color: var(--blue); }
+.card.warning .card-title { color: var(--coral); }
+.card.deepen .card-title { color: var(--amber); }
+.card.takeaway .card-title { color: var(--teal); }
+.card.critical .card-title { color: var(--red); }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { font-weight: 600; background: #f7f7f4; color: var(--muted); font-size: 13px; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: #f1f1ee; padding: 2px 6px; border-radius: 4px; color: #d63384; }
+pre { background: #2c2c2a; color: #f1efe8; padding: 14px 16px; border-radius: 8px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; }
+pre code { background: transparent; color: inherit; padding: 0; }
+.token-row { display: flex; flex-wrap: wrap; gap: 4px; margin: 12px 0; }
+.token { padding: 4px 8px; border-radius: 4px; font-family: "SF Mono", monospace; font-size: 13px; border: 1px solid var(--border); }
+.token.eng { background: #E6F1FB; color: var(--blue); }
+.token.cjk { background: var(--coral-bg); color: var(--coral); }
+.token.special { background: var(--amber-bg); color: var(--amber); }
+.token.bad { background: var(--red-bg); color: var(--red); }
+.diagram { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin: 16px 0; text-align: center; overflow-x: auto; }
+.flow { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; font-family: "SF Mono", monospace; font-size: 13px; }
+.flow-step { padding: 8px 14px; background: var(--purple-bg); color: var(--purple); border-radius: 6px; font-weight: 500; }
+.flow-arrow { color: var(--muted); font-size: 18px; }
+.thinking { border-left: 3px solid var(--amber); padding: 4px 16px; margin: 16px 0; font-style: italic; color: #555; }
+.principle { border-left: 3px solid var(--purple); padding: 4px 16px; margin: 16px 0; background: var(--purple-bg); border-radius: 0 8px 8px 0; }
+.footer-actions { margin-top: 48px; padding: 20px; background: var(--purple-bg); border-radius: 10px; }
+.footer-actions h3 { margin-top: 0; color: var(--purple); }
+.footer-actions ul { padding-left: 20px; }
+.footer-actions li { margin: 6px 0; }
+.footer-actions a { color: var(--purple); font-weight: 500; }
+strong { font-weight: 600; }
+em { color: #555; }
+.kv { display: grid; grid-template-columns: 120px 1fr; gap: 8px 16px; font-size: 14px; margin: 8px 0; }
+.kv dt { color: var(--muted); font-weight: 500; }
+.kv dd { margin: 0; }
+.source-tag { display: inline-block; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-left: 4px; vertical-align: middle; }
+.source-tag.cn { background: #EEEDFE; color: #534AB7; }
+.source-tag.intl { background: #E6F1FB; color: #185FA5; }
+.vocab-bar { height: 22px; border-radius: 11px; display: inline-block; min-width: 40px; text-align: center; font-size: 10px; font-weight: 700; color: white; line-height: 22px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t1">T1 LLM 系统</span>
+    <span class="tag section">1.1 Tokenization</span>
+    <span class="tag time">≈ 42 min · 进度 5/5 · v3 行业共识修订</span>
+    <a href="../../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+    <a href="1.1-tokenization-quiz.html" class="nav-link">Quiz · 10 题 →</a>
+  </div>
+  <h1>Tokenizer：模型眼里的"字"长什么样</h1>
+  <div class="subtitle">从产品体感出发，用第一性原理拆解 BPE，再拉到 2025-2026 行业全景观</div>
+
+  <div style="display:flex;gap:8px;margin-top:16px;font-size:12px;flex-wrap:wrap;">
+    <a href="#s1-is" style="padding:4px 10px;border-radius:14px;background:#E1F5EE;color:#0F6E56;text-decoration:none;font-weight:500;">① 是什么</a>
+    <a href="#s2-how" style="padding:4px 10px;border-radius:14px;background:#E1F5EE;color:#0F6E56;text-decoration:none;font-weight:500;">② 怎么实现</a>
+    <a href="#s3-why" style="padding:4px 10px;border-radius:14px;background:#E1F5EE;color:#0F6E56;text-decoration:none;font-weight:500;">③ 为什么</a>
+    <a href="#s4-evo" style="padding:4px 10px;border-radius:14px;background:#E1F5EE;color:#0F6E56;text-decoration:none;font-weight:500;">④ 演进格局</a>
+    <a href="#s5-product" style="padding:4px 10px;border-radius:14px;background:#E1F5EE;color:#0F6E56;text-decoration:none;font-weight:500;">⑤ 产品决策</a>
+  </div>
+</div>
+
+<div class="diagram" style="margin:24px 0 8px;">
+<p style="font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px;">章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 340" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+  <defs><marker id="ov-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+  <rect x="220" y="10" width="240" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text x="340" y="30" font-family="-apple-system,sans-serif" font-size="13" font-weight="500" fill="#534AB7" text-anchor="middle">① 是什么</text>
+  <text x="340" y="48" font-family="-apple-system,sans-serif" font-size="11" fill="#3C3489" text-anchor="middle">文本 → token ID · 为何不按字符/词切</text>
+  <line x1="340" y1="62" x2="340" y2="88" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr)"/>
+  <rect x="220" y="92" width="240" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+  <text x="340" y="112" font-family="-apple-system,sans-serif" font-size="13" font-weight="500" fill="#185FA5" text-anchor="middle">② 怎么实现</text>
+  <text x="340" y="130" font-family="-apple-system,sans-serif" font-size="11" fill="#0C447C" text-anchor="middle">BPE 6步训练 · 贪心合并 · pre-tokenize</text>
+  <line x1="340" y1="144" x2="340" y2="170" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr)"/>
+  <rect x="220" y="174" width="240" height="52" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+  <text x="340" y="194" font-family="-apple-system,sans-serif" font-size="13" font-weight="500" fill="#BA7517" text-anchor="middle">③ 为什么</text>
+  <text x="340" y="212" font-family="-apple-system,sans-serif" font-size="11" fill="#633806" text-anchor="middle">信息熵 · Zipf定律 · 数字推理因果链</text>
+  <line x1="340" y1="226" x2="340" y2="252" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr)"/>
+  <rect x="42" y="256" width="278" height="52" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+  <text x="181" y="276" font-family="-apple-system,sans-serif" font-size="12" font-weight="500" fill="#534AB7" text-anchor="middle">④ 演进格局</text>
+  <text x="181" y="293" font-family="-apple-system,sans-serif" font-size="10" fill="#3C3489" text-anchor="middle">BPE→WordPiece→Unigram→BBPE→BLT</text>
+  <rect x="360" y="256" width="278" height="52" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+  <text x="499" y="276" font-family="-apple-system,sans-serif" font-size="12" font-weight="500" fill="#1D9E75" text-anchor="middle">⑤ 产品连接</text>
+  <text x="499" y="293" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">token预算 · glitch token · 多语言公平性</text>
+</svg>
+</div>
+
+<!-- ============================================================ -->
+<!--  SECTION 1: WHAT IS IT -->
+<!-- ============================================================ -->
+
+<div class="card intuition">
+  <div class="card-title">▎为什么从这里开始</div>
+  你做了4个生产级Agent，但有没有想过：用户输入"我想换100美元到日元"这一句话，模型<strong>真正"看到"的是什么</strong>？是 13 个汉字+数字+字母吗？不是。它看到的是一串数字 ID：<code>[31476, 88229, 9554, ...]</code>。
+  <br><br>
+  这串数字怎么来的？为什么OpenAI按token计费，1个汉字往往要花2-3个token，但1个英文单词可能只算1个？为什么有些模型对中文表现差？<strong>答案都在Tokenizer这一层。</strong>
+  <br><br>
+  这是LLM最底层、最容易被产品经理忽略、却又直接影响成本与效果的一环。学完今天你将彻底理解：模型"识字"的方式，和人类完全不同。
+</div>
+
+<h2 id="s1-is">① 是什么 — 模型不识字，只识ID</h2>
+
+<p>大模型本质是一个<strong>矩阵乘法机器</strong>。它不能直接处理文本——所有输入必须先变成数字索引。这个翻译过程就叫 <strong>Tokenization（分词）</strong>。</p>
+
+<div class="diagram">
+  <div class="flow">
+    <span class="flow-step">"换100美元"</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">Tokenizer</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">[换][100][美][元]</span>
+    <span class="flow-arrow">&rarr;</span>
+    <span class="flow-step">[2391, 1633, 9876, 3210]</span>
+  </div>
+  <div style="font-size: 13px; color: var(--muted); margin-top: 12px;">原文 &rarr; 切成 token 序列 &rarr; 每个 token 查表得到整数 ID</div>
+</div>
+
+<p>这里有几个关键概念，先把术语对齐：</p>
+
+<dl class="kv">
+  <dt>Token（词元）</dt>
+  <dd>模型处理的<strong>原子单位</strong>。可能是 1个字、半个词、1个标点、甚至1个空格——<strong>长度不固定</strong>，由算法从训练数据中统计得出。</dd>
+  <dt>Vocabulary（词表）</dt>
+  <dd>所有可能 token 的集合，每个 token 有唯一整数 ID。<strong>词表大小 = embedding 矩阵的行数</strong>——这是理解后续 scaling 的关键。</dd>
+  <dt>Tokenizer</dt>
+  <dd>把"原始文本 &harr; token ID 序列"双向翻译的确定性程序。<em>同一份代码 + 同一份数据 = 任何时候切出来的结果完全一样</em>。</dd>
+  <dt>Embedding（嵌入）</dt>
+  <dd>把 token ID 转成一个高维稠密向量（如 4096 维），让模型可以做矩阵运算。是 Tokenizer 的<strong>下一步</strong>，下一章讲。</dd>
+</dl>
+
+<h4>2025-2026 各大模型的词表大小（权威公司官方数据）</h4>
+
+<table>
+  <tr><th>模型</th><th>词表大小</th><th>Tokenizer 类型</th><th>信息源</th></tr>
+  <tr><td>Gemini 3 / Gemma 3</td><td><b>262,144</b></td><td>SentencePiece Unigram</td><td>Google 官方博客<span class="source-tag intl">🌍</span></td></tr>
+  <tr><td>Qwen3.5</td><td><b>250,000</b></td><td>Byte-level BPE</td><td>Qwen 官方博客<span class="source-tag cn">🇨🇳</span></td></tr>
+  <tr><td>GPT-4o / GPT-5 / o3</td><td>~200,000</td><td>tiktoken (BBPE)</td><td>OpenAI tiktoken 库<span class="source-tag intl">🌍</span></td></tr>
+  <tr><td>LLaMA 4 Scout/Maverick</td><td>202,048</td><td>tiktoken + O200K_PATTERN</td><td>Meta torchtune<span class="source-tag intl">🌍</span></td></tr>
+  <tr><td>Qwen3</td><td>151,669</td><td>Byte-level BPE</td><td>Qwen3 技术报告<span class="source-tag cn">🇨🇳</span></td></tr>
+  <tr><td>Mistral Small 3.1</td><td>131,072</td><td>Tekken (BBPE)</td><td>Mistral 官方文档<span class="source-tag intl">🌍</span></td></tr>
+  <tr><td>DeepSeek-V3 / R2</td><td>128,000</td><td>Byte-level BPE</td><td>DeepSeek-V3 技术报告<span class="source-tag cn">🇨🇳</span></td></tr>
+  <tr><td>Claude Opus 4.6</td><td>~65,536</td><td>专有 BPE 变体</td><td>社区推断（头部中最小）</td></tr>
+</table>
+
+<div class="card critical">
+  <div class="card-title">⚠️ 关键趋势：词表 3 年 8 倍增长</div>
+  从 LLaMA 2 的 32K（2023）到 Gemini 3 的 262K（2025），词表扩大了 <strong>8 倍</strong>。这不是偶然——背后有三股驱动力：<strong>多语言覆盖需求 + 编码效率优化 + 词表本身成为 scaling law 的关键维度</strong>。§④ 会展开这个话题。
+</div>
+
+<div class="principle">
+  <strong>第一性原理：</strong>Tokenization 本质上是一个<strong>有损压缩编码</strong>问题——在有限词表预算下，如何把无限可能的文本映射为有限集合中的元素序列，同时最大化信息保留率。所有 tokenizer 变种都是对这个问题的不同近似解。
+</div>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 2: HOW IT WORKS -->
+<!-- ============================================================ -->
+
+<h2 id="s2-how">② 怎么实现 — 一句话变成 7 个 token 的全过程</h2>
+
+<p>这一节我们只做一件事：拿一句真实的话 <code>I want to exchange 12345 dollars</code>，<strong>从头到尾追踪它怎么一步步变成 7 个 token</strong>。本节分三块：</p>
+
+<div class="card intuition">
+  <div class="card-title">▎本节路线图</div>
+  <ol style="margin:6px 0;padding-left:22px;">
+    <li><strong>Part A · 全流程大图</strong>：一张图看懂 NFC → 正则 → UTF-8 → BPE 4 个阶段每一步具体干了什么</li>
+    <li><strong>Part B · 4 个比喻</strong>：每个阶段用一个非专业人士秒懂的比喻锚定直觉</li>
+    <li><strong>Part C · BPE 深讲</strong>：纠正"BPE = 单步贪心匹配"这个最大误解，区分训练期 vs 推理期</li>
+  </ol>
+</div>
+
+<!-- ===================================================================== -->
+<!-- PART A: BIG FLOW DIAGRAM -->
+<!-- ===================================================================== -->
+
+<h3>Part A · 全流程大图：一句话的 4 阶段之旅</h3>
+
+<p>下图把 <code>"I want to exchange 12345 dollars"</code> 在每个阶段的<strong>具体输入和输出</strong>都画出来。建议放大或横屏阅读。</p>
+
+<div class="diagram" style="padding:14px;">
+<svg viewBox="0 0 680 540" width="100%" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,'PingFang SC',sans-serif;">
+  <defs>
+    <marker id="arrFlow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M2 1 L8 5 L2 9" fill="none" stroke="#534AB7" stroke-width="1.6"/>
+    </marker>
+  </defs>
+
+  <!-- 输入 -->
+  <rect x="160" y="14" width="360" height="58" rx="12" fill="#EEEDFE" stroke="#7F77DD" stroke-width="1"/>
+  <text x="340" y="36" text-anchor="middle" font-size="13" font-weight="700" fill="#26215C">原始输入文本</text>
+  <text x="340" y="58" text-anchor="middle" font-size="14" font-family="'SF Mono',monospace" font-weight="600" fill="#534AB7">"I want to exchange 12345 dollars"</text>
+  <line x1="340" y1="74" x2="340" y2="98" stroke="#534AB7" stroke-width="2" marker-end="url(#arrFlow)"/>
+
+  <!-- 阶段 ① -->
+  <rect x="80" y="104" width="520" height="64" rx="12" fill="#fff" stroke="#7F77DD" stroke-width="1.4"/>
+  <rect x="80" y="104" width="520" height="24" rx="12" fill="#EEEDFE"/>
+  <text x="340" y="121" text-anchor="middle" font-size="12" font-weight="700" fill="#26215C">阶段 ① · NFC Unicode 归一化</text>
+  <text x="340" y="146" text-anchor="middle" font-size="11" fill="#534AB7">把多种 Unicode 写法统一成标准形式（详情见下方卡片）</text>
+  <text x="340" y="160" text-anchor="middle" font-size="10" fill="#888">本例无变化（英文+数字不涉及多形态）</text>
+  <line x1="340" y1="172" x2="340" y2="194" stroke="#534AB7" stroke-width="2" marker-end="url(#arrFlow)"/>
+
+  <!-- 阶段 ② -->
+  <rect x="80" y="200" width="520" height="64" rx="12" fill="#fff" stroke="#BA7517" stroke-width="1.4"/>
+  <rect x="80" y="200" width="520" height="24" rx="12" fill="#FAEEDA"/>
+  <text x="340" y="217" text-anchor="middle" font-size="12" font-weight="700" fill="#412402">阶段 ② · 正则预分词（切大块，定天花板）⚠️ 最关键</text>
+  <text x="340" y="242" text-anchor="middle" font-size="11" fill="#854F0B">用正则规则切成"半成品"块，BPE 不能跨块合并</text>
+  <text x="340" y="256" text-anchor="middle" font-size="10" fill="#888">本例：1 句 → 8 个 pre-token 块（详情见下方卡片）</text>
+  <line x1="340" y1="268" x2="340" y2="290" stroke="#534AB7" stroke-width="2" marker-end="url(#arrFlow)"/>
+
+  <!-- 阶段 ③ -->
+  <rect x="80" y="296" width="520" height="64" rx="12" fill="#fff" stroke="#185FA5" stroke-width="1.4"/>
+  <rect x="80" y="296" width="520" height="24" rx="12" fill="#E6F1FB"/>
+  <text x="340" y="313" text-anchor="middle" font-size="12" font-weight="700" fill="#042C53">阶段 ③ · UTF-8 字节化</text>
+  <text x="340" y="338" text-anchor="middle" font-size="11" fill="#185FA5">把每个 pre-token 翻译成 0-255 的字节序列</text>
+  <text x="340" y="352" text-anchor="middle" font-size="10" fill="#888">本例：8 个 pre-token → 各自字节序列（详情见下方卡片）</text>
+  <line x1="340" y1="364" x2="340" y2="386" stroke="#534AB7" stroke-width="2" marker-end="url(#arrFlow)"/>
+
+  <!-- 阶段 ④ -->
+  <rect x="80" y="392" width="520" height="64" rx="12" fill="#fff" stroke="#1D9E75" stroke-width="1.4"/>
+  <rect x="80" y="392" width="520" height="24" rx="12" fill="#E1F5EE"/>
+  <text x="340" y="409" text-anchor="middle" font-size="12" font-weight="700" fill="#04342C">阶段 ④ · BPE 合并（按训练好的"合并菜谱"逐步贴合）</text>
+  <text x="340" y="434" text-anchor="middle" font-size="11" fill="#0F6E56">按 merges.txt 顺序合并相邻字节对，不能跳步</text>
+  <text x="340" y="448" text-anchor="middle" font-size="10" fill="#888">本例：5 个独立字节 → 1 个 " want" token（详情见下方卡片）</text>
+  <line x1="340" y1="460" x2="340" y2="482" stroke="#534AB7" stroke-width="2" marker-end="url(#arrFlow)"/>
+
+  <!-- 最终输出 -->
+  <rect x="80" y="488" width="520" height="44" rx="12" fill="#E1F5EE" stroke="#1D9E75" stroke-width="1.4"/>
+  <text x="340" y="508" text-anchor="middle" font-size="12" font-weight="700" fill="#04342C">最终输出：7 个 token</text>
+  <text x="340" y="525" text-anchor="middle" font-size="11" font-family="'SF Mono',monospace" fill="#0F6E56">[I] [ want] [ to] [ exchange] [ 123] [45] [ dollars]</text>
+</svg>
+</div>
+
+<h4 style="margin-top:24px;">📂 各阶段详情</h4>
+
+<h5 style="font-size:14px;margin:16px 0 8px;color:#26215C;">阶段 ① · NFC Unicode 归一化</h5>
+<div class="card intuition">
+  <div class="card-title">这一步干啥</div>
+  <p style="margin:0;">把"长得不一样但意思一样"的字符统一成一种标准写法。本例的英文+数字不涉及 Unicode 多形态，所以输入输出一致。</p>
+  <p style="margin:6px 0 0;font-size:13px;color:#185FA5;">触发场景示例：<code>café</code>（重音符可拆/合）、全角半角标点、韩文组合字符等。</p>
+  <p style="margin:8px 0 0;font-size:13px;color:#666;">💡 <strong>比喻</strong>：就像快递员收件前先把"广东省·深圳"和"广东深圳"都改写成"广东省深圳市"——后续处理只需要认一种格式。</p>
+</div>
+
+<h5 style="font-size:14px;margin:20px 0 8px;color:#412402;">阶段 ② · 正则预分词（最关键的一步）</h5>
+<div class="card deepen">
+  <div class="card-title">这一步干啥</div>
+  <p style="margin:0;">用正则规则把整句切成<strong>一块块大的"半成品"</strong>（叫 pre-token），后面 BPE 只能在每块<strong>内部</strong>玩，<strong>跨不过去</strong>。</p>
+  <p style="margin:8px 0 4px;font-weight:600;color:#854F0B;">本例切分结果（8 个 pre-token）：</p>
+  <div class="token-row" style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;">
+    <span class="token" style="padding:4px 10px;border-radius:4px;font-family:'SF Mono',monospace;font-size:13px;background:#EEEDFE;color:#534AB7;border:1px solid #CECBF6;">I</span>
+    <span class="token" style="padding:4px 10px;border-radius:4px;font-family:'SF Mono',monospace;font-size:13px;background:#EEEDFE;color:#534AB7;border:1px solid #CECBF6;"> want</span>
+    <span class="token" style="padding:4px 10px;border-radius:4px;font-family:'SF Mono',monospace;font-size:13px;background:#EEEDFE;color:#534AB7;border:1px solid #CECBF6;"> to</span>
+    <span class="token" style="padding:4px 10px;border-radius:4px;font-family:'SF Mono',monospace;font-size:13px;background:#EEEDFE;color:#534AB7;border:1px solid #CECBF6;"> exchange</span>
+    <span class="token" style="padding:4px 10px;border-radius:4px;font-family:'SF Mono',monospace;font-size:13px;background:#E1F5EE;color:#0F6E56;border:1px solid #9FE1CB;"> 123</span>
+    <span class="token" style="padding:4px 10px;border-radius:4px;font-family:'SF Mono',monospace;font-size:13px;background:#E1F5EE;color:#0F6E56;border:1px solid #9FE1CB;">45</span>
+    <span class="token" style="padding:4px 10px;border-radius:4px;font-family:'SF Mono',monospace;font-size:13px;background:#EEEDFE;color:#534AB7;border:1px solid #CECBF6;"> dollars</span>
+  </div>
+  <p style="margin:6px 0 0;font-size:13px;color:#666;">注意 <code>"12345"</code> 被拆成 <code> 123</code> + <code>45</code>——这是<strong>正则切的</strong>，不是 BPE 干的（很多人搞错的关键点）。</p>
+  <p style="margin:8px 0 0;font-size:13px;color:#666;">💡 <strong>比喻</strong>：就像拆快递先按"形状大类"分箱——长方形进 A 区、圆柱形进 B 区。后面拣货员（BPE）只能在自己负责的箱子里挑，不能跨箱。</p>
+</div>
+
+<h5 style="font-size:14px;margin:20px 0 8px;color:#042C53;">阶段 ③ · UTF-8 字节化</h5>
+<div class="card intuition">
+  <div class="card-title">这一步干啥</div>
+  <p style="margin:0;">计算机不认识"字母"或"汉字"，只认识 0-255 的字节。把每个 pre-token 翻译成字节序列。这一步纯翻译，不做任何合并/拆分判断。</p>
+  <p style="margin:10px 0 6px;font-weight:600;color:#185FA5;">本例 8 个 pre-token 的字节序列：</p>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="background:#f7f7f4;">
+        <th style="text-align:left;padding:6px 10px;font-weight:600;color:#666;border-bottom:1px solid rgba(0,0,0,0.08);">Pre-token</th>
+        <th style="text-align:left;padding:6px 10px;font-weight:600;color:#666;border-bottom:1px solid rgba(0,0,0,0.08);">字节序列</th>
+        <th style="text-align:left;padding:6px 10px;font-weight:600;color:#666;border-bottom:1px solid rgba(0,0,0,0.08);">字节数</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;"><code style="background:#EEEDFE;color:#534AB7;">I</code></td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;color:#185FA5;">[73]</td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;color:#888;">1 byte</td></tr>
+      <tr><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;"><code style="background:#EEEDFE;color:#534AB7;"> want</code></td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;color:#185FA5;">[32, 119, 97, 110, 116]</td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;color:#888;">5 bytes</td></tr>
+      <tr><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;"><code style="background:#EEEDFE;color:#534AB7;"> to</code></td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;color:#185FA5;">[32, 116, 111]</td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;color:#888;">3 bytes</td></tr>
+      <tr><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;"><code style="background:#EEEDFE;color:#534AB7;"> exchange</code></td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;color:#185FA5;">[32, 101, 120, 99, 104, 97, 110, 103, 101]</td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;color:#888;">9 bytes</td></tr>
+      <tr><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;"><code style="background:#E1F5EE;color:#0F6E56;"> 123</code></td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;color:#185FA5;">[32, 49, 50, 51]</td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;color:#888;">4 bytes</td></tr>
+      <tr><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;"><code style="background:#E1F5EE;color:#0F6E56;">45</code></td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;color:#185FA5;">[52, 53]</td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;color:#888;">2 bytes</td></tr>
+      <tr><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;"><code style="background:#EEEDFE;color:#534AB7;"> dollars</code></td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;color:#185FA5;">[32, 100, 111, 108, 108, 97, 114, 115]</td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;color:#888;">8 bytes</td></tr>
+    </tbody>
+  </table>
+  <p style="margin:12px 0 4px;font-weight:600;color:#993C1D;font-size:13px;">非 ASCII 字符对照（字节数固定）：</p>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <tbody>
+      <tr><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;width:90px;"><code style="background:#FAECE7;color:#993C1D;">"美"</code></td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;color:#185FA5;">[0xE7, 0xBE, 0x8E]</td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;color:#888;">3 bytes（中文恒 3 字节）</td></tr>
+      <tr><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;"><code style="background:#FAECE7;color:#993C1D;">"🚀"</code></td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;color:#185FA5;">[0xF0, 0x9F, 0x9A, 0x80]</td><td style="padding:5px 10px;border-bottom:1px solid #f1f1ee;color:#888;">4 bytes（emoji 恒 4 字节）</td></tr>
+      <tr><td style="padding:5px 10px;"><code style="background:#FAECE7;color:#993C1D;">"汉"</code></td><td style="padding:5px 10px;font-family:'SF Mono',monospace;color:#185FA5;">[0xE6, 0xB1, 0x89]</td><td style="padding:5px 10px;color:#888;">3 bytes（同"美"）</td></tr>
+    </tbody>
+  </table>
+  <p style="margin:10px 0 0;font-size:13px;color:#666;">💡 <strong>比喻</strong>：就像翻译——把每个英文字母 / 中文字 / emoji 都查一本"万国通用字典（UTF-8）"，得到一串电脑能直接算的数字。这一步纯翻译，不做任何合并/拆分判断。</p>
+</div>
+
+<h5 style="font-size:14px;margin:20px 0 8px;color:#04342C;">阶段 ④ · BPE 合并（以 " want" 为例）</h5>
+<div class="card takeaway">
+  <div class="card-title">这一步干啥</div>
+  <p style="margin:0;">对每个 pre-token 的字节序列，<strong>按训练时记录好的合并顺序（merges.txt）</strong>，逐条尝试把相邻字节合并成更大的 token。</p>
+  <p style="margin:10px 0 6px;font-weight:600;color:#0F6E56;">以 <code> want</code> 的字节 [32, 119, 97, 110, 116] 为例，演示三步合并：</p>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="background:#f7f7f4;">
+        <th style="text-align:left;padding:6px 10px;font-weight:600;color:#666;">合并步骤</th>
+        <th style="text-align:left;padding:6px 10px;font-weight:600;color:#666;">动作</th>
+        <th style="text-align:left;padding:6px 10px;font-weight:600;color:#666;">序列状态</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #f1f1ee;color:#888;">起点</td><td style="padding:6px 10px;border-bottom:1px solid #f1f1ee;color:#666;">5 个独立字节</td><td style="padding:6px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;color:#993C1D;">[32, 119, 97, 110, 116]</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #f1f1ee;color:#0F6E56;font-weight:600;">合并 #142</td><td style="padding:6px 10px;border-bottom:1px solid #f1f1ee;color:#666;">(119, 97) → "wa"</td><td style="padding:6px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;">[32, <strong style="color:#0F6E56;">"wa"</strong>, 110, 116]</td></tr>
+      <tr><td style="padding:6px 10px;border-bottom:1px solid #f1f1ee;color:#0F6E56;font-weight:600;">合并 #291</td><td style="padding:6px 10px;border-bottom:1px solid #f1f1ee;color:#666;">(110, 116) → "nt"</td><td style="padding:6px 10px;border-bottom:1px solid #f1f1ee;font-family:'SF Mono',monospace;">[32, <strong style="color:#0F6E56;">"wa"</strong>, <strong style="color:#0F6E56;">"nt"</strong>]</td></tr>
+      <tr><td style="padding:6px 10px;color:#0F6E56;font-weight:700;">合并 #1503</td><td style="padding:6px 10px;color:#666;">(32, "wa") + (..., "nt") → " want" ✅</td><td style="padding:6px 10px;font-family:'SF Mono',monospace;"><strong style="color:#04342C;background:#E1F5EE;padding:2px 6px;border-radius:3px;">" want"</strong> &nbsp;→ 最终 1 个 token</td></tr>
+    </tbody>
+  </table>
+  <p style="margin:10px 0 0;font-size:13px;color:#666;">💡 <strong>比喻</strong>：就像照菜谱做菜——菜谱第 142 步说"先把 w 和 a 合炒"，第 291 步说"再炒 n 和 t"……你<strong>不能跳步</strong>、<strong>不能改顺序</strong>、不在菜谱上的合并永远不做。</p>
+</div>
+
+<div class="card warning">
+  <div class="card-title">⚠️ 关键纠正</div>
+  <p style="margin:0;">BPE <strong>不是</strong>"看哪个 token 最长就匹配哪个"。它严格按照训练时记录的合并顺序回放——这点是后面 Part C 要纠正的最大误区。</p>
+</div>
+
+<table>
+  <tr><th>阶段</th><th>这一步在做什么</th><th>本例的具体变化</th><th>一句话比喻</th></tr>
+  <tr><td><strong style="color:#534AB7;">④ BPE</strong></td><td>按 merges.txt 顺序合并相邻字节对，输出最终 token</td><td>5 字节 → 1 个 " want" token</td><td>照菜谱一步步合炒，不能跳步</td></tr>
+</table>
+
+
+<!-- ===================================================================== -->
+<!-- PART B: METAPHORS -->
+<!-- ===================================================================== -->
+
+<h3>Part B · 4 个阶段的工厂比喻</h3>
+
+<p>把整条流水线想象成一家"<strong>token 加工厂</strong>"——每个阶段是一个独立的车间，干一件具体的事：</p>
+
+<div class="diagram" style="text-align:left;padding:18px;">
+<svg viewBox="0 0 720 360" width="100%" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,sans-serif;">
+
+  <!-- Conveyor belt base -->
+  <line x1="40" y1="220" x2="690" y2="220" stroke="#aaa" stroke-width="2" stroke-dasharray="6,4"/>
+
+  <!-- Stage 1 -->
+  <circle cx="105" cy="120" r="42" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.4"/>
+  <text fill="#555" x="105" y="115" text-anchor="middle" font-size="22">📋</text>
+  <text x="105" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#26215C">阶段 ①</text>
+
+  <text x="105" y="186" text-anchor="middle" font-size="12" font-weight="700" fill="#534AB7">收件登记</text>
+  <text x="105" y="245" text-anchor="middle" font-size="10.5" fill="#555">无论顾客写"café"还是</text>
+  <text x="105" y="260" text-anchor="middle" font-size="10.5" fill="#555">"cafe&#769;"，都先登记成</text>
+  <text x="105" y="275" text-anchor="middle" font-size="10.5" fill="#555">同一种标准写法</text>
+  <text x="105" y="298" text-anchor="middle" font-size="10" fill="#888" font-style="italic">→ 字符标准化</text>
+
+  <!-- Stage 2 -->
+  <circle cx="265" cy="120" r="42" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.4"/>
+  <text fill="#555" x="265" y="115" text-anchor="middle" font-size="22">✂️</text>
+  <text x="265" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#412402">阶段 ②</text>
+
+  <text x="265" y="186" text-anchor="middle" font-size="12" font-weight="700" fill="#BA7517">粗切车间 ⭐</text>
+  <text x="265" y="245" text-anchor="middle" font-size="10.5" fill="#555">用模板（正则规则）把</text>
+  <text x="265" y="260" text-anchor="middle" font-size="10.5" fill="#555">原料切成大块（pre-token）</text>
+  <text x="265" y="275" text-anchor="middle" font-size="10.5" fill="#555">设定后续不能跨越的边界</text>
+  <text x="265" y="298" text-anchor="middle" font-size="10" fill="#888" font-style="italic">→ 边界天花板</text>
+
+  <!-- Stage 3 -->
+  <circle cx="425" cy="120" r="42" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.4"/>
+  <text fill="#555" x="425" y="115" text-anchor="middle" font-size="22">🔢</text>
+  <text x="425" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#042C53">阶段 ③</text>
+
+  <text x="425" y="186" text-anchor="middle" font-size="12" font-weight="700" fill="#185FA5">编号车间</text>
+  <text x="425" y="245" text-anchor="middle" font-size="10.5" fill="#555">查"万国通用字典"</text>
+  <text x="425" y="260" text-anchor="middle" font-size="10.5" fill="#555">把每个字符翻译成</text>
+  <text x="425" y="275" text-anchor="middle" font-size="10.5" fill="#555">计算机能算的字节编号</text>
+  <text x="425" y="298" text-anchor="middle" font-size="10" fill="#888" font-style="italic">→ 字符变数字</text>
+
+  <!-- Stage 4 -->
+  <circle cx="585" cy="120" r="42" fill="#E1F5EE" stroke="#1D9E75" stroke-width="1.4"/>
+  <text fill="#555" x="585" y="115" text-anchor="middle" font-size="22">🍳</text>
+  <text x="585" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#04342C">阶段 ④</text>
+
+  <text x="585" y="186" text-anchor="middle" font-size="12" font-weight="700" fill="#1D9E75">合炒车间</text>
+  <text x="585" y="245" text-anchor="middle" font-size="10.5" fill="#555">照训练好的"菜谱"</text>
+  <text x="585" y="260" text-anchor="middle" font-size="10.5" fill="#555">（merges.txt）一步步</text>
+  <text x="585" y="275" text-anchor="middle" font-size="10.5" fill="#555">把字节合并成 token</text>
+  <text x="585" y="298" text-anchor="middle" font-size="10" fill="#888" font-style="italic">→ 字节变 token</text>
+
+  <!-- Arrows on conveyor -->
+  <text x="185" y="225" font-size="20" fill="#888">▶</text>
+  <text x="345" y="225" font-size="20" fill="#888">▶</text>
+  <text x="505" y="225" font-size="20" fill="#888">▶</text>
+
+  <!-- Title at top -->
+  <text x="360" y="40" text-anchor="middle" font-size="14" font-weight="700" fill="#333">🏭 Token 加工厂的 4 道工序</text>
+  <text x="360" y="60" text-anchor="middle" font-size="11.5" fill="#888">原料（一段文本）从左边进入 → 经过 4 个车间 → 右边出来变成 token ID 序列</text>
+</svg>
+</div>
+
+<div class="card deepen">
+<div class="card-title">▎4 个比喻一句话回顾</div>
+<table style="margin:0;font-size:13px;">
+<tr><th style="width:90px;">阶段</th><th>比喻</th><th>对应到 PM 工作</th></tr>
+<tr><td><strong style="color:#534AB7;">① NFC</strong></td><td>把"广东·深圳"和"广东深圳"统一成"广东省深圳市"</td><td>就像数据清洗的第一步——所有客户地址、币种代码先归一</td></tr>
+<tr><td><strong style="color:#BA7517;">② 正则</strong></td><td>厨师按模板把整块肉切成均匀小段，<strong>切完就不能再合</strong></td><td>就像 RAG 切片——切片的边界一旦定下，后续检索粒度就被锁死</td></tr>
+<tr><td><strong style="color:#185FA5;">③ UTF-8</strong></td><td>查"万国通用字典"，每个字符 → 一串通用编号</td><td>就像把不同语言的客户姓名统一编码成 Unicode，存数据库</td></tr>
+<tr><td><strong style="color:#1D9E75;">④ BPE</strong></td><td>照"菜谱"一步步合炒——<strong>步骤固定、不能跳过</strong></td><td>就像编排好的工作流（workflow）——执行顺序由训练时定好，运行时只是回放</td></tr>
+</table>
+</div>
+
+
+<!-- ===================================================================== -->
+<!-- PART C: DEEP DIVE ON BPE -->
+<!-- ===================================================================== -->
+
+<h3>Part C · BPE 深讲：纠正"单步贪心匹配"这个最大误解</h3>
+
+<p>关于 BPE 阶段 ④ 到底怎么工作，<strong>几乎所有非专业人士都会搞错</strong>。这一节用最直白的方式讲清楚。</p>
+
+<div class="card critical">
+<div class="card-title">🔴 最大误区："BPE 就是从左到右找最长能匹配的子串"</div>
+<p>这句话听起来很直觉——遇到 "theirs"，先看词表里有没有 "theirs"，没有就找 "their"，再没有就找 "the"……</p>
+<p style="margin-top:10px;"><strong>这不是 BPE。这是另一个完全不同的算法叫"最长匹配分词"（Maximum Match Tokenization）。</strong></p>
+<p style="margin-top:10px;">如果你带着这个误解去理解 BPE，你看到的代码、读到的论文都会处处对不上。下面分三步讲清楚。</p>
+</div>
+
+<h4>第 1 步 · BPE 有两个完全不同的阶段（很多人搞混的根源）</h4>
+
+<p>大多数人把 BPE 当成"一个推理算法"，但其实 BPE 是<strong>两个阶段</strong>：训练期和推理期。它们做的事完全不一样。</p>
+
+<h5 style="font-size:14px;margin:18px 0 10px;color:#26215C;">BPE = 训练期 + 推理期（不同的两件事）</h5>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:14px 0;">
+
+  <div class="card deepen" style="margin:0;">
+    <div class="card-title">🏋️ 训练期（离线，做一次）</div>
+    <p style="margin:4px 0 12px;font-size:12.5px;color:#854F0B;">规模：万亿 token；耗时：数天/周</p>
+
+    <p style="margin:0 0 4px;font-weight:600;font-size:13px;color:#412402;">输入</p>
+    <p style="margin:0 0 12px;font-size:13px;color:#444;">海量训练文本</p>
+
+    <p style="margin:0 0 4px;font-weight:600;font-size:13px;color:#412402;">做什么</p>
+    <p style="margin:0 0 6px;font-size:13px;color:#444;">从字节级开始，反复执行：</p>
+    <ul style="margin:0 0 12px 18px;padding:0;font-size:13px;color:#444;line-height:1.7;">
+      <li>统计所有相邻字节对的频次</li>
+      <li>把出现频次最高的对合并成新 token</li>
+      <li>记录这次合并到 <code>merges.txt</code></li>
+      <li>重复，直到达到目标词表大小</li>
+    </ul>
+
+    <p style="margin:0 0 4px;font-weight:600;font-size:13px;color:#412402;">输出（最关键！）</p>
+    <p style="margin:0 0 4px;font-size:13px;color:#444;">一份带顺序的合并清单：</p>
+    <pre style="margin:4px 0 0;padding:8px 10px;font-size:12px;background:#2c2c2a;color:#f1efe8;border-radius:6px;line-height:1.5;"># merges.txt
+#142: 119 97   → "wa"
+#291: 110 116  → "nt"
+#1503: 32 "wa" → " wa"
+...</pre>
+  </div>
+
+  <div class="card takeaway" style="margin:0;">
+    <div class="card-title">⚡ 推理期（在线，每次都跑）</div>
+    <p style="margin:4px 0 12px;font-size:12.5px;color:#0F6E56;">规模：一段话；耗时：毫秒</p>
+
+    <p style="margin:0 0 4px;font-weight:600;font-size:13px;color:#04342C;">输入</p>
+    <p style="margin:0 0 12px;font-size:13px;color:#444;">用户的一段话</p>
+
+    <p style="margin:0 0 4px;font-weight:600;font-size:13px;color:#04342C;">做什么（核心！）</p>
+    <p style="margin:0 0 6px;font-size:13px;color:#444;">先走阶段 ①②③，然后<strong>按 merges.txt 顺序</strong>：</p>
+    <ul style="margin:0 0 12px 18px;padding:0;font-size:13px;color:#444;line-height:1.7;">
+      <li>读 merges 第 1 行，扫一遍序列：有 → 全部替换；没有 → 跳过</li>
+      <li>读 merges 第 2 行，再扫一遍……</li>
+      <li>一直遍历到 merges.txt 末尾</li>
+    </ul>
+    <p style="margin:0 0 12px;font-size:12.5px;color:#993C1D;">⚠️ 每条 merge 只查一次！不是循环往复直到收敛</p>
+
+    <p style="margin:0 0 4px;font-weight:600;font-size:13px;color:#04342C;">伪代码</p>
+    <pre style="margin:4px 0 0;padding:8px 10px;font-size:12px;background:#2c2c2a;color:#f1efe8;border-radius:6px;line-height:1.5;">tokens = bytes(text)
+for (a, b) in merges:
+    tokens = replace_all(tokens, (a,b), ab)
+# → 最终 tokens 即输出
+# → 去查 vocab 拿 ID</pre>
+  </div>
+
+</div>
+
+<div class="card critical" style="margin-top:14px;">
+  <div class="card-title">🔑 关键洞察</div>
+  <p style="margin:0;font-size:13.5px;"><strong>merges 的顺序就是优先级</strong>——先训练出来的合并规则，推理时优先使用。这就是为什么 BPE 不是"贪心最长匹配"，而是"按训练顺序回放"。</p>
+</div>
+
+<h4>第 2 步 · 用反例证明"BPE ≠ 贪心最长匹配"</h4>
+
+<p>假设训练后的 <code>merges.txt</code> 前几行长这样：</p>
+
+<pre><code>merge #1 :  (t, h)     → th
+merge #2 :  (th, e)    → the
+merge #3 :  (e, r)     → er
+merge #4 :  (ther, s)  → theirs   ← 注意这一条！</code></pre>
+
+<p>现在推理时输入 <code>"theirs"</code>。<strong>如果是贪心最长匹配</strong>——它会检查"词表里有 theirs 吗？有！直接返回 1 个 token"。</p>
+
+<p><strong>但 BPE 不是这么工作的</strong>，它老实按 merges.txt 顺序回放：</p>
+
+<table>
+<tr><th>步</th><th>当前序列</th><th>正在检查的规则</th><th>是否触发</th><th>序列变化</th></tr>
+<tr><td>初始</td><td><code>[t, h, e, i, r, s]</code></td><td>—</td><td>—</td><td>纯字节</td></tr>
+<tr><td>1</td><td><code>[t, h, e, i, r, s]</code></td><td>#1 (t,h)→th</td><td>✅ 命中</td><td><code>[<b>th</b>, e, i, r, s]</code></td></tr>
+<tr><td>2</td><td><code>[th, e, i, r, s]</code></td><td>#2 (th,e)→the</td><td>✅ 命中</td><td><code>[<b>the</b>, i, r, s]</code></td></tr>
+<tr><td>3</td><td><code>[the, i, r, s]</code></td><td>#3 (e,r)→er</td><td>❌ 没有相邻的 (e,r) 了</td><td>不变</td></tr>
+<tr><td>4</td><td><code>[the, i, r, s]</code></td><td>#4 (ther,s)→theirs</td><td>❌ "ther" 在序列里根本不存在</td><td>不变</td></tr>
+<tr><td colspan="5" style="background:#fff8e6;"><strong>最终输出 4 个 token：[the, i, r, s]</strong>。即使词表里有 "theirs"，BPE 也合不出来！</td></tr>
+</table>
+
+<div class="card deepen">
+<div class="card-title">▎为什么 merge #4 (ther+s) 没生效？</div>
+<p>因为 merge #4 要求"ther"和"s"是<strong>相邻的两个 token</strong>。但 #2 触发后，序列已经变成 <code>[the, i, r, s]</code>——"the" 和 "s" 之间隔着 "i" 和 "r"，<strong>它们根本不相邻</strong>。</p>
+<p style="margin-top:10px;">而且 BPE 也不会"回退一步"重新尝试。它就是一条直线走到底——按 merges.txt 顺序，每条规则只检查一次当前的序列。</p>
+<p style="margin-top:10px;"><strong>这就是"按顺序回放"的本质：前面的合并决定了后面合并的可能性空间。</strong></p>
+</div>
+
+<h4>第 3 步 · 那"贪心最长匹配"到底有没有？— 有，但在不同地方</h4>
+
+<p>这里很容易混淆。让我们彻底分清：</p>
+
+<div class="diagram" style="text-align:left;padding:18px;">
+<svg viewBox="0 0 720 280" width="100%" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,sans-serif;">
+
+  <text x="360" y="22" text-anchor="middle" font-size="14" font-weight="700" fill="#333">两种"匹配"——别再混淆了</text>
+
+  <!-- 左：BPE 顺序回放（不贪心） -->
+  <rect x="20" y="44" width="340" height="220" rx="12" fill="#fff" stroke="#1D9E75" stroke-width="1.4"/>
+  <rect x="20" y="44" width="340" height="38" rx="12" fill="#E1F5EE"/>
+  <text x="190" y="68" text-anchor="middle" font-size="13" font-weight="700" fill="#04342C">✅ BPE 合并算法（不是贪心）</text>
+
+  <text x="40" y="106" font-size="12" fill="#444"><tspan font-weight="700" fill="#1D9E75">机制</tspan>：遍历 merges.txt，每条都试一遍</text>
+  <text x="40" y="128" font-size="12" fill="#444"><tspan font-weight="700" fill="#1D9E75">依据</tspan>：训练期排好的固定顺序</text>
+  <text x="40" y="150" font-size="12" fill="#444"><tspan font-weight="700" fill="#1D9E75">特点</tspan>：确定性、可复现，与"最长"无关</text>
+  <text x="40" y="172" font-size="12" fill="#444"><tspan font-weight="700" fill="#1D9E75">类比</tspan>：照菜谱做菜——步骤固定不能跳</text>
+
+  <rect x="40" y="190" width="300" height="56" rx="6" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.6"/>
+  <text x="190" y="210" text-anchor="middle" font-size="12" font-weight="700" fill="#04342C">这是 BPE 阶段 ④ 的真正算法</text>
+  <text x="190" y="230" text-anchor="middle" font-size="10.5" fill="#0F6E56">原始论文（Sennrich 2016）和所有教材定义的</text>
+
+  <!-- 中间：≠ -->
+  <text x="378" y="160" text-anchor="middle" font-size="22" font-weight="800" fill="#534AB7">≠</text>
+
+  <!-- 右：词表查找（贪心） -->
+  <rect x="395" y="44" width="305" height="220" rx="12" fill="#fff" stroke="#C41E3A" stroke-width="1.4"/>
+  <rect x="395" y="44" width="305" height="38" rx="12" fill="#FAECE7"/>
+  <text x="547" y="68" text-anchor="middle" font-size="13" font-weight="700" fill="#993C1D">⚠️ 词表查找（这才是贪心最长匹配）</text>
+
+  <text x="415" y="106" font-size="12" fill="#444"><tspan font-weight="700" fill="#C41E3A">机制</tspan>：从游标取最长子串查词表</text>
+  <text x="415" y="128" font-size="12" fill="#444"><tspan font-weight="700" fill="#C41E3A">依据</tspan>：词表中是否存在该字串</text>
+  <text x="415" y="150" font-size="12" fill="#444"><tspan font-weight="700" fill="#C41E3A">特点</tspan>：贪心——尽量匹配最长</text>
+  <text x="415" y="172" font-size="12" fill="#444"><tspan font-weight="700" fill="#C41E3A">类比</tspan>：查字典——找最长词条</text>
+
+  <rect x="415" y="190" width="270" height="56" rx="6" fill="#FAECE7" stroke="#C41E3A" stroke-width="0.6"/>
+  <text x="550" y="210" text-anchor="middle" font-size="12" font-weight="700" fill="#993C1D">这是 tiktoken 等库的工程优化</text>
+  <text x="550" y="230" text-anchor="middle" font-size="10.5" fill="#993C1D">为加速等价于 BPE 顺序回放的结果</text>
+</svg>
+</div>
+
+<div class="principle">
+<strong>精确结论</strong>：当人们说"BPE 是贪心匹配"，他们通常在混淆这两层：
+<ul style="margin:10px 0;">
+  <li><strong>BPE 算法本身</strong>（教科书定义）：按 merges.txt 顺序回放——<strong>不是贪心</strong>。</li>
+  <li><strong>tiktoken 等工业实现</strong>：用预编译的 trie 树做<strong>贪心最长匹配</strong>。这是<strong>工程优化</strong>，在数学上等价于按 merges 顺序回放，但运行更快。</li>
+</ul>
+<em>类比：BPE 算法是一份菜谱（步骤固定）；tiktoken 是熟练厨师记住了"最常做的菜直接抄答案"——结果一样，但他没真的按菜谱一步步执行。两者结果等价，但机制不同。</em>
+</div>
+
+<div class="card warning">
+<div class="card-title">▎对你产品的实际意义</div>
+<ul style="margin:6px 0;">
+  <li><strong>token 数可预测</strong>：因为是确定性算法，同一段文本在同一个 tokenizer 下结果完全可复现——这是计费透明的基础</li>
+  <li><strong>专有名词无法"提示性扩词"</strong>：你不能在 prompt 里放一段说明就让 BPE 把"FxSkill"合成 1 个 token——必须重训 tokenizer</li>
+  <li><strong>拼写错误代价高</strong>：因为 merge 顺序固定，常见拼写有 VIP token、错拼只能字节兜底——多烧 30-40% 是常态（Part D 例 2）</li>
+</ul>
+</div>
+
+
+<!-- ===================================================================== -->
+<!-- PART D: MORE EXAMPLES (短例) -->
+<!-- ===================================================================== -->
+
+<h3>Part D · 4 个补充实例（30 秒速看）</h3>
+
+<h4>例 1 · 拼错的英文 — "I want to recieve money"（多烧 2 个 token）</h4>
+<p>正确拼写是 <code>receive</code>，词表里有 <code>" receive"</code>，但没有 <code>" recieve"</code>。BPE 找不到完整合并路径，只能字节兜底拼出来：</p>
+<div class="token-row">
+  <span class="token eng">I</span>
+  <span class="token eng"> want</span>
+  <span class="token eng"> to</span>
+  <span class="token bad"> re</span>
+  <span class="token bad">ci</span>
+  <span class="token bad">eve</span>
+  <span class="token eng"> money</span>
+</div>
+<p style="font-size:14px;color:var(--muted);">→ 共 7 个 token；正确拼写仅需 5 个。<strong>拼写错误 = 多烧 40% 费用</strong>。</p>
+
+<h4>例 2 · 数字的诡异规则</h4>
+<table>
+<tr><th>原文</th><th>切分结果</th><th>token 数</th><th>原因</th></tr>
+<tr><td><code>100</code></td><td><span class="token eng">100</span></td><td>1</td><td>3 位数 ≤ 上限，且常见入表</td></tr>
+<tr><td><code>1234</code></td><td><span class="token eng">1234</span></td><td>1</td><td>4 位常作年份/ID，整体入表</td></tr>
+<tr><td><code>12345</code></td><td><span class="token eng">123</span> <span class="token eng">45</span></td><td>2</td><td>正则强制 ≤3 位 → 切成 3+2</td></tr>
+<tr><td><code>99.50</code></td><td><span class="token eng">99</span> <span class="token special">.</span> <span class="token eng">50</span></td><td>3</td><td>小数点独立，前后分别匹配</td></tr>
+<tr><td><code>1234567890</code></td><td><span class="token eng">123</span> <span class="token eng">456</span> <span class="token eng">789</span> <span class="token eng">0</span></td><td>4</td><td>3 位贪心切，末位落单</td></tr>
+</table>
+
+<div class="card warning">
+<div class="card-title">▎对你产品的启示</div>
+DDAgent 处理交易金额、流水号、客户 ID 时，<strong>token 消耗远高于直觉</strong>。一笔 "USD 12,345.67" ≈ 6 个 token，10 位流水号 ≈ 4 个 token。<br>
+KBA 知识库若包含大量金额、订单号、电话号码，<strong>实际占用上下文比纯文本估算多 30-50%</strong>——切片设计要考虑这点。
+</div>
+
+<h4>例 3 · 中文逐字切 — "我想换100美元"（6 token）</h4>
+<div class="token-row">
+  <span class="token cjk">我</span>
+  <span class="token cjk">想</span>
+  <span class="token cjk">换</span>
+  <span class="token eng">100</span>
+  <span class="token cjk">美</span>
+  <span class="token cjk">元</span>
+</div>
+<p style="font-size:14px;color:var(--muted);">→ 中文几乎逐字切；每个汉字在 UTF-8 中占 3 字节，<strong>底层成本是英文的 2-3 倍</strong>。</p>
+
+<h4>例 4 · 终极兜底 — emoji 与生僻字</h4>
+<table>
+<tr><th>字符</th><th>UTF-8 字节数</th><th>切法</th><th>token 数</th></tr>
+<tr><td>我</td><td>3</td><td>词表有 → 1 token</td><td>1</td></tr>
+<tr><td>🚀（火箭）</td><td>4</td><td>词表无 → 字节级兜底 → 4 token</td><td>4</td></tr>
+<tr><td>💰（钱袋）</td><td>4</td><td>同上</td><td>4</td></tr>
+</table>
+<p style="font-size:14px;color:var(--muted);">→ 一个 emoji ≈ 4 个 token，<strong>是普通汉字成本的 4 倍</strong>。Byte-level BPE 的设计哲学：<strong>永远不崩溃，但生僻内容很贵</strong>。</p>
+
+<div class="card takeaway">
+<div class="card-title">▎本节核心要点（30 秒速览）</div>
+<ol style="margin:6px 0;padding-left:22px;">
+  <li>Tokenizer 是 4 阶段流水线：NFC → 正则 → UTF-8 → BPE，<strong>各司其职</strong></li>
+  <li>阶段 ② 正则是天花板——决定了 BPE 能合并什么、不能合并什么（如"12345"被强制切成 123+45）</li>
+  <li>阶段 ④ BPE = 按 merges.txt 顺序回放，<strong>不是贪心最长匹配</strong>。这是大多数人的最大误解</li>
+  <li>BPE 训练期产出 vocab.txt + merges.txt；推理期就是按这份"菜谱"回放</li>
+  <li>tiktoken 等库用贪心最长匹配做工程优化，结果与 BPE 等价但机制不同</li>
+</ol>
+</div>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 3: WHY BPE WORKS -->
+<!-- ============================================================ -->
+
+<h2 id="s3-why">③ 为什么这样 — BPE 的设计哲学与第一性原理</h2>
+
+<h3>直觉：BPE 做了一件聪明的事</h3>
+
+<div class="card deepen">
+  <div class="card-title">▎BPE 的核心洞察</div>
+  <p><strong>让高频出现的字符串组合自动获得"VIP 身份"（整 token 编码），低频的就保持拆散状态。</strong></p>
+  结果形成三层结构：<br>
+  &bull; <strong>高频词</strong>（"the"、"ing"、"tion"、常见中文词）&rarr; 整体 1 token，压缩高效<br>
+  &bull; <strong>中频词</strong>（"antidisestablishmentarianism"）&rarr; 拆成若干子词，信息不丢<br>
+  &bull; <strong>完全未见过的词</strong> &rarr; 退化到字节级，<strong>永远不会 OOV（Out-of-Vocabulary）崩溃</strong>
+</div>
+
+<h3>第一性原理：这是一个信息论最优压缩问题</h3>
+
+<p>用数学语言重新表述：</p>
+
+<div class="principle">
+  <strong>问题形式化</strong>：给定一个文本分布 $P(x)$ 和词表大小上限 $|V|_{max}$，找到一个分词方案 $T$，使得期望编码长度最小：<br><br>
+  $$ \min_T \mathbb{E}_{x \sim P}\left[ \text{len}(T(x)) \right] \quad \text{s.t.} \quad |V_T| \leq |V|_{max} $$
+  <br>
+  其中 $T(x)$ 是文本 $x$ 被 tokenizer $T$ 划分后的 token 序列，$\text{len}$ 是序列长度。
+</div>
+
+<p>BPE 的做法是<strong>贪心近似</strong>这个最优解：每次选能带来最大压缩收益的那一对合并。虽然不保证全局最优，但在实践中效果极好——因为自然语言的统计特性给了它一个"友好的"数据分布。</p>
+
+<h3>Zipf 定律：自然语言的幂律分布</h3>
+
+<div class="card intuition">
+<div class="card-title">▎Zipf 定律：BPE 为什么能工作得这么好的底层原因</div>
+George Zipf 1949 年观察到：<strong>自然语言中词频严格服从幂律分布</strong>。
+<ul style="margin:6px 0;">
+<li>排名第 1 的词（"the"）频次 &asymp; 排名第 N 的词的 N 倍</li>
+<li>极少数词极高频（"the"、"of"、"and" 占英语文本 ~15%）</li>
+<li>大量词极低频（医学、法律、跨境支付术语）</li>
+<li>固定词表无论怎么选都会浪费：选高频词漏低频词，选全部词则词表爆炸</li>
+</ul>
+<strong>BPE 用子词策略巧妙解决</strong>：高频词整体收录（~1000-5000 个就覆盖大部分文本），低频词由子词组合表达。这正是幂律分布下的<strong>近最优压缩</strong>。
+</div>
+
+<h3>数字切分的行业共识：3 位规则</h3>
+
+<p>这是一个<strong>行业先用行动验证、学术后来解释</strong>的经典案例：</p>
+
+<div class="card warning">
+  <div class="card-title">▎大模型数学差，根因在 tokenizer</div>
+  不同 tokenizer 对数字的切分方式，<strong>直接决定 LLM 的算术与符号推理能力上限</strong>。
+
+  <br><strong>行业行动时间线：</strong>
+  <ol style="margin:8px 0;padding-left:20px;">
+    <li><b>GPT-2（2019）</b>：允许任意长度数字合并 &rarr; "12345" 可能是 1 个 token &rarr; 数字内部结构丢失 &rarr; 算术表现差</li>
+    <li><b>GPT-4 cl100k_base（2023）</b>：引入 <code>\p{N}{1,3}</code> &rarr; 强制 3 位切分</li>
+    <li><b>LLaMA 3（2024-04）</b>：跟随 GPT-4 采用 3 位规则</li>
+    <li><b>DeepSeek-V3（2024-12）</b>：同样 3 位切分</li>
+    <li><b>Qwen3 / Mistral / Claude</b>：全部采用类似的数字规则化切分</li>
+  </ol>
+
+  <br><strong>结果</strong>：现代模型在简单算术上的准确率从 GPT-2 的 &lt;30% 跃升到 GPT-4o 的 &gt;95%。
+
+  <br><em>注</em>：2024-2025 年有多篇学术论文（Singh & Strouse 2024、"Token Awareness"框架等）系统解释了这个现象的因果机制。但关键是：<strong>4+ 家头部公司在论文大规模引用之前就已经一致采用了这个规则</strong>。这是典型的"工程先行，学术后释"。
+</div>
+
+<h3>词表大小本身就是 Scaling Law 的关键维度</h3>
+
+<p>长期以来，人们关注 scaling law 时只看"参数量 × 数据量 × 算力"。但 2025 年 ByteDance ICML 论文《Over-Tokenized Transformer》给出了一个反直觉的发现：</p>
+
+<div class="card deepen">
+  <div class="card-title">▎词表扩大 2 倍 &asymp; 参数翻倍的效果（几乎零额外推理成本）</div>
+  <p><strong>核心发现</strong>：在相同计算预算下，把词表从 V 扩大到 2V，效果接近把模型参数从 P 扩到 2P。</p>
+  <br>
+  <p><b>为什么？</b>直觉上：</p>
+  <ul style="margin:6px 0;">
+    <li>更大词表 &rarr; 更多"整词 token" &rarr; 同样的意思用更少的 token 表达 &rarr; 有效上下文更长</li>
+    <li>更多 token &rarr; embedding 层参数增加（V × d_model）&rarr; 表达能力提升</li>
+    <li>但推理时的 <strong>自注意力计算量取决于序列长度 L</strong>，不是词表大小 V &rarr; 大词表不增加推理延迟</li>
+  </ul>
+  <br>
+  <p><b>行业验证</b>：Qwen3.5 把词表从 Qwen3 的 151,669 扩到 250,000，官方报告编码效率提升 10–60%（不同语言差异）。这直接验证了上述理论。</p>
+</div>
+
+<div class="principle">
+  <strong>第一性原理总结</strong>：Tokenizer 的本质是在做<strong>有损压缩</strong>，BPE 通过统计驱动的子词策略实现了对幂律分布语言的高效近似；而<strong>词表大小 V 本身是一个独立的 scaling 维度</strong>——扩大 V 的性价比远超同等规模的参数扩大，因为前者只增加 embedding 层参数（一次性查表），后者增加每层计算（每次推理都要执行）。
+</div>
+
+<h3>BPE vs One-Hot：为什么不直接用朴素方案</h3>
+
+<table>
+  <tr><th>方案</th><th>词表 V=100K 时</th><th>致命缺陷</th></tr>
+  <tr><td>One-Hot</td><td>每 token 一个 100K 维超稀疏向量，99.999% 为 0</td><td>所有 token 互相正交（距离相等），无法表达"美元"比"番茄"更接近"日元"</td></tr>
+  <tr><td>BPE + Embedding</td><td>每 token 映射为一个 4096/7168 维稠密向量</td><td>语义相近的 token 在向量空间中自然聚集 &mdash; 这是 Embedding 章节（1.2）的内容</td></tr>
+</table>
+
+
+<!-- ============================================================ -->
+<!--  SECTION 4: EVOLUTION & LANDSCAPE -->
+<!-- ============================================================ -->
+
+<h2 id="s4-evo">④ 演进格局 — 2025-2026 行业全景</h2>
+
+<p>了解了 BPE 的机制和原理之后，我们需要知道：<strong>当前业界到底在用什么</strong>。这不再是学术争论，而是 7 家头部公司的实际产品选择。</p>
+
+<h3>三种主流技术路线</h3>
+
+<table>
+  <tr>
+    <th>路线</th>
+    <th>代表公司/模型</th>
+    <th>核心思想</th>
+    <th>市场占比</th>
+  </tr>
+  <tr>
+    <td><b>Byte-level BPE（绝对主流）</b></td>
+    <td>OpenAI (GPT-4o/5/o3)<br>Meta (LLaMA 3/4)<br>DeepSeek-V3/R2<br>Qwen3/3.5<br>Mistral Tekken</td>
+    <td>从 UTF-8 <strong>字节</strong>开始合并（非字符）；保证任意文本可编码；通过 tiktoken 或等效库实现</td>
+    <td><b>5/7 家</b><br>（~85% 市场份额）</td>
+  </tr>
+  <tr>
+    <td>SentencePiece (Unigram)</td>
+    <td>Google (Gemini 3 / Gemma 3)</td>
+    <td>不依赖空格分词，从大词表"反向裁剪"；更适合中日韩等粘着语</td>
+    <td>1/7 家<br>（~10%）</td>
+  </tr>
+  <tr>
+    <td>专有 BPE 变体</td>
+    <td>Anthropic (Claude)</td>
+    <td>未公开细节；已知词表仅 ~65K（头部模型中最小）</td>
+    <td>1/7 家</td>
+  </tr>
+</table>
+
+<div class="card critical">
+  <div class="card-title">⚠️ 行业共识：Byte-level BPE 已成绝对标准</div>
+  <strong>5 家头部公司（OpenAI/Meta/DeepSeek/Qwen/Mistral）全部使用 Byte-level BPE</strong>，只有 Google 仍坚持 SentencePiece。这已经不是"哪种算法更好"的学术讨论——而是<strong>生态事实</strong>：tiktoken 库已成为事实标准，HuggingFace transformers 原生支持，Meta 甚至从自己发明的 SentencePiece（LLaMA-1/2 时代）切换到了 tiktoken（LLaMA-3/4 时代）。<br><br>
+  <b>LLaMA 架构切换的意义</b>：这相当于一家公司把自己的基础设施从 iOS 换到了 Android——成本巨大，除非新方案有明显优势。Meta 这一切换证明了 BBPE+tiktoken 方案的成熟度。
+</div>
+
+<h3>词表增长时间线：3 年 8 倍</h3>
+
+<p>这是 2023-2026 tokenizer 领域最显著的趋势：</p>
+
+<div class="diagram" style="text-align:left;">
+<svg viewBox="0 0 720 360" width="100%" xmlns="http://www.w3.org/2000/svg" style="font-family:-apple-system,sans-serif;">
+  <!-- Title -->
+  <text x="360" y="22" text-anchor="middle" font-size="14" font-weight="600" fill="#333">词表大小演进时间线（2023-2026）— 32K → 262K（8× 增长）</text>
+
+  <!-- Y axis -->
+  <line x1="60" y1="50" x2="60" y2="280" stroke="#ccc" stroke-width="1"/>
+  <text x="15" y="55" font-size="10" fill="#888">262K</text>
+  <line x1="55" y1="50" x2="60" y2="50" stroke="#ccc" stroke-width="1"/>
+
+  <text x="20" y="110" font-size="10" fill="#888">200K</text>
+  <line x1="55" y1="106" x2="60" y2="106" stroke="#eee" stroke-width="0.5"/>
+
+  <text x="20" y="170" font-size="10" fill="#888">128K</text>
+  <line x1="55" y1="166" x2="60" y2="166" stroke="#eee" stroke-width="0.5"/>
+
+  <text x="25" y="232" font-size="10" fill="#888">64K</text>
+  <line x1="55" y1="228" x2="60" y2="228" stroke="#eee" stroke-width="0.5"/>
+
+  <text x="30" y="280" font-size="10" fill="#888">32K</text>
+
+  <!-- Bars -->
+  <!-- LLaMA 2: 32K -->
+  <rect x="80" y="276" width="50" height="4" rx="2" fill="#bbb"/>
+  <text x="105" y="296" text-anchor="middle" font-size="9" fill="#888">LLaMA2</text>
+  <text x="105" y="308" text-anchor="middle" font-size="8" fill="#aaa">32K·2023</text>
+
+  <!-- LLaMA 3: 128K -->
+  <rect x="150" y="164" width="50" height="116" rx="2" fill="#7F77DD" opacity="0.7"/>
+  <text x="175" y="156" text-anchor="middle" font-size="9" fill="#534AB7" font-weight="600">128K</text>
+  <text x="175" y="296" text-anchor="middle" font-size="9" fill="#534AB7">LLaMA3</text>
+  <text x="175" y="308" text-anchor="middle" font-size="8" fill="#aaa">2024-04</text>
+
+  <!-- DeepSeek-V3: 128K -->
+  <rect x="220" y="166" width="50" height="114" rx="2" fill="#534AB7" opacity="0.6"/>
+  <text x="245" y="158" text-anchor="middle" font-size="9" fill="#534AB7" font-weight="600">128K</text>
+  <text x="245" y="296" text-anchor="middle" font-size="9" fill="#534AB7">DS-V3</text>
+  <text x="245" y="308" text-anchor="middle" font-size="8" fill="#aaa">2024-12</text>
+
+  <!-- Mistral: 131K -->
+  <rect x="290" y="162" width="50" height="118" rx="2" fill="#185FA5" opacity="0.6"/>
+  <text x="315" y="154" text-anchor="middle" font-size="9" fill="#185FA5" font-weight="600">131K</text>
+  <text x="315" y="296" text-anchor="middle" font-size="9" fill="#185FA5">Mistral</text>
+  <text x="315" y="308" text-anchor="middle" font-size="8" fill="#aaa">2025-03</text>
+
+  <!-- Qwen3: 152K -->
+  <rect x="360" y="144" width="50" height="136" rx="2" fill="#1D9E75" opacity="0.65"/>
+  <text x="385" y="136" text-anchor="middle" font-size="9" fill="#1D9E75" font-weight="600">152K</text>
+  <text x="385" y="296" text-anchor="middle" font-size="9" fill="#1D9E75">Qwen3</text>
+  <text x="385" y="308" text-anchor="middle" font-size="8" fill="#aaa">2025-04</text>
+
+  <!-- LLaMA 4: 202K -->
+  <rect x="430" y="103" width="50" height="177" rx="2" fill="#534AB7" opacity="0.8"/>
+  <text x="455" y="95" text-anchor="middle" font-size="9" fill="#534AB7" font-weight="600">202K</text>
+  <text x="455" y="296" text-anchor="middle" font-size="9" fill="#534AB7">LLaMA4</text>
+  <text x="455" y="308" text-anchor="middle" font-size="8" fill="#aaa">2025-04</text>
+
+  <!-- GPT-4o: ~200K -->
+  <rect x="500" y="106" width="50" height="174" rx="2" fill="#10a37f" opacity="0.6"/>
+  <text x="525" y="98" text-anchor="middle" font-size="9" fill="#10a37f" font-weight="600">~200K</text>
+  <text x="525" y="296" text-anchor="middle" font-size="9" fill="#10a37f">GPT-4o/5</text>
+  <text x="525" y="308" text-anchor="middle" font-size="8" fill="#aaa">2024-25</text>
+
+  <!-- Gemini 3: 262K -->
+  <rect x="570" y="50" width="50" height="230" rx="2" fill="#4285f4" opacity="0.7"/>
+  <text x="595" y="42" text-anchor="middle" font-size="9" fill="#4285f4" font-weight="600">262K</text>
+  <text x="595" y="296" text-anchor="middle" font-size="9" fill="#4285f4">Gemini 3</text>
+  <text x="595" y="308" text-anchor="middle" font-size="8" fill="#aaa">2025</text>
+
+  <!-- Qwen3.5: 250K -->
+  <rect x="640" y="57" width="50" height="223" rx="2" fill="#1D9E75" opacity="0.75"/>
+  <text x="665" y="49" text-anchor="middle" font-size="9" fill="#1D9E75" font-weight="600">250K</text>
+  <text x="665" y="296" text-anchor="middle" font-size="9" fill="#1D9E75">Qwen3.5</text>
+  <text x="665" y="308" text-anchor="middle" font-size="8" fill="#aaa">2026-02</text>
+
+  <!-- Driver annotations -->
+  <rect x="60" y="318" width="650" height="1" fill="#eee"/>
+  <text x="385" y="338" text-anchor="middle" font-size="10.5" fill="#888"><tspan font-weight="700">三大驱动力</tspan>: 多语言覆盖(119→201 语言) · 编码效率(+10-60%) · 词表作为 scaling law 维度(ByteDance ICML 2025 验证)</text>
+</svg>
+</div>
+
+<h3>前沿探索：BLT（Byte Latent Transformer）— 研究前沿 ≠ 行业共识</h3>
+
+<div class="card deepen">
+  <div class="card-title">▎BLT：彻底抛弃 tokenizer 的激进想法</div>
+  <p>Meta + Stanford 提出的 Byte Latent Transformer (ACL 2025) 走得更远：<strong>不做任何 tokenization，直接把原始字节序列喂给模型</strong>。</p>
+  <br>
+  <p><b>发展脉络</b>：</p>
+  <ul style="margin:6px 0;">
+    <li>2024：原始 BLT 论文发布</li>
+    <li>2025-05：Meta 开源 BLT 权重到 HuggingFace</li>
+    <li>2025-09：HuggingFace transformers 正式集成</li>
+    <li><b>2026-05：Fast BLT（BLT Diffusion）</b> 解决逐字节生成瓶颈 (arxiv 2605.08044)</li>
+  </ul>
+  <br>
+  <p><b>但是</b>：截至 2026-05，<strong>没有任何生产级模型采用 BLT 作为主 tokenizer</strong>。OpenAI / Meta / Google / DeepSeek / Qwen 全部仍在用 BPE。BLT 是重要的研究方向，但属于"研究前沿"而非"行业共识"。</p>
+</div>
+
+<h3>新维度：特殊 Token 的爆发式增长</h3>
+
+<p>一个容易被忽视的变化：LLaMA 4 的特殊 token 从 256 个暴增到 <strong>2,048 个</strong>（8 倍），其中新增了 <code>thinking_start</code> / <code>thinking_end</code> 等 reasoning token。这意味着 tokenizer 不再只是"分词工具"，还开始承载模型的<strong>推理控制信号</strong>功能——这是 §④ 演进节的最新维度。
+
+
+<!-- ============================================================ -->
+<!--  SECTION 5: PRODUCT CONNECTION -->
+<!-- ============================================================ -->
+
+<h2 id="s5-product">⑤ 产品决策 — Tokenizer 如何影响你的 Agent 设计</h2>
+
+<div class="card takeaway">
+  <div class="card-title">▎与你工作的直接连接</div>
+  <ol style="margin: 0; padding-left: 20px;">
+    <li><strong>成本估算</strong>：DDAgent 提示词如果有大量中文专有名词，token 消耗显著高于英文场景——给老板汇报 API 成本时这是关键变量</li>
+    <li><strong>上下文窗口规划</strong>：KBA 知识库如果以中文为主，128K 上下文实际只能装约 40K 中文字符——影响检索粒度和 RAG 分块策略</li>
+    <li><strong>模型选型</strong>：优先选择大词表模型（200K+）。2025年后头部模型中文效率差距在缩小，o200k_base / Qwen3.5 / Gemini 3 对中文的支持已大幅改善</li>
+    <li><strong>幻觉根因分析</strong>：当 Agent 对专有名词（"FxSkill"、"TenPay Global"）反复出错，可能是 tokenizer 将其切碎导致模型学不到稳定表征。选大词表模型本身就是一种解法</li>
+    <li><strong>词表与推理成本的关系</strong>：扩大词表不显著增加推理延迟（注意力计算量取决于序列长度 L，非词表 V），但能显著降低 token 消耗——这是 ByteDance ICML 2025 + Qwen3.5 双重验证的结论</li>
+  </ol>
+</div>
+
+<h3>模型选型速查表</h3>
+
+<table>
+  <tr><th>场景</th><th>推荐</th><th>理由</th></tr>
+  <tr><td>中文为主的 Agent</td><td>Qwen3.5 (250K) > DeepSeek-V3 (128K) > GPT-4o (~200K)</td><td>中文词表覆盖率依次递减</td></tr>
+  <tr><td>多语言跨境场景</td><td>Gemini 3 (262K, 201 语言) > Qwen3.5</td><td>语言覆盖面最广</td></tr>
+  <tr><td>成本敏感 + 英文为主</td><td>GPT-4o / LLaMA 4 (~200K)</td><td>英文 token 效率极高，生态成熟</td></tr>
+  <tr><td>需要 reasoning 控制</td><td>LLaMA 4 (2048 特殊 token)</td><td>原生支持 thinking token</td></tr>
+</table>
+
+<h2>今日核心要点（30 秒速览）</h2>
+
+<ul>
+  <li>模型不直接处理文本，Tokenizer 先将其转为 token ID 序列</li>
+  <li>Token 不等于字也不等于词——它是 BPE 统计学习得到的<strong>高频字节组合</strong></li>
+  <li>工业 BPE = 4 阶段确定性流水线（归一化 &rarr; 正则预分词 &rarr; 字节化 &rarr; BPE 合并），其中<strong>预分词规则是天花板</strong></li>
+  <li>BPE 本质是对幂律分布语言的有损压缩最优近似；<strong>词表大小 V 是独立的 scaling 维度</strong>（扩大 V 性价比超过扩大参数）</li>
+  <li><strong>Byte-level BPE 是行业绝对主流</strong>（5/7 家头部公司），LLaMA 从 SentencePiece 切换到 tiktoken 是标志性事件</li>
+  <li>词表 3 年 8 倍增长（32K → 262K），驱动力：多语言 + 效率 + scaling law</li>
+  <li>选模型时优先大词表（200K+）：不增延迟，降 token 消耗，改善专有名词处理</li>
+</ul>
+
+<div class="footer-actions">
+  <h3>▎接下来你要做的</h3>
+  <ul>
+    <li><strong>10 分钟 Quiz</strong>：打开 <a href="1.1-tokenization-quiz.html">本章节交互式 Quiz →</a></li>
+    <li><strong>追问思路</strong>（任选感兴趣的）：
+      <ul>
+        <li>"BPE 训练完后能不能再扩词表？能给我们的 Agent 加自定义专有名词吗？"</li>
+        <li>"词表 8 倍增长的背后，各家公司分别解决了什么问题？"</li>
+        <li>"BLT 如果真的工业化，对我们的 Agent 架构意味着什么？"</li>
+      </ul>
+    </li>
+    <li><strong>支线深读</strong>：<a href="deep-dives/1.1-d1-deployment-anatomy.html">大模型部署文件解剖（DeepSeek-V3） →</a></li>
+    <li><strong>审计报告</strong>：<a href="deep-dives/1.1-d2-academic-audit.html">本章 v3 行业共识审计详情 →</a></li>
+    <li><strong>下一章预告</strong>：1.2 Embedding — token ID 怎么变成"语义向量"？</li>
+  </ul>
+</div>
+
+</body>
+</html>

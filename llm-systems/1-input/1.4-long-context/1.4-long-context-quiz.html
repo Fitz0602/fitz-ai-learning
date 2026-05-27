@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz · 1.4 长上下文扩展</title>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE;
+  --amber: #BA7517; --amber-bg: #FAEEDA;
+  --blue: #185FA5; --blue-bg: #E6F1FB;
+  --coral: #993C1D; --coral-bg: #FAECE7;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7;
+  max-width: 700px; margin: 0 auto; padding: 32px 24px 80px; font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.tag.t1 { background: var(--purple-bg); color: var(--purple); }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 20px; font-weight: 600; margin: 8px 0 2px; }
+.subtitle { color: var(--muted); font-size: 13px; }
+.section-divider { font-size: 11px; color: var(--purple); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 28px 0 8px; padding: 4px 10px; background: var(--purple-bg); border-radius: 6px; display: inline-block; }
+.q-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 12px 0; transition: opacity 0.2s; }
+.q-block.answered { opacity: 0.85; }
+.q-num { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.multi-badge { font-size: 10px; background: var(--amber-bg); color: var(--amber); padding: 1px 6px; border-radius: 4px; font-weight: 500; white-space: nowrap; }
+.q-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt { padding: 10px 14px 10px 42px; border-radius: 8px; border: 1.5px solid var(--border); cursor: pointer; font-size: 14px; transition: all 0.15s; background: var(--card); line-height: 1.5; position: relative; }
+.opt:hover { border-color: var(--purple); background: var(--purple-bg); }
+.opt.selected { border-color: var(--purple); background: var(--purple-bg); }
+.opt.correct { border-color: var(--teal); background: var(--teal-bg); }
+.opt.wrong { border-color: var(--coral); background: var(--coral-bg); }
+.opt::before { content: ''; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 50%; transition: all 0.15s; background: white; }
+.q-block[data-type="multi"] .opt::before { border-radius: 4px; }
+.opt.selected::before { border-color: var(--purple); background: var(--purple); }
+.opt.selected::after { content: ''; position: absolute; left: 14px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; }
+.q-block[data-type="multi"] .opt.selected::after { width: 9px; height: 5px; transform: translateY(-50%) rotate(0); border-width: 2px 0 0 2px; left: 13px; }
+.opt.locked { pointer-events: none; }
+
+.action-btns { display: flex; gap: 8px; margin-top: 14px; }
+.q-btn { flex: 1; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; text-align: center; }
+.q-btn:hover { border-color: var(--purple); background: var(--purple-bg); }
+.q-btn.submit-btn { background: var(--purple); color: white; border-color: var(--purple); }
+.q-btn.submit-btn:hover { background: #3C3489; }
+.q-btn.reveal-btn { color: var(--muted); }
+.q-btn.reveal-btn:hover { color: var(--text); }
+.q-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: 14px; display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.correct-fb { background: var(--teal-bg); color: #085041; }
+.feedback.wrong-fb { background: var(--coral-bg); color: #711B0C; }
+.source { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.score-bar { background: var(--purple-bg); border-radius: 12px; padding: 24px; margin-top: 32px; text-align: center; display: none; }
+.score-bar.show { display: block; }
+.score-num { font-size: 44px; font-weight: 700; color: var(--purple); }
+.score-label { font-size: 14px; color: var(--muted); margin-top: 6px; }
+.global-actions { display: flex; gap: 10px; margin-top: 24px; }
+.global-btn { flex: 1; padding: 13px; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+.global-btn.primary { background: var(--purple); color: white; }
+.global-btn.primary:hover { background: #3C3489; }
+.global-btn.secondary { background: var(--card); color: var(--purple); border: 1.5px solid var(--purple); }
+.global-btn.secondary:hover { background: var(--purple-bg); }
+.global-btn:disabled { background: #ccc; border-color: #ccc; color: #666; cursor: not-allowed; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: #f1f1ee; padding: 2px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t1">T1 LLM 系统</span>
+    <span class="tag" style="background:#f1f1f1;color:var(--muted);">1.4 Quiz</span>
+    <span class="tag" style="background:var(--teal-bg);color:var(--teal);">10 题 · 单选+多选 · ≈ 10 min</span>
+    <a href="1.4-long-context-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+<a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+  </div>
+  <h1>Quiz · 1.4 长上下文扩展</h1>
+  <div class="subtitle">概念辨析 + 判断应用 · 覆盖全章 5 节 · 每题可独立提交</div>
+</div>
+
+<div class="section-divider">① 是什么</div>
+
+<div class="q-block" data-q="1">
+  <div class="q-num">Q1 · 概念辨析</div>
+  <div class="q-text">RoPE 在超出训练长度后困惑度爆炸的根本原因是？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 显存不够装下更多 token，导致模型内存溢出</div>
+    <div class="opt" data-val="B">B. 高频维度的旋转角度超出训练时见过的分布范围（OOD），注意力权重分配失常</div>
+    <div class="opt" data-val="C">C. 低频维度旋转太慢，无法区分远距离 token 的位置</div>
+    <div class="opt" data-val="D">D. Token Embedding 向量的维度不够大，无法编码长距离依赖</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(1)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(1)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb1"></div>
+  <div class="source">参考：<a href="1.4-long-context-chapter.html#is">§① 是什么</a></div>
+</div>
+
+<!-- 多选题 -->
+<div class="q-block" data-q="2" data-type="multi">
+  <div class="q-num">Q2 · 判断应用<span class="multi-badge">多选</span></div>
+  <div class="q-text">关于长上下文扩展的三大路线，以下哪些说法是<strong>正确的</strong>？（选所有适用的选项）</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 路线 A（位置编码缩放）是当前行业量产方案，典型代表是 YaRN，可将 4K 扩展到 128K</div>
+    <div class="opt" data-val="B">B. 路线 B（注意力架构创新）需要改变模型结构，如 LLaMA 4 的 iRoPE 和 DeepSeek 的 NSA</div>
+    <div class="opt" data-val="C">C. 路线 C（输入压缩）通过 RAG 或视觉压缩减少 token 数，但可能丢失信息，适合概览而非精确提取</div>
+    <div class="opt" data-val="D">D. 三条路线互斥，只能选择其中一条实施</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(2)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(2)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb2"></div>
+  <div class="source">参考：<a href="1.4-long-context-chapter.html#is">§① 是什么</a></div>
+</div>
+
+<div class="section-divider">② 怎么实现</div>
+
+<div class="q-block" data-q="3">
+  <div class="q-num">Q3 · 概念辨析</div>
+  <div class="q-text">Position Interpolation（PI）的核心操作和主要缺陷分别是？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 增大 base 频率值；缺陷是低频维度过度缩放</div>
+    <div class="opt" data-val="B">B. 把位置索引除以缩放因子压缩到训练范围内；缺陷是相邻 token 的位置被挤得太近，局部精度丢失</div>
+    <div class="opt" data-val="C">C. 在注意力分数上加温度修正；缺陷是长距离推理能力下降</div>
+    <div class="opt" data-val="D">D. 用 NoPE 替换部分 RoPE 层；缺陷是短距离精度严重受损</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(3)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(3)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb3"></div>
+  <div class="source">参考：<a href="1.4-long-context-chapter.html#how">② 怎么实现</a></div>
+</div>
+
+<div class="q-block" data-q="4">
+  <div class="q-num">Q4 · 判断应用</div>
+  <div class="q-text">YaRN 相比 NTK-aware Scaling 的核心改进是？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 把所有频率维度统一缩放，不再区分高频和低频</div>
+    <div class="opt" data-val="B">B. 在 NTK-by-parts（三段频率差异化策略）基础上增加注意力温度修正，补偿长度增加导致的注意力分布熵漂移</div>
+    <div class="opt" data-val="C">C. 完全不用微调就能扩展到任意长度，无需任何额外训练</div>
+    <div class="opt" data-val="D">D. 用 NoPE 完全替代 RoPE，消除了位置编码外推问题</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(4)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(4)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb4"></div>
+  <div class="source">参考：<a href="1.4-long-context-chapter.html#how">② 怎么实现</a></div>
+</div>
+
+<div class="section-divider">③ 为什么</div>
+
+<div class="q-block" data-q="5">
+  <div class="q-num">Q5 · 概念辨析</div>
+  <div class="q-text">YaRN 对 RoPE 维度采用"高频外推、低频内插"策略，其背后的第一性原理是？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 高频维度旋转快，训练时已见过多个完整周期，外推仍鲁棒；低频维度旋转慢，训练时只见过部分周期，必须做插值压缩回训练分布</div>
+    <div class="opt" data-val="B">B. 高频维度计算量大，外推节省算力；低频维度计算量小，内插不影响速度</div>
+    <div class="opt" data-val="C">C. 低频维度编码的是局部信息，不能改变；高频维度编码全局信息，可以安全外推</div>
+    <div class="opt" data-val="D">D. 这是纯经验结论，没有理论依据，只是在实验中碰巧发现效果好</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(5)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(5)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb5"></div>
+  <div class="source">参考：<a href="1.4-long-context-chapter.html#why">③ 为什么</a></div>
+</div>
+
+<!-- 多选题 -->
+<div class="q-block" data-q="6" data-type="multi">
+  <div class="q-num">Q6 · 判断应用<span class="multi-badge">多选</span></div>
+  <div class="q-text">以下关于"大 base 预训练 vs YaRN 后处理"两种长上下文方案的对比，哪些是<strong>正确的</strong>？（选所有适用的选项）</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 大 base 预训练（如 LLaMA 3 base=500K）让模型原生学习长距离位置关系，效果上限更高</div>
+    <div class="opt" data-val="B">B. YaRN 不需要从头训练，只需 ~400 step 微调即可把 4K 扩展到 128K，成本远低于大 base 重训</div>
+    <div class="opt" data-val="C">C. 大 base 预训练的短上下文性能一定优于 YaRN 扩展</div>
+    <div class="opt" data-val="D">D. 两种方案可以组合使用——先用大 base 预训练，再用 YaRN 做进一步外推</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(6)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(6)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb6"></div>
+  <div class="source">参考：<a href="1.4-long-context-chapter.html#why">③ 为什么</a></div>
+</div>
+
+<div class="section-divider">④ 演进格局</div>
+
+<div class="q-block" data-q="7">
+  <div class="q-num">Q7 · 概念辨析</div>
+  <div class="q-text">LLaMA 4 Scout 实现了 10M 上下文窗口，其核心技术架构 iRoPE 的设计思路是？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 所有层都用更大的 base 值的 RoPE，从而覆盖 10M 位置</div>
+    <div class="opt" data-val="B">B. 局部注意力层用 RoPE 处理短上下文，全局注意力层不使用位置编码（NoPE），并在推理时对全局层应用温度缩放以增强长距离泛化</div>
+    <div class="opt" data-val="C">C. 使用 NSA 稀疏注意力，只计算部分 token 间的注意力分数</div>
+    <div class="opt" data-val="D">D. 训练时直接使用 10M 长度的序列，不做任何外推处理</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(7)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(7)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb7"></div>
+  <div class="source">参考：<a href="1.4-long-context-chapter.html#evolution">④ 演进格局</a></div>
+</div>
+
+<div class="q-block" data-q="8">
+  <div class="q-num">Q8 · 判断应用</div>
+  <div class="q-text">DeepSeek 的 NSA（原生可训练稀疏注意力）获得 ACL 2025 最佳论文奖。关于 NSA，以下哪项说法最准确？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. NSA 是一种位置编码缩放方案，通过调整旋转角度实现长上下文</div>
+    <div class="opt" data-val="B">B. NSA 通过三条并行注意力分支（压缩注意力 + 选择性注意力 + 滑动注意力）实现稀疏计算，支持端到端训练，64K 序列解码速度提升 11 倍</div>
+    <div class="opt" data-val="C">C. NSA 完全抛弃了注意力机制，用纯 MLP 替代</div>
+    <div class="opt" data-val="D">D. NSA 只能在推理阶段使用，不支持训练</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(8)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(8)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb8"></div>
+  <div class="source">参考：<a href="1.4-long-context-chapter.html#evolution">④ 演进格局</a></div>
+</div>
+
+<div class="section-divider">⑤ 与产品连接</div>
+
+<div class="q-block" data-q="9">
+  <div class="q-num">Q9 · 概念辨析</div>
+  <div class="q-text">你为 DDAgent 选了一个声称"支持 128K 上下文"的模型，但把关键信息放在文档第 60K 位置时模型提取不到。这最可能的原因是？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 模型的词表大小不够，无法处理 60K 位置的 token</div>
+    <div class="opt" data-val="B">B. 128K 是名义上下文窗口大小，不代表所有位置的信息都被有效感知；"Lost in the Middle"现象和位置编码质量导致中段注意力权重衰减</div>
+    <div class="opt" data-val="C">C. 60K 位置超出了模型的最大输入长度限制</div>
+    <div class="opt" data-val="D">D. 模型使用了 ALiBi 位置编码，只对短距离有效</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(9)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(9)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb9"></div>
+  <div class="source">参考：<a href="1.4-long-context-chapter.html#connect">⑤ 与产品连接</a></div>
+</div>
+
+<div class="q-block" data-q="10">
+  <div class="q-num">Q10 · 判断应用</div>
+  <div class="q-text">你的跨境支付合同审核场景需要处理 100K+ token 的文档，需要精确提取关键条款。以下哪种方案组合最合理？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 用短上下文模型 + RAG 分段检索即可，不需要长上下文能力</div>
+    <div class="opt" data-val="B">B. 选择原生训练 128K+ 的模型（如大 base RoPE）并用 needle-in-haystack 测试验证中段信息感知能力，RAG 作为召回辅助而非唯一手段</div>
+    <div class="opt" data-val="C">C. 随便选一个 4K 模型配合 YaRN 就能完美处理，不需要额外测试</div>
+    <div class="opt" data-val="D">D. 用视觉压缩方案把合同转成图片，让视觉语言模型处理，一定比文本模型更精确</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(10)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(10)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb10"></div>
+  <div class="source">参考：<a href="1.4-long-context-chapter.html#connect">⑤ 与产品连接</a></div>
+</div>
+
+<div class="global-actions">
+  <button class="global-btn primary" id="submitAllBtn" onclick="submitRemaining()">提交剩余题目</button>
+  <button class="global-btn secondary" id="revealAllBtn" onclick="revealAll()">查看所有答案</button>
+</div>
+
+<div class="score-bar" id="scorebar">
+  <div class="score-num" id="scorenum">0/10</div>
+  <div class="score-label" id="scoremsg"></div>
+</div>
+
+<script>
+const answers = {
+  1:'B', 2:['A','B','C'], 3:'B', 4:'B', 5:'A',
+  6:['A','B','D'], 7:'B', 8:'B', 9:'B', 10:'B'
+};
+const multiSet = new Set([2, 6]);
+const feedbacks = {
+  1: {
+    B: '正确。RoPE 外推失败的根本原因是：高频维度（θ 值大）旋转速度快，训练时已见过多个完整周期，外推时旋转角超出训练分布（OOD），注意力权重崩塌。低频维度旋转慢，超出训练范围时角度变化不大，反而相对安全。这不是显存问题（A 错），低频维度不是根因（C 错），与 Embedding 维度无关（D 错）。',
+    default: '不对。根因是高频维度的旋转角超出训练时见过的分布（OOD），导致注意力权重崩塌。与显存无关（A），低频维度反而是安全的（C），与 Embedding 维度无关（D）。'
+  },
+  2: {
+    A_BC: '正确！A、B、C 均为正确描述。路线 A 是 YaRN 量产方案（A）；路线 B 是架构创新如 iRoPE/NSA（B）；路线 C 通过压缩减少 token 数但有信息损失（C）。D 是错误的——三条路线不互斥，Qwen2.5 同时用了 A+C，LLaMA 4 同时用了 A+B。',
+    default: '你漏选了或多选了错误项。正确答案是 A、B、C。D 是错误的——三条路线不互斥，实际中经常组合使用。'
+  },
+  3: {
+    B: '正确。PI 把所有位置索引除以缩放因子 s（s = L_new / L_train），把 128K 个位置压缩到 4K 范围内。代价是相邻 token 的位置差也被压缩（如原来相差 1 变成相差 0.5），导致局部精度丢失。A 是 NTK-aware，C 是 YaRN 的温度修正，D 是 iRoPE 的做法。',
+    default: '不对。PI 的核心是等比压缩位置索引，代价是局部精度丢失。增大 base 是 NTK-aware（A 错），温度修正是 YaRN（C 错），NoPE 替换是 iRoPE（D 错）。'
+  },
+  4: {
+    B: '正确。YaRN 在 NTK-by-parts（高频保持/中频 NTK/低频线性插值三段策略）基础上，增加了注意力温度修正 t = 0.1·ln(s) + 1。温度修正补偿了上下文变长后注意力分布趋于均匀（熵增大）的问题，使模型在扩展长度下仍保持集中注意力。A 是 PI 的做法，C 不准确（YaRN 仍需少量微调 ~400 step），D 完全错误。',
+    default: '不对。统一缩放所有维度是 PI 的做法（A 错）；YaRN 仍需少量微调（C 错）；YaRN 不替代 RoPE（D 错）。核心改进是 NTK-by-parts + 温度修正。'
+  },
+  5: {
+    A: '正确。这是信号处理的基本原理：高频维度旋转快，在训练窗口内已经历多个完整 2π 周期，对超出部分的外推仍保持鲁棒性（因为模型已学会周期性模式）。低频维度旋转极慢，训练时只见过角度的一小段，外推时进入完全未知的角度区域，必须插值压缩回训练分布。B 和 C 混淆了高频/低频的功能，D 忽略了理论基础。',
+    default: '不对。高频维度负责短距离感知，训练时已多次周期性出现，外推鲁棒；低频维度负责长距离，训练时只见过部分周期，必须插值。B 说反了计算量问题，C 说反了高频/低频的功能，D 否定了理论基础。'
+  },
+  6: {
+    A_B_D: '正确！A、B、D 均为正确描述。大 base 让模型原生学习长距离关系（A）；YaRN 成本远低于重训（B）；两者可组合使用（D）。C 是错误项——大 base 预训练在短上下文上不一定优于 YaRN 扩展，因为大 base 可能降低短距离位置精度（低频维度旋转更慢，短距离区分力下降）。',
+    default: '你漏选了或多选了错误项。正确答案是 A、B、D。C 是错误的——大 base 预训练可能在短上下文精度上有损失，不一定优于 YaRN 扩展。'
+  },
+  7: {
+    B: '正确。LLaMA 4 的 iRoPE 架构：局部注意力层用 RoPE（保持短距离精度），全局注意力层不使用位置编码（NoPE，增强长程泛化），推理时对全局层应用温度缩放。训练长度 256K，外推到 10M。A 不是 iRoPE 的核心，C 是 NSA 不是 iRoPE，D 不符合事实（训练长度 256K，不是 10M）。',
+    default: '不对。iRoPE 的核心是 RoPE 与 NoPE 层交错，不是所有层都用大 base RoPE（A 错），NSA 是 DeepSeek 的方案（C 错），LLaMA 4 训练长度 256K 不是 10M（D 错）。'
+  },
+  8: {
+    B: '正确。NSA 通过三条并行注意力分支：压缩注意力（粗粒度全局模式）+ 选择性注意力（关键词块精读）+ 滑动注意力（局部上下文），支持端到端训练。在 64K 序列下解码速度提升 11.6 倍，前向传播提升 9 倍。NSA 不是位置编码方案（A 错），没有抛弃注意力机制（C 错），恰恰是原生可训练的（D 错）。',
+    default: '不对。NSA 不是位置编码方案（A 错），也没有抛弃注意力（C 错），它是原生可训练的（D 错）。NSA 是稀疏注意力架构，三分支并行，支持端到端训练。'
+  },
+  9: {
+    B: '正确。这是"名义上下文 vs 有效上下文"的经典问题。128K 只是窗口大小，不代表所有位置的信息都被有效感知。"Lost in the Middle" 现象表明模型对文档中段的注意力权重显著低于首尾，位置编码方案的质量影响中段信息的权重分配。与词表大小无关（A 错），60K 在 128K 范围内（C 错），ALiBi 不会导致完全提取不到（D 错）。',
+    default: '不对。词表大小不影响位置感知（A 错），60K 在 128K 名义范围内（C 错），ALiBi 不会导致完全提取不到（D 错）。核心是有效上下文远小于名义上下文。'
+  },
+  10: {
+    B: '正确。精确提取关键条款需要模型真正"读完全文"，RAG 分段检索可能漏掉跨段逻辑关联（A 错）。最佳方案是选原生训练 128K+ 的模型，并用 needle-in-haystack 测试验证实际感知能力，RAG 作为召回辅助。4K+YaRN 不经测试直接用太冒险（C 错），视觉压缩有信息损失（D 错）。',
+    default: '不对。RAG 不适合精确提取场景（A 错）；4K+YaRN 需要验证（C 错）；视觉压缩有精度损失（D 错）。精确提取场景需要原生长上下文 + 实测验证。'
+  }
+};
+
+let selected = {};
+let answered = new Set();
+let score = 0;
+
+document.querySelectorAll('.opt').forEach(opt => {
+  opt.addEventListener('click', function() {
+    const block = this.closest('.q-block');
+    const q = parseInt(block.dataset.q);
+    if (answered.has(q)) return;
+    const isMulti = block.dataset.type === 'multi';
+    if (!isMulti) {
+      block.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+      this.classList.add('selected');
+      selected[q] = this.dataset.val;
+    } else {
+      this.classList.toggle('selected');
+      if (!selected[q]) selected[q] = [];
+      const val = this.dataset.val;
+      if (this.classList.contains('selected')) {
+        if (!selected[q].includes(val)) selected[q].push(val);
+      } else {
+        selected[q] = selected[q].filter(v => v !== val);
+      }
+    }
+  });
+});
+
+function normalizeAnswer(ans) {
+  return Array.isArray(ans) ? ans.slice().sort().join(',') : ans;
+}
+
+function checkOne(q) {
+  const block = document.querySelector('[data-q="' + q + '"]');
+  const userAns = selected[q];
+  const correct = answers[q];
+  const isMulti = multiSet.has(q);
+
+  if (!userAns || (Array.isArray(userAns) && userAns.length === 0)) {
+    alert('请先选择至少一个选项'); return;
+  }
+
+  const userKey = normalizeAnswer(userAns);
+  const correctKey = normalizeAnswer(correct);
+  const isCorrect = userKey === correctKey;
+
+  block.querySelectorAll('.opt').forEach(o => {
+    const val = o.dataset.val;
+    if (correct.includes(val)) o.classList.add('correct');
+    else if ((Array.isArray(userAns) ? userAns.includes(val) : userAns === val))
+      o.classList.add('wrong');
+    o.classList.add('locked');
+  });
+
+  const fb = document.getElementById('fb' + q);
+  fb.classList.add('show');
+
+  if (isCorrect) {
+    score++;
+    fb.classList.add('correct-fb');
+    fb.innerHTML = '<strong style="color:#085041">✓ 正确。</strong> ' + (feedbacks[q][correctKey] || feedbacks[q][Object.keys(feedbacks[q]).find(k => !k.startsWith('_') && k !== 'default')] || '');
+  } else {
+    fb.classList.add('wrong-fb');
+    const msg = feedbacks[q][userKey] || feedbacks[q]['default'] || '';
+    fb.innerHTML = '<strong style="color:#711B0C">✗ 不正确。</strong> ' + msg + '<br><em style="color:var(--muted)">正确答案：' + (Array.isArray(correct) ? correct.join(' + ') : correct) + '</em>';
+  }
+
+  block.querySelectorAll('.q-btn').forEach(b => b.disabled = true);
+  block.classList.add('answered');
+  answered.add(q);
+  updateScore();
+}
+
+function revealOne(q) {
+  const block = document.querySelector('[data-q="' + q + '"]');
+  const correct = answers[q];
+
+  block.querySelectorAll('.opt').forEach(o => {
+    if (correct.includes(o.dataset.val)) o.classList.add('correct');
+    o.classList.add('locked');
+  });
+
+  const fb = document.getElementById('fb' + q);
+  fb.classList.add('show');
+  fb.style.background = '#f5f5f0';
+  fb.style.color = 'var(--text)';
+  fb.innerHTML = '<strong>参考答案：' + (Array.isArray(correct) ? correct.join(' + ') : correct) + '</strong><br>' +
+    (feedbacks[q][normalizeAnswer(correct)] || '');
+
+  block.querySelectorAll('.q-btn').forEach(b => b.disabled = true);
+  if (!answered.has(q)) { answered.add(q); updateScore(); }
+  block.classList.add('answered');
+}
+
+function submitRemaining() {
+  let anyLeft = false;
+  for (let q = 1; q <= Object.keys(answers).length; q++) {
+    if (!answered.has(q)) {
+      anyLeft = true;
+      const userAns = selected[q];
+      if (userAns && !(Array.isArray(userAns) && userAns.length === 0)) {
+        checkOne(q);
+      } else { revealOne(q); }
+    }
+  }
+  if (!anyLeft) alert('所有题目已作答！');
+}
+
+function revealAll() {
+  for (let q = 1; q <= Object.keys(answers).length; q++) {
+    if (!answered.has(q)) revealOne(q);
+  }
+}
+
+function updateScore() {
+  const total = Object.keys(answers).length;
+  document.getElementById('scorenum').textContent = score + '/' + total;
+  let msgs = [
+    '0-4：建议重读章节，重点看§①和§②',
+    '0-4：建议重读章节，重点看§①和§②',
+    '0-4：建议重读章节，重点看§①和§②',
+    '0-4：建议重读章节，重点看§①和§②',
+    '0-4：建议重读章节，重点看§①和§②',
+    '5-7：基础理解不错，继续深挖实现细节',
+    '5-7：基础理解不错，继续深挖实现细节',
+    '5-7：基础理解不错，继续深挖实现细节',
+    '8-9：理解扎实，可以进入追问模式',
+    '8-9：理解扎实，可以进入追问模式',
+    '满分！可以自信推进 §② 怎么实现了'
+  ];
+  document.getElementById('scoremsg').textContent = msgs[score] || '';
+  document.getElementById('scorebar').classList.add('show');
+  const remaining = total - answered.size;
+  const submitBtn = document.getElementById('submitAllBtn');
+  if (remaining === 0) { submitBtn.disabled = true; submitBtn.textContent = '已全部完成'; }
+  else { submitBtn.textContent = '提交剩余题目（' + remaining + '）'; }
+}
+</script>
+
+</body>
+</html>

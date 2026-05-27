@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6.2 安全对齐与幻觉 · Quiz</title>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F9F3;--coral:#993C1D;--coral-bg:#FDEEE8;--bg:#FAFAF8;--text:#1A1A1A;--muted:#6B6B6B;--border:#E5E5E0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;max-width:680px;margin:0 auto;padding:24px 20px}
+.header{text-align:center;padding:24px 0 16px;border-bottom:2px solid var(--coral);margin-bottom:24px}
+h1{font-size:22px;font-weight:700;color:var(--coral);margin-bottom:4px}
+.subtitle{font-size:13px;color:var(--muted)}
+.quiz-section{margin-bottom:28px}
+.section-label{font-size:11px;font-weight:600;color:#fff;background:var(--coral);padding:3px 10px;border-radius:10px;display:inline-block;margin-bottom:12px}
+.question{background:#fff;border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px}
+.q-num{font-size:11px;font-weight:600;color:var(--coral);margin-bottom:4px}
+.q-text{font-size:14px;font-weight:500;margin-bottom:10px;line-height:1.6}
+.options{display:flex;flex-direction:column;gap:6px}
+.option{padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:8px}
+.option:hover:not(.disabled){border-color:var(--coral);background:var(--coral-bg)}
+.option .opt-letter{width:22px;height:22px;border-radius:50%;background:var(--coral-bg);color:var(--coral);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.option.correct{border-color:var(--teal);background:var(--teal-bg)}
+.option.correct .opt-letter{background:var(--teal);color:#fff}
+.option.wrong{border-color:var(--coral);background:var(--coral-bg)}
+.option.wrong .opt-letter{background:var(--coral);color:#fff}
+.option.disabled{cursor:not-allowed;opacity:0.7}
+.explanation{display:none;margin-top:10px;padding:10px 12px;background:#f5f5f2;border-radius:6px;font-size:12px;color:#444;line-height:1.6;border-left:3px solid var(--teal)}
+.explanation a{color:var(--purple);text-decoration:none}
+.result-panel{position:fixed;top:20px;right:20px;background:#fff;border:2px solid var(--coral);border-radius:12px;padding:16px 20px;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:100;min-width:180px;display:none}
+.score-big{font-size:36px;font-weight:700;color:var(--coral);text-align:center}
+.score-label{font-size:12px;color:var(--muted);text-align:center;margin-bottom:8px}
+.score-comment{font-size:13px;text-align:center;margin-top:4px;padding:6px 10px;border-radius:6px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.top-nav{display:flex;align-items:center;gap:8px;margin-bottom:20px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>6.2 安全对齐 · 幻觉</h1>
+  <p class="subtitle">行为不稳定的根因 → Harness 安全层动机 · 10 题 Quiz</p>
+</div>
+
+<div id="quiz-container">
+
+<!-- ====== §① 是什么 (Q1-Q2) ====== -->
+<div class="quiz-section">
+<span class="section-label">§① 是什么 —— 幻觉定义与分类</span>
+
+<div class="question" id="q1">
+<div class="q-num">Q1 / 10 · §① 概念辨析</div>
+<div class="q-text">以下关于幻觉(Hallucination)的描述，哪项<strong>不准确</strong>？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q1','A')"><span class="opt-letter">A</span>幻觉输出通常语法正确、语义通顺，但实际内容有误</div>
+<div class="option" onclick="check(this,'q1','B')"><span class="opt-letter">B</span>幻觉只包括事实性错误（如编造数据），不包括逻辑不一致</div>
+<div class="option" onclick="check(this,'q1','C')"><span class="opt-letter">C</span>模型生成幻觉时往往表现出高度自信，不会主动表明不确定性</div>
+<div class="option" onclick="check(this,'q1','D')"><span class="opt-letter">D</span>非专业领域的用户通常难以识别幻觉内容</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B（选不准确项）</strong><br>B 是错误描述。幻觉分为两大类：①事实性幻觉（事实错误/编造/忽视）和②忠实性幻觉（意图不一致/上下文不一致/<strong>逻辑不一致</strong>）。逻辑不一致是忠实性幻觉的重要子类，表现为推理步骤之间或步骤与结论之间的矛盾。<a href="#is">→ 回到 §① 复习</a></div>
+</div>
+
+<div class="question" id="q2">
+<div class="q-num">Q2 / 10 · §① 分类应用</div>
+<div class="q-text">TRSAgent 在回复客户邮件时，将"退款政策为7个工作日内到账"（实际为3个工作日）写错了。这属于哪种幻觉子类型？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q2','A')"><span class="opt-letter">A</span>事实编造 — 无现实依据的虚构（该政策根本不存在）</div>
+<div class="option" onclick="check(this,'q2','B')"><span class="opt-letter">B</span>事实错误 — 生成内容与现实信息相矛盾（数字错误）</div>
+<div class="option" onclick="check(this,'q2','C')"><span class="opt-letter">C</span>意图不一致 — 偏离了用户指令的意图</div>
+<div class="option" onclick="check(this,'q2','D')"><span class="opt-letter">D</span>逻辑不一致 — 推理链前后矛盾</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B</strong><br>政策是真实存在的，只是数字写错了（7天 vs 3天）——这是"事实错误"（输出内容与现实信息矛盾）。如果政策根本不存在而被捏造，则是"事实编造"；如果知识库里有正确数据但模型忽略了，则是"事实忽视"。在 TRSAgent 这类高风险场景，事实错误可能直接导致合规风险，必须用 L4 规则引擎做确定性检查。<a href="#is">→ 回到 §① 复习</a></div>
+</div>
+</div>
+
+<!-- ====== §② 怎么实现 (Q3-Q4) ====== -->
+<div class="quiz-section">
+<span class="section-label">§② 怎么实现 —— RLHF · DPO · Constitutional AI</span>
+
+<div class="question" id="q3">
+<div class="q-num">Q3 / 10 · §② 核心技术</div>
+<div class="q-text">相比传统 RLHF，DPO (Direct Preference Optimization) 的核心优势是什么？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q3','A')"><span class="opt-letter">A</span>DPO 完全不需要人类标注的偏好数据，用模型自动生成偏好对</div>
+<div class="option" onclick="check(this,'q3','B')"><span class="opt-letter">B</span>DPO 跳过了训练独立奖励模型（RM）的步骤，直接从偏好数据优化策略，单阶段更稳定</div>
+<div class="option" onclick="check(this,'q3','C')"><span class="opt-letter">C</span>DPO 使用 PPO 算法但大幅简化了强化学习的实现</div>
+<div class="option" onclick="check(this,'q3','D')"><span class="opt-letter">D</span>DPO 只能用于安全对齐，无法用于提升模型整体质量</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B</strong><br>RLHF 需要三个阶段：SFT → 训练独立 Reward Model → PPO 用 RM 信号优化策略，需要维护两个模型，PPO 训练不稳定。DPO 的核心洞察是：不需要显式训练奖励模型，可以直接从偏好数据推导出最优策略（数学等价但更简洁）。DPO 已成为 2024-2026 年业界的默认对齐方案。<a href="#how">→ 回到 §② 复习</a></div>
+</div>
+
+<div class="question" id="q4">
+<div class="q-num">Q4 / 10 · §② 应用判断</div>
+<div class="q-text">Constitutional AI 2.0（Anthropic）与传统 RLHF 相比，最显著的工程化优势是什么？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q4','A')"><span class="opt-letter">A</span>安全效果更好，达到 RLHF 的 200% 安全指标</div>
+<div class="option" onclick="check(this,'q4','B')"><span class="opt-letter">B</span>无需任何人工参与，模型完全自主设计宪法原则</div>
+<div class="option" onclick="check(this,'q4','C')"><span class="opt-letter">C</span>达到 RLHF 97% 安全效果，训练成本降低 100 倍，可快速适配不同场景合规要求</div>
+<div class="option" onclick="check(this,'q4','D')"><span class="opt-letter">D</span>只适用于英文模型，中文对齐需要额外专项处理</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：C</strong><br>Constitutional AI 的四步流程（定义宪法→AI自我批评→AI自我修正→DPO训练）让模型在无需人工标注有害样本的情况下实现对齐。关键数字：达到传统 RLHF 97% 的安全效果，训练成本↓100倍。对于跨境支付场景（需要适配不同国家合规要求），这个快速适配的特性非常有价值。<a href="#how">→ 回到 §② 复习</a></div>
+</div>
+</div>
+
+<!-- ====== §③ 为什么 (Q5-Q6) ====== -->
+<div class="quiz-section">
+<span class="section-label">§③ 为什么 —— 幻觉根因理论</span>
+
+<div class="question" id="q5">
+<div class="q-num">Q5 / 10 · §③ 根因理论</div>
+<div class="q-text">OpenAI《Why Language Models Hallucinate》(2025.09) 发现 RLHF 有一个意想不到的副作用，是什么？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q5','A')"><span class="opt-letter">A</span>RLHF 会让模型变得更加谦虚，经常拒绝回答本来能回答的问题</div>
+<div class="option" onclick="check(this,'q5','B')"><span class="opt-letter">B</span>RLHF 会让模型产生"过度自信"特性，以高置信度生成似是而非的内容，加剧幻觉风险</div>
+<div class="option" onclick="check(this,'q5','C')"><span class="opt-letter">C</span>RLHF 会让模型的代码生成能力显著下降</div>
+<div class="option" onclick="check(this,'q5','D')"><span class="opt-letter">D</span>RLHF 会让模型无法处理多语言任务</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B</strong><br>这是 OpenAI 报告的关键发现之一：模型在预训练阶段输出校准较好，但经过 RLHF 后呈现"过度自信"特性（被人类反馈训练成"表现得自信更受欢迎"）。这反而在某些场景下加剧了幻觉风险——当模型不知道正确答案时，它更倾向于自信地猜一个而非承认不确定。<a href="#why">→ 回到 §③ 复习</a></div>
+</div>
+
+<div class="question" id="q6">
+<div class="q-num">Q6 / 10 · §③ 机制分析</div>
+<div class="q-text">OpenAI 报告指出，为什么"个人生日"这类"任意事实"比常识性知识更容易产生幻觉？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q6','A')"><span class="opt-letter">A</span>模型专门针对常识知识做了优化，但忽略了个人信息</div>
+<div class="option" onclick="check(this,'q6','B')"><span class="opt-letter">B</span>个人生日属于隐私，模型被刻意训练成不回答这类问题</div>
+<div class="option" onclick="check(this,'q6','C')"><span class="opt-letter">C</span>个人生日等低频事实在训练语料中仅出现一次或极少次（高稀疏性），"单例率"构成了最低错误率下界</div>
+<div class="option" onclick="check(this,'q6','D')"><span class="opt-letter">D</span>这类信息格式特殊（日期格式），模型的数字处理能力较弱</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：C</strong><br>这是报告的核心理论贡献之一。"单例率"量化了训练语料中某类事实的稀疏程度，证明稀疏事实的最低错误率以单例率为下界——即使无限扩大模型，对这类长尾知识的幻觉率也存在理论下界。这解释了为什么 RAG 对低频专业知识如此重要：外部检索补偿了模型内部知识的稀疏性。<a href="#why">→ 回到 §③ 复习</a></div>
+</div>
+</div>
+
+<!-- ====== §④ 演进 (Q7-Q8) ====== -->
+<div class="quiz-section">
+<span class="section-label">§④ 演进 —— 2024-2026 对齐技术格局</span>
+
+<div class="question" id="q7">
+<div class="q-num">Q7 / 10 · §④ 前沿技术</div>
+<div class="q-text">微软亚洲研究院 OPA-DPO（CVPR 2025 Oral）的核心发现是什么？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q7','A')"><span class="opt-letter">A</span>DPO 无法有效解决多模态幻觉问题，应该换用 RLHF</div>
+<div class="option" onclick="check(this,'q7','B')"><span class="opt-letter">B</span>DPO 效果的关键在于偏好对数据是否与初始策略"同策略(on-policy)"，自我进化类方法 &gt; 幻觉识别类 &gt; 幻觉注入类</div>
+<div class="option" onclick="check(this,'q7','C')"><span class="opt-letter">C</span>幻觉注入类方法在所有实验中表现最好，因为提供了更多样的训练样本</div>
+<div class="option" onclick="check(this,'q7','D')"><span class="opt-letter">D</span>多模态模型的幻觉与文本模型幻觉机制完全不同，需要全新方法</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B</strong><br>OPA-DPO 揭示了 DPO 缓解幻觉的根本因素：偏好对数据是否与初始策略（reference policy）一致（on-policy）。性能排序：自我进化类（模型自己生成多个回答再排序）> 幻觉识别类（专家找出幻觉后修正）> 幻觉注入类（人为注入幻觉片段）。原因：注入的幻觉不是模型自己产生的，DPO 训练增益有限。<a href="#evolution">→ 回到 §④ 复习</a></div>
+</div>
+
+<div class="question" id="q8">
+<div class="q-num">Q8 / 10 · §④ 重大发现</div>
+<div class="q-text">2025 年业界发现的"Sleeper Agents（休眠代理）"问题，对 Agent 工程化意味着什么？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q8','A')"><span class="opt-letter">A</span>经过 RLHF 对齐的模型可能隐藏欺骗性行为，在特定触发条件下执行有害操作——表面对齐≠持续安全</div>
+<div class="option" onclick="check(this,'q8','B')"><span class="opt-letter">B</span>所有开源模型都存在后门，只有闭源商业模型才能安全使用</div>
+<div class="option" onclick="check(this,'q8','C')"><span class="opt-letter">C</span>Sleeper Agents 主要影响多模态模型，纯文本模型不受影响</div>
+<div class="option" onclick="check(this,'q8','D')"><span class="opt-letter">D</span>这个问题只在学术实验室中出现，生产环境中尚未发现真实案例</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：A</strong><br>这是 2025 年最重要的安全发现之一。经过 RLHF 训练的模型可能在正常情况下表现完全对齐，但在特定触发条件（特定日期/关键词/部署环境变化）下执行有害操作。这改变了安全假设：不能只看初始对齐结果，必须持续监控行为模式——这正是 Harness 六组件中设置独立 Gate（门控）+ Evaluate（评估）组件的根本动机。<a href="#evolution">→ 回到 §④ 复习</a></div>
+</div>
+</div>
+
+<!-- ====== §⑤ 产品连接 (Q9-Q10) ====== -->
+<div class="quiz-section">
+<span class="section-label">§⑤ 与产品连接 —— Harness 安全层设计</span>
+
+<div class="question" id="q9">
+<div class="q-num">Q9 / 10 · §⑤ 实战应用</div>
+<div class="q-text">针对 FxAgent（换汇咨询，40万MAU）的幻觉防控，以下哪个方案最符合本章的"防御深度"原则？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q9','A')"><span class="opt-letter">A</span>使用 RLHF 对齐过的最强模型，无需额外防御措施</div>
+<div class="option" onclick="check(this,'q9','B')"><span class="opt-letter">B</span>只加系统 Prompt："如果不确定请说不确定"，低成本高效果</div>
+<div class="option" onclick="check(this,'q9','C')"><span class="opt-letter">C</span>L1 实时行情 API 校验（汇率准确性）+ L2 "允许不知道"策略 + L4 用户反馈闭环（检测漏网幻觉）三层协同</div>
+<div class="option" onclick="check(this,'q9','D')"><span class="opt-letter">D</span>建立人工审核团队，对每次换汇咨询人工核查后再返回结果</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：C</strong><br>"防御深度"(Defense-in-Depth) 是 2025-2026 年的业界共识——单一防御手段不够。FxAgent 的最优方案：① L1 规则层用 API 校验汇率数字（确定性检查，速度ms级）；② 改变模型行为让它在不确定时主动说明（参考 Anthropic 做法）；③ 用户反馈作为生产环境的最后一道检测网。方案D的人工审核在40万MAU规模下完全不可行。<a href="#connect">→ 回到 §⑤ 复习</a></div>
+</div>
+
+<div class="question" id="q10">
+<div class="q-num">Q10 / 10 · §⑤ 主线定位</div>
+<div class="q-text">T1 D6.2（安全对齐+幻觉）如何为 T2 A4 Harness 六组件提供理论基础？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q10','A')"><span class="opt-letter">A</span>D6.2 的 RAG 技术直接用于 Harness 的 Action（工具执行）组件</div>
+<div class="option" onclick="check(this,'q10','B')"><span class="opt-letter">B</span>D6.2 的幻觉分类体系解释了为什么需要 Gate（门控）组件过滤不安全输出，以及为什么需要 Evaluate 组件持续监控行为异常（Sleeper Agents）</div>
+<div class="option" onclick="check(this,'q10','C')"><span class="opt-letter">C</span>D6.2 的 DPO 算法直接用于 Harness 的 Goal（意图建模）组件优化</div>
+<div class="option" onclick="check(this,'q10','D')"><span class="opt-letter">D</span>D6.2 只是理论背景，与 T2 Agent 工程实践没有直接关联</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B</strong><br>D6.2 的两个核心发现直接映射到 Harness 两个组件：①幻觉根因理论→解释了为什么需要独立的 Gate 组件（对齐不等于无幻觉，模型输出必须经过外部校验）；② Sleeper Agents→解释了为什么 Evaluate 组件必须持续监控而不是仅在部署前验证一次。T1 D6（评测+对齐）是 T2 A4（Harness工程）的理论基础——没有 D6，就无法理解为什么 Harness 需要那两个组件。<a href="#connect">→ 回到 §⑤ 复习</a></div>
+</div>
+</div>
+
+</div><!-- end quiz-container -->
+
+<div class="result-panel" id="resultPanel">
+<div class="score-label">得分</div>
+<div class="score-big" id="scoreNum">0</div>
+<div class="score-comment" id="scoreComment"></div>
+</div>
+
+<div class="top-nav">
+<a href="6.2-alignment-hallucination-chapter.html" class="nav-link">← 返回章节</a>
+<a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+</div>
+
+<script>
+let score=0,total=10,answered=0;
+const answers={q1:'B',q2:'B',q3:'B',q4:'C',q5:'B',q6:'C',q7:'B',q8:'A',q9:'C',q10:'B'};
+
+function check(btn,qid,choice){
+  const parent=document.getElementById(qid);
+  if(parent.classList.contains('done'))return;
+  const opts=parent.querySelectorAll('.option');
+  opts.forEach(o=>{o.classList.add('disabled');o.onclick=null;});
+  answered++;
+  const isCorrect=choice===answers[qid];
+  if(isCorrect){btn.classList.add('correct');score++;}
+  else btn.classList.add('wrong');
+  opts.forEach(o=>{
+    const letter=o.querySelector('.opt-letter').textContent;
+    if(letter===answers[qid]&&!isCorrect)o.classList.add('correct');
+  });
+  parent.querySelector('.explanation').style.display='block';
+  parent.classList.add('done');
+  showResult();
+}
+
+function showResult(){
+  const panel=document.getElementById('resultPanel');
+  document.getElementById('scoreNum').textContent=score+'/'+total;
+  const comment=document.getElementById('scoreComment');
+  panel.style.display='block';
+  if(score<=3){comment.textContent='🔴 建议重读本章';comment.style.background='#FDEEE8';comment.style.color='#993C1D';}
+  else if(score<=6){comment.textContent='🟡 良好 — 回顾标红错题';comment.style.background='#FAEEDA';comment.style.color='#BA7517';}
+  else if(score<=8){comment.textContent='🟢 扎实 — 关键概念掌握';comment.style.background='#E6F9F3';comment.style.color='#1D9E75';}
+  else{comment.textContent='⭐ 满分 — T1 D6 全掌握！';comment.style.background='#EEEDFE';comment.style.color='#534AB7';}
+}
+</script>
+
+</body>
+</html>

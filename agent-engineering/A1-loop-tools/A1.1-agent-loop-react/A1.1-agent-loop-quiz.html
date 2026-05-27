@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz · A1.1 Agent Loop · ReAct · Tool Use</title>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE;
+  --amber: #BA7517; --amber-bg: #FAEEDA;
+  --blue: #185FA5; --blue-bg: #E6F1FB;
+  --coral: #993C1D; --coral-bg: #FAECE7;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7;
+  max-width: 700px; margin: 0 auto; padding: 32px 24px 80px; font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.tag.t2 { background: var(--teal-bg); color: #0F6E56; }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 20px; font-weight: 600; margin: 8px 0 2px; }
+.subtitle { color: var(--muted); font-size: 13px; }
+.section-divider { font-size: 11px; color: var(--teal); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 28px 0 8px; padding: 4px 10px; background: var(--teal-bg); border-radius: 6px; display: inline-block; }
+.q-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 12px 0; transition: opacity 0.2s; }
+.q-block.answered { opacity: 0.85; }
+.q-num { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.q-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt { padding: 10px 14px 10px 42px; border-radius: 8px; border: 1.5px solid var(--border); cursor: pointer; font-size: 14px; transition: all 0.15s; background: var(--card); line-height: 1.5; position: relative; }
+.opt:hover { border-color: var(--purple); background: var(--purple-bg); }
+.opt.selected { border-color: var(--purple); background: var(--purple-bg); }
+.opt.correct { border-color: var(--teal); background: var(--teal-bg); }
+.opt.wrong { border-color: var(--coral); background: var(--coral-bg); }
+.opt::before { content: ''; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 50%; transition: all 0.15s; background: white; }
+.opt.selected::before { border-color: var(--purple); background: var(--purple); }
+.opt.selected::after { content: ''; position: absolute; left: 14px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; }
+.opt.locked { pointer-events: none; }
+.action-btns { display: flex; gap: 8px; margin-top: 14px; }
+.q-btn { flex: 1; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; text-align: center; }
+.q-btn:hover { border-color: var(--purple); background: var(--purple-bg); }
+.q-btn.submit-btn { background: var(--purple); color: white; border-color: var(--purple); }
+.q-btn.submit-btn:hover { background: #3C3489; }
+.q-btn.reveal-btn { color: var(--muted); }
+.q-btn.reveal-btn:hover { color: var(--text); }
+.q-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: 14px; display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.correct-fb { background: var(--teal-bg); color: #085041; }
+.feedback.wrong-fb { background: var(--coral-bg); color: #711B0C; }
+.source { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.score-bar { background: var(--purple-bg); border-radius: 12px; padding: 24px; margin-top: 32px; text-align: center; display: none; }
+.score-bar.show { display: block; }
+.score-num { font-size: 44px; font-weight: 700; color: var(--purple); }
+.score-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.score-detail { display: flex; justify-content: center; gap: 24px; margin-top: 16px; font-size: 13px; }
+.score-item { text-align: center; }
+.score-item .num { font-size: 22px; font-weight: 600; color: var(--text); }
+.score-item .lbl { font-size: 11px; color: var(--muted); }
+.progress-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #e0e0dc; transition: all 0.3s; }
+.dot.done { background: var(--teal); }
+.dot.current { background: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t2">T2 Agent 工程</span>
+    <span style="font-size:13px;color:var(--muted);">A1.1 Agent Loop · ReAct · Tool Use</span>
+    <a href="A1.1-agent-loop-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+<a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+  </div>
+  <h1>Quiz：Agent Loop · ReAct · Tool Use</h1>
+  <div class="subtitle">10 题 · 每节 2 题 · 选择题为主</div>
+</div>
+
+<div class="progress-dots" id="dots"></div>
+<div id="quiz-container"></div>
+
+<div class="score-bar" id="scoreBar">
+  <div class="score-num" id="scoreNum">0/10</div>
+  <div class="score-label">完成！你的得分</div>
+  <div class="score-detail">
+    <div class="score-item"><div class="num" id="correctNum">0</div><div class="lbl">正确</div></div>
+    <div class="score-item"><div class="num" id="wrongNum">0</div><div class="lbl">错误</div></div>
+  </div>
+</div>
+
+<script>
+const quizData = [
+  // ===== §① 是什么（Q1-Q2）=====
+  {
+    section: "§① 是什么",
+    num: 1,
+    question: "Lilian Weng（OpenAI）提出的 Agent 公式是 Agent = LLM + Memory + Planning + ______？",
+    options: [
+      { label: "A", text: "Fine-tuning" },
+      { label: "B", text: "Tool Use", correct: true },
+      { label: "C", text: "RAG（检索增强生成）" },
+      { label: "D", text: "Knowledge Graph" }
+    ],
+    explanation: "Lilian Weng 的经典公式：Agent = LLM + Memory + Planning + Tool Use。Tool Use 是让 Agent 从'会回答'变成'能做事'的关键组件——没有它，Agent 只是更聪明的聊天机器人。",
+    source: "Lilian Weng, 'LLM Powered Autonomous Agents', 2023"
+  },
+  {
+    section: "§① 是什么",
+    num: 2,
+    question: "ReAct 模式相比纯 CoT 和纯 Tool-calling，最核心的差异化能力是什么？",
+    options: [
+      { label: "A", text: "支持并行工具调用以减少延迟" },
+      { label: "B", text: "交替进行推理和行动，每次观察结果后重新规划", correct: true },
+      { label: "C", text: "内置了记忆机制自动保存对话历史" },
+      { label: "D", text: "使用更先进的模型架构（如 Transformer XL）" }
+    ],
+    explanation: "ReAct = Reasoning + Acting，它的核心是将推理和行动交织在同一个循环中：模型先思考（Thought），再执行（Action），观察结果（Observation），然后基于真实反馈重新思考。纯CoT看不到外部世界，纯Tool-calling无规划能力。",
+    source: "Yao et al., 'ReAct: Synergizing Reasoning and Acting in Language Models', 2022"
+  },
+
+  // ===== §② 怎么实现（Q3-Q4）=====
+  {
+    section: "§② 怎么实现",
+    num: 3,
+    question: "在 ReAct 循环中，当 LLM 返回 finish_reason = 'tool_use' 时，Runtime 应该做什么？",
+    options: [
+      { label: "A", text: "立即终止循环并返回模型的文本内容" },
+      { label: "B", text: "忽略该调用，要求用户重新提问" },
+      { label: "C", text: "执行工具调用，将结果作为 tool_result 追加到 messages，然后继续循环", correct: true },
+      { label: "D", text: "记录日志但不做任何操作，等待下一轮用户输入" }
+    ],
+    explanation: "tool_use 表示模型要调用工具。正确流程：解析 tool_calls → 执行每个工具 → 将 Thought+Action 和 Observations 都追加到 messages → 再次调用 LLM。只有 finish_reason = 'end_turn' 时才表示模型给出了最终答案，可以退出循环。",
+    source: "Anthropic Tool Use 文档 / OpenAI Function Calling 文档, 2026.04"
+  },
+  {
+    section: "§② 怎么实现",
+    num: 4,
+    question: "关于 Function Calling 的工具定义（description 字段），以下哪条描述最符合最佳实践？",
+    options: [
+      { label: "A", text: "'get_weather function' —— 简短重复函数名即可" },
+      { label: "B", text: "'查询指定城市的当前天气信息，包括温度、天气状况和湿度。仅在用户明确询问天气时调用。'" , correct: true},
+      { label: "C", text: "description 越长越好，包含完整的 API 文档和使用示例" },
+      { label: "D", text: "description 是可选字段，模型主要根据参数类型推断何时调用" }
+    ],
+    explanation: "模型完全依赖 description 来决定是否以及何时调用工具。好的 description 应说明用途、明确触发条件、排除不适用场景、指出参数格式。Anthropic 数据显示，添加基础工具后在 LAB-Bench/SWE-bench 上通常超越人类专家基准。",
+    source: "Anthropic Tool Use 文档, 2026.04"
+  },
+
+  // ===== §③ 为什么（Q5-Q6）=====
+  {
+    section: "§③ 为什么",
+    num: 5,
+    question: "Oracle Blog（2026）指出六大AI公司在Agent Loop上的实现有何共同点？",
+    options: [
+      { label: "A", text: "都使用图编排（Graph-based Orchestration）架构" },
+      { label: "B", text: "都实现了自主的多Agent协作协议" },
+      { label: "C", text: "底层执行模式完全一致 —— LLM + tools in a loop", correct: true },
+      { label: "D", text: "都基于 LangChain/LangGraph 构建" }
+    ],
+    explanation: "OpenAI/Anthropic/Google/Microsoft/Meta/LangChain 六家公司的命名不同（Agents SDK / Claude Agent SDK / Orchestration Layer 等）、SDK设计不同、哲学不同，但底层拓扑完全等价——都是 LLM 在一个循环中调用工具。差异在于工具目录设计和终止逻辑，不在架构本身。",
+    source: "Oracle Developer Blog, 'What Is the AI Agent Loop?', 2026"
+  },
+  {
+    section: "§③ 为什么",
+    num: 6,
+    question: "以下哪个场景最适合用 ReAct 模式，而非 Pure CoT 或 Plan-and-Execute？",
+    options: [
+      { label: "A", text: "解答一道数学证明题（步骤固定且已知）" },
+      { label: "B", text: "帮用户查询实时汇率并根据结果建议换汇时机", correct: true },
+      { label: "C", text: "按照预定义的流水线处理一批结构化数据" },
+      { label: "D", text: "对一段代码进行语法检查（单步任务）" }
+    ],
+    explanation: "ReAct 最适合'步骤不可预测、需要根据中间结果自适应调整'的场景。查汇率→分析结果→建议换汇正是这种模式：每一步都依赖于上一步的真实数据。数学题用 CoT 就够了；结构化数据处理用确定性 Pipeline 更好。",
+    source: "Taskade AI Wiki / Oracle Blog, 2026"
+  },
+
+  // ===== §④ 演进（Q7-Q8）=====
+  {
+    section: "§④ 演进",
+    num: 7,
+    question: "MCP（Model Context Protocol）被称为'USB-C for AI'，以下哪个时间线节点标志着标准之争的结束？",
+    options: [
+      { label: "A", text: "2024年11月 Anthropic 发布 MCP 规范" },
+      { label: "B", text: "2025年3月 OpenAI 宣布在 Agents SDK 中支持 MCP", correct: true },
+      { label: "C", text: "2025年12月 Anthropic 发布 Advanced Tool Use 套件" },
+      { label: "D", text: "2026年1月 MCP 被捐赠给 Linux Foundation" }
+    ],
+    explanation: "2025年3月 OpenAI 支持 MCP 是关键转折点——两大商业 LLM 提供商同时支持同一协议，意味着'哪种标准会赢'的问题在竞争开始前就结束了。之后 Google/Microsoft 纷纷跟进，MCP 成为事实标准。",
+    source: "AgentPatch Blog, 'The MCP Protocol in 2026', 2026"
+  },
+  {
+    section: "§④ 演进",
+    num: 8,
+    question: "Anthropic 的 Programmatic Tool Calling 相比传统逐个 tool_use block 输出的核心优势是什么？",
+    options: [
+      { label: "A", text: "支持更多种类的工具（包括 GUI 操作）" },
+      { label: "B", text: "Token 减少 37%，推理次数减少 19+ 次/任务", correct: true },
+      { label: "C", text: "不需要定义 JSON Schema，模型自动推断参数" },
+      { label: "D", text: "可以在离线模式下运行，无需 API 连接" }
+    ],
+    explanation: "Programmatic Tool Calling 让 Claude 写 Python 脚本来编排整个工作流，而不是逐个输出 tool_use block。本质是把多次串行工具调用压缩成一次脚本执行。Zylos Research (2026.01) 数据显示 Token 减少约37%。",
+    source: "Zylos Research, 'LLM Structured Output & Tool Use Patterns 2025', 2026.01"
+  },
+
+  // ===== §⑤ 与产品连接（Q9-Q10）=====
+  {
+    section: "§⑤ 与产品",
+    num: 9,
+    question: "DDAgent 的 Dispatcher 架构中，外层 Dispatcher 和内层子Agent 分别对应哪种 Agent 模式？",
+    options: [
+      { label: "A", text: "外层 ReAct + 内层 Pure CoT" },
+      { label: "B", text: "外层 Plan-and-Execute + 内层 ReAct", correct: true },
+      { label: "C", text: "外层 Reflection + 内层 Tool-calling only" },
+      { label: "D", text: "两层都是 ReAct，只是工具集不同" }
+    ],
+    explanation: "DDAgent 的 Dispatcher（外层）采用 Plan-and-Execute 模式——接收尽调需求后先拆分子任务再分配。各子Agent（内层）运行 ReAct 循环——在自己的领域内反复查API→解析→填充→验证。这种'外层规划+内层执行'的两层架构是多Agent系统的典型模式。",
+    source: "DDAgent 项目实践（Fitz 团队）"
+  },
+  {
+    section: "§⑤ 与产品",
+    num: 10,
+    question: "TRSAgent 的3个P0问题（充值T+1规则遗漏/忽略链边界/Remitly混淆），从 ReAct 循环角度看，它们的共同根因环节是什么？",
+    options: [
+      { label: "A", text: "Action 执行阶段——工具本身有 Bug" },
+      { label: "B", text: "Observation 阶段——工具返回结果的格式和质量有问题", correct: true },
+      { label: "C", text: "Final Answer 生成阶段——模型的总结能力不足" },
+      { label: "D", text: "Build Prompt 阶段——system prompt 编写得不好" }
+    ],
+    explanation: "三个P0问题的根因都在 ReAct 循环的信息流转环节：(1) T+1规则遗漏=Thought阶段工具选择错误(应先查KB)；(2)忽略链边界=Build Prompt阶段messages构建缺会话隔离；(3)Remitly混淆=Observation阶段工具返回的错误码格式不一致。修复方向是强化循环每个环节的质量。",
+    source: "TRSAgent 评估报告 2026-05-14（Fitz 团队）"
+  }
+];
+
+let currentQ = 0;
+let score = { correct: 0, wrong: 0 };
+let answered = new Set();
+
+function renderQuiz() {
+  const container = document.getElementById('quiz-container');
+  const dotsContainer = document.getElementById('dots');
+  dotsContainer.innerHTML = quizData.map((_, i) =>
+    `<div class="dot ${answered.has(i)?'done':''} ${i===currentQ?'current':''}" data-i="${i}"></div>`
+  ).join('');
+
+  if (currentQ >= quizData.length) {
+    showScore();
+    return;
+  }
+
+  const q = quizData[currentQ];
+  const isAnswered = answered.has(currentQ);
+  container.innerHTML = `
+    <div class="section-divider">${q.section} · 第 ${q.num} 题</div>
+    <div class="q-block ${isAnswered?'answered':''}" id="qb${currentQ}">
+      <div class="q-num">Question ${q.num} / ${quizData.length}</div>
+      <div class="q-text">${q.question}</div>
+      <div class="options" id="opts${currentQ}">
+        ${q.options.map((o, i) => `<div class="opt${isAnswered?' locked':''}" data-i="${i}" onclick="selectOpt(${i})">${o.label}. ${o.text}</div>`).join('')}
+      </div>
+      <div class="action-btns" id="btns${currentQ}">
+        <button class="q-btn submit-btn" onclick="submitAnswer()" ${isAnswered?'disabled':''}>提交答案</button>
+        <button class="q-btn reveal-btn" onclick="revealAnswer()" ${isAnswered?'disabled':''}>查看答案</button>
+      </div>
+      <div class="feedback" id="fb${currentQ}"></div>
+      <div class="source" id="src${currentQ}" style="display:none">${q.source}</div>
+    </div>
+  `;
+
+  if (isAnswered) {
+    // Restore previous answer state
+    const selIdx = q._selected;
+    if (selIdx !== undefined) {
+      document.querySelectorAll(`#opts${currentQ} .opt`).forEach((el, i) => {
+        el.classList.toggle('selected', i === selIdx);
+        el.classList.toggle('correct', q.options[i].correct);
+        el.classList.toggle('wrong', i === selIdx && !q.options[i].correct);
+      });
+      showFeedback(true);
+    }
+  }
+
+  // Dot click navigation
+  dotsContainer.querySelectorAll('.dot').forEach(d => {
+    d.onclick = () => { currentQ = parseInt(d.dataset.i); renderQuiz(); };
+  });
+}
+
+function selectOpt(idx) {
+  if (answered.has(currentQ)) return;
+  document.querySelectorAll(`#opts${currentQ} .opt`).forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+  });
+  quizData[currentQ]._selected = idx;
+}
+
+function submitAnswer() {
+  if (answered.has(currentQ)) return;
+  const q = quizData[currentQ];
+  const selIdx = q._selected;
+  if (selIdx === undefined) { alert('请先选择一个选项'); return; }
+  answered.add(currentQ);
+
+  const isCorrect = q.options[selIdx].correct;
+  if (isCorrect) score.correct++; else score.wrong++;
+
+  document.querySelectorAll(`#opts${currentQ} .opt`).forEach((el, i) => {
+    el.classList.add('locked');
+    if (q.options[i].correct) el.classList.add('correct');
+    else if (i === selIdx) el.classList.add('wrong');
+  });
+
+  showFeedback(isCorrect);
+  document.getElementById(`btns${currentQ}`).querySelectorAll('.q-btn').forEach(b => b.disabled = true);
+}
+
+function revealAnswer() {
+  if (answered.has(currentQ)) return;
+  answered.add(currentQ);
+  score.wrong++;
+
+  const q = quizData[currentQ];
+  q._revealed = true;
+
+  document.querySelectorAll(`#opts${currentQ} .opt`).forEach((el, i) => {
+    el.classList.add('locked');
+    if (q.options[i].correct) el.classList.add('correct');
+  });
+
+  showFeedback(false);
+  document.getElementById(`btns${currentQ}`).querySelectorAll('.q-btn').forEach(b => b.disabled = true);
+}
+
+function showFeedback(isSubmitted) {
+  const q = quizData[currentQ];
+  const fb = document.getElementById(`fb${currentQ}`);
+  const src = document.getElementById(`src${currentQ}`);
+  const selIdx = q._selected;
+  const isCorrect = q.options[selIdx]?.correct;
+
+  if (isSubmitted && isCorrect) {
+    fb.className = 'feedback show correct-fb';
+    fb.innerHTML = '<strong>✅ 正确！</strong> ' + q.explanation;
+  } else if (isSubmitted && !isCorrect) {
+    fb.className = 'feedback show wrong-fb';
+    fb.innerHTML = '<strong>❌ 错误。</strong> 正确答案是 <strong>' + q.options.find(o=>o.correct).label + '</strong>。' + q.explanation;
+  } else {
+    fb.className = 'feedback show wrong-fb';
+    fb.innerHTML = '<strong>📖 参考答案：</strong>' + q.explanation;
+  }
+  src.style.display = 'block';
+}
+
+function showScore() {
+  document.getElementById('quiz-container').innerHTML = '';
+  document.getElementById('scoreBar').classList.add('show');
+  document.getElementById('scoreNum').textContent = `${score.correct}/${quizData.length}`;
+  document.getElementById('correctNum').textContent = score.correct;
+  document.getElementById('wrongNum').textContent = score.wrong;
+}
+
+// Init
+renderQuiz();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz · A3.2 Memory 机制 · 四层架构</title>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE;
+  --amber: #BA7517; --amber-bg: #FAEEDA;
+  --blue: #185FA5; --blue-bg: #E6F1FB;
+  --coral: #993C1D; --coral-bg: #FAECE7;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7;
+  max-width: 700px; margin: 0 auto; padding: 32px 24px 80px; font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.tag.t2 { background: var(--teal-bg); color: #0F6E56; }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 20px; font-weight: 600; margin: 8px 0 2px; }
+.subtitle { color: var(--muted); font-size: 13px; }
+.section-divider { font-size: 11px; color: var(--teal); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 28px 0 8px; padding: 4px 10px; background: var(--teal-bg); border-radius: 6px; display: inline-block; }
+.q-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 12px 0; transition: opacity 0.2s; }
+.q-block.answered { opacity: 0.85; }
+.q-num { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.q-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt { padding: 10px 14px 10px 42px; border-radius: 8px; border: 1.5px solid var(--border); cursor: pointer; font-size: 14px; transition: all 0.15s; background: var(--card); line-height: 1.5; position: relative; }
+.opt:hover { border-color: var(--purple); background: var(--purple-bg); }
+.opt.selected { border-color: var(--purple); background: var(--purple-bg); }
+.opt.correct { border-color: var(--teal); background: var(--teal-bg); }
+.opt.wrong { border-color: var(--coral); background: var(--coral-bg); }
+.opt::before { content: ''; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 50%; transition: all 0.15s; background: white; }
+.opt.selected::before { border-color: var(--purple); background: var(--purple); }
+.opt.selected::after { content: ''; position: absolute; left: 14px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; }
+.opt.locked { pointer-events: none; }
+.action-btns { display: flex; gap: 8px; margin-top: 14px; }
+.q-btn { flex: 1; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; text-align: center; }
+.q-btn:hover { border-color: var(--purple); background: var(--purple-bg); }
+.q-btn.submit-btn { background: var(--purple); color: white; border-color: var(--purple); }
+.q-btn.submit-btn:hover { background: #3C3489; }
+.q-btn.reveal-btn { color: var(--muted); }
+.q-btn.reveal-btn:hover { color: var(--text); }
+.q-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: 14px; display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.correct-fb { background: var(--teal-bg); color: #085041; }
+.feedback.wrong-fb { background: var(--coral-bg); color: #711B0C; }
+.source { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.score-bar { background: var(--purple-bg); border-radius: 12px; padding: 24px; margin-top: 32px; text-align: center; display: none; }
+.score-bar.show { display: block; }
+.score-num { font-size: 44px; font-weight: 700; color: var(--purple); }
+.score-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.score-detail { display: flex; justify-content: center; gap: 24px; margin-top: 16px; font-size: 13px; }
+.score-item { text-align: center; }
+.score-item .num { font-size: 22px; font-weight: 600; color: var(--text); }
+.score-item .lbl { font-size: 11px; color: var(--muted); }
+.progress-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #e0e0dc; transition: all 0.3s; }
+.dot.done { background: var(--teal); }
+.dot.current { background: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t2">T2 Agent 工程</span>
+    <span style="font-size:13px;color:var(--muted);">A3.2 Memory 机制 · 四层架构</span>
+    <a href="A3.2-memory-system-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+    <a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+  </div>
+  <h1>Quiz：Memory 机制（四层架构）</h1>
+  <div class="subtitle">10 题 · 每节 2 题 · 选择题为主</div>
+</div>
+
+<div class="progress-dots" id="dots"></div>
+<div id="quiz-container"></div>
+
+<div class="score-bar" id="scoreBar">
+  <div class="score-num" id="scoreNum">0/10</div>
+  <div class="score-label">完成！你的得分</div>
+  <div class="score-detail">
+    <div class="score-item"><div class="num" id="correctNum">0</div><div class="lbl">正确</div></div>
+    <div class="score-item"><div class="num" id="wrongNum">0</div><div class="lbl">错误</div></div>
+  </div>
+</div>
+
+<script>
+const quizData = [
+  // ===== §① 是什么（Q1-Q2）=====
+  {
+    section: "§① 是什么",
+    num: 1,
+    question: "\"Memory is what turns a model into a product.\" 以下哪项不是\"没有 Memory 的 Agent\"的表现？",
+    options: [
+      { label: "A", text: "每次交互从零开始，不记得用户身份和偏好" },
+      { label: "B", text: "不能从过去的错误中学习，重复犯同样的错" },
+      { label: "C", text: "API 响应速度慢，延迟超过 3 秒", correct: true },
+      { label: "D", text: "无法累积知识，每次对话产生的洞察随 session 结束而消失" }
+    ],
+    explanation: "响应速度是推理/网络问题，与记忆系统无关。无状态本质导致的四大问题是：从零开始、不能学错、重复犯错、知识不积累——这些都是 Memory 系统要解决的核心问题。",
+    source: "§1.1 无状态本质 vs 有状态产品需求"
+  },
+  {
+    section: "§① 是什么",
+    num: 2,
+    question: "为什么不能简单地用\"把所有历史对话都塞进 Context Window\"作为记忆方案？以下哪个原因最致命？",
+    options: [
+      { label: "A", text: "Context Window 大小有限（4K~1M tokens），塞入长对话后所剩无几" },
+      { label: "B", text: "上下文越长，模型定位关键信息的准确率越低（\"大海捞针\"效应），约在 32K 后显著下降" },
+      { label: "C", text: "每轮都要重新发送全部历史，token 成本随对话长度线性放大" },
+      { label: "D", text: "以上三者都是致命限制，需要分层的结构化记忆方案", correct: true }
+    ],
+    explanation: "暴力全量上下文的三个限制互相叠加：空间不够放、放了效果变差、且成本线性增长。这正是需要四层架构的根本动机。",
+    source: "§1.1 \"常见误区：全量塞入 Context Window\""
+  },
+
+  // ===== §② 怎么实现（Q3-Q4）=====
+  {
+    section: "§② 怎么实现",
+    num: 3,
+    question: "在四层记忆架构中，\"工作上下文（Working Context）\"的主要职责和典型实现方式是什么？",
+    options: [
+      { label: "A", text: "存储用户偏好和项目事实等跨会话信息，用向量库实现" },
+      { label: "B", text: "维护当前会话的压缩版历史，通过滑动窗口/摘要/向量检索实现", correct: true },
+      { label: "C", text: "存储学会的技能和工作流模式，以 SKILL.md 为载体" },
+      { label: "D", text: "承载当前轮次的 System Prompt + User Message + Tool Output" }
+    ],
+    explanation: "Working Context 是第二层，职责是在会话范围内维护压缩版历史。三种主流实现是滑动窗口（保留最近 N 轮）、对话摘要（旧对话压缩）、向量检索（语义相似度召回）。A 是第三层 External Context，C 是第四层 Procedural，D 是第一层 Main Context。",
+    source: "§2.3 第二层：工作上下文 (Working Context)"
+  },
+  {
+    section: "§② 怎么实现",
+    num: 4,
+    question: "认知科学将长期记忆分为情景记忆(Episodic)、语义记忆(Semantic)和程序性记忆(Procedural)。以下哪个映射关系是正确的？",
+    options: [
+      { label: "A", text: "情景记忆=\"用户偏好 TypeScript\"；语义记忆=\"上次尝试X失败了\"；程序性=\"成功的调试流程\"" },
+      { label: "B", text: "情景记忆=\"具体事件，有时间戳\"；语义记忆=\"事实和关系，去时间化\"；程序性=\"技能和工作流模式\"", correct: true },
+      { label: "C", text: "情景记忆=向量库存储；语义记忆=图谱存储；程序性记忆=Redis 缓存" },
+      { label: "D", text: "三种记忆类型只是学术分类，工程上统一用向量数据库即可" }
+    ],
+    explanation: "Episodic 记录具体事件（何时发生了什么），Semantic 记录去时间化的事实（什么是真的），Procedural 记录技能（怎么做）。它们有不同的技术最优解：情景→向量/带时态标记，语义→图谱三元组/结构化表，程序性→SKILL.md/规则引擎。",
+    source: "§2.4 第三层：外部上下文 — 三种记忆类型"
+  },
+
+  // ===== §③ 为什么（Q5-Q6）=====
+  {
+    section: "§③ 为什么",
+    num: 5,
+    question: "ENGRAM 方法论（NeurIPS 2025）关于记忆检索的核心结论是什么？",
+    options: [
+      { label: "A", text: "应该保存所有对话的完整记录以确保不丢失任何信息" },
+      { label: "B", text: "通过精心设计的记忆检索策略，仅需约 1% 的 full-context tokens 就能达到接近完整上下文的 baseline 效果", correct: true },
+      { label: "C", text: "向量化检索永远优于关键词匹配，应该全面迁移到 embedding 方案" },
+      { label: "D", text: "记忆越多越好，Token 成本增加带来的质量提升总是正相关的" }
+    ],
+    explanation: "ENGRAM 方法证明核心原则是'存对的最小集合'而非'存越多越好'。100K tokens 的 full-context 只需 ~1K tokens 精选记忆即可达到相近效果。这直接指导了 Memory 系统的设计方向：密度优先于数量。",
+    source: "§3.2 ENGRAM 方法论：1% Token 达到 Full-Context 效果"
+  },
+  {
+    section: "§③ 为什么",
+    num: 6,
+    question: "在 Token 经济学的四个决策变量中，哪一个对成本节省的影响最大？",
+    options: [
+      { label: "A", text: "存什么（What）：从原始对话改为原子事实，可节省 ~90% 存储空间" },
+      { label: "B", text: "怎么存（How）：分层存储（事实→图谱、经验→MD、对话→向量），可加速 ~70%" },
+      { label: "C", text: "何时取（When）：从每次全量加载改为按需检索，可节省 ~80% Token", correct: true },
+      { label: "D", text: "怎更新（Update）：引入衰减和冲突检测，可提升 ~50% 质量" }
+    ],
+    explanation: "四个变量都有价值，但'何时取'是最大杠杆——因为它是直接影响每轮推理 Token 消耗的变量。从'每次全量加载'到'按需检索'可以降低一个数量级的 Token 开销。其他三个变量更多影响存储效率和记忆质量。",
+    source: "§3.3 四个决策变量的经济学最优做法"
+  },
+
+  // ===== §④ 演进（Q7-Q8）=====
+  {
+    section: "§④ 演进",
+    num: 7,
+    question: "关于四代记忆系统的演进，下列描述中哪一项是错误的？",
+    options: [
+      { label: "A", text: "第一代(2023)：LangChain/Dify 对话历史缓冲区——解决'不要忘记上一句话'" },
+      { label: "B", text: "第二代(2025)：Manus / DeepResearch 任务工作空间——组织数十次工具调用的中间产物" },
+      { label: "C", text: "第三代(2025-26)：OpenClaw MEMORY.md + Hermes Agent —— 图谱驱动的本体范式记忆", correct: true },
+      { label: "D", text: "第四代(2026)：Glean/Snowflake/Databricks 方向的企业图谱(Enterprise Graph)" }
+    ],
+    explanation: "第三代的核心特征是 Markdown 文件持久化 + 自我进化闭环（MEMORY.md / SKILL 自动沉淀），边界是'文本扁平，结构化推理弱'。本体范式（Enterprise Graph + Ontology Layer）才是第四代的特征。C 把第四代的特征安到了第三代头上。",
+    source: "§4.1 四代演进路线图"
+  },
+  {
+    section: "§④ 演进",
+    num: 8,
+    question: "ChatGPT 和 Claude 采用了截然不同的记忆策略。关于两者对比，以下说法正确的是？",
+    options: [
+      { label: "A", text: "ChatGPT 用主动检索（模型判断需要时才调工具），Claude 用被动注入（每次自动注入预计算事实）" },
+      { label: "B", text: "ChatGPT 固定消耗 ~500-1500 tokens（不管用不用），Claude 按需消耗 ~200-2000 tokens（只有相关时产生开销）", correct: true },
+      { label: "C", text: "ChatGPT 用户可以看到\"正在搜索记忆...\"提示，Claude 完全无感" },
+      { label: "D", text: "Claude 模式只适合高频短问答场景，不适合长周期协作" }
+    ],
+    explanation: "ChatGPT = 被动注入（预计算、固定消耗、无感）；Claude = 主动检索（按需、动态消耗、可见）。B 正确描述了 Context 占用的差异。A 说反了，C 也说反了。两种模式各有适用场景，不存在绝对的优劣。",
+    source: "§4.3 ChatGPT vs Claude 记忆模式对比"
+  },
+
+  // ===== §⑤ 连接（Q9-Q10）=====
+  {
+    section: "§⑤ 连接",
+    num: 9,
+    question: "在 KBA 项目中，产出的 443 条 HQA 在记忆系统中扮演了什么角色？",
+    options: [
+      { label: "A", text: "纯粹的语义知识库，相当于 FAQ 列表" },
+      { label: "B", text: "结构化的情景记忆（Structured Episodic Memory），同时承载了情景/语义/程序性三种记忆属性", correct: true },
+      { label: "C", text: "只是 L1 工作上下文的一部分，会话结束后即丢弃" },
+      { label: "D", text: "等同于 DDAgent 的银行规则差异表，属于纯语义记忆" }
+    ],
+    explanation: "HQA 的设计精妙之处在于一条数据同时服务三层：created_at/source_topic 等元数据 = 情景记忆属性；tags/related_topics/confidence = 语义记忆属性；quality_checks_passed = 程序性记忆属性（质量门禁规则）。这是'一次写入，多层复用'的最佳实践。",
+    source: "§5.3 HQA 就是结构化的情景记忆"
+  },
+  {
+    section: "§⑤ 连接",
+    num: 10,
+    question: "DDAgent 同时服务于多个尽调客户时，如何解决跨主体的记忆安全问题？以下哪种方案不属于推荐的隔离策略？",
+    options: [
+      { label: "A", text: "客户级隔离：每个客户 ID 作为独立的向量 Collection 或 Namespace" },
+      { label: "B", text: "项目级隔离：同一客户下不同项目的记忆通过 Metadata Filter 隔离" },
+      { label: "C", text: "敏感等级分级：PUBLIC→向量检索 / CONFIDENTIAL→加密图谱 / SECRET→仅内存" },
+      { label: "D", text: "全局共享：所有客户的记忆存储在同一命名空间中，靠 LLM 自行判断是否泄漏", correct: true }
+    ],
+    explanation: "D 明显违反了最小权限原则。多租户场景下必须做 namespace/collection/metadata 多级隔离，绝不能依赖 LLM 自行判断安全边界。DDAgent 处理的是敏感尽调数据，一旦 A 客户结论泄漏给 B 客户后果严重。",
+    source: "§5.4 DDAgent 的跨主体记忆隔离"
+  }
+];
+
+let currentQ = 0;
+let score = { correct: 0, wrong: 0 };
+let answered = new Set();
+
+function renderQuiz() {
+  const container = document.getElementById('quiz-container');
+  const dotsContainer = document.getElementById('dots');
+  dotsContainer.innerHTML = quizData.map((_, i) =>
+    '<div class="dot ' + (answered.has(i)?'done':'') + ' ' + (i===currentQ?'current':'') + '" data-i="' + i + '"></div>'
+  ).join('');
+
+  if (currentQ >= quizData.length) {
+    showScore();
+    return;
+  }
+
+  const q = quizData[currentQ];
+  const isAnswered = answered.has(currentQ);
+  container.innerHTML =
+    '<div class="section-divider">' + q.section + ' · 第 ' + q.num + ' 题</div>' +
+    '<div class="q-block ' + (isAnswered?'answered':'') + '" id="qb' + currentQ + '">' +
+      '<div class="q-num">Question ' + q.num + ' / ' + quizData.length + '</div>' +
+      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="options" id="opts' + currentQ + '">' +
+        q.options.map((o, i) => '<div class="opt' + (isAnswered?' locked':'') + '" data-i="' + i + '" onclick="selectOpt(' + i + ')">' + o.label + '. ' + o.text + '</div>').join('') +
+      '</div>' +
+      '<div class="action-btns" id="btns' + currentQ + '">' +
+        '<button class="q-btn submit-btn" onclick="submitAnswer()" ' + (isAnswered?'disabled':'') + '>提交答案</button> ' +
+        '<button class="q-btn reveal-btn" onclick="revealAnswer()" ' + (isAnswered?'disabled':'') + '>查看答案</button>' +
+      '</div>' +
+      '<div class="feedback" id="fb' + currentQ + '"></div>' +
+      '<div class="source" id="src' + currentQ + '" style="display:none">' + q.source + '</div>' +
+    '</div>';
+
+  if (isAnswered) {
+    const selIdx = q._selected;
+    if (selIdx !== undefined) {
+      document.querySelectorAll('#opts' + currentQ + ' .opt').forEach((el, i) => {
+        el.classList.toggle('selected', i === selIdx);
+        el.classList.toggle('correct', q.options[i].correct);
+        el.classList.toggle('wrong', i === selIdx && !q.options[i].correct);
+      });
+      showFeedback(true);
+    }
+  }
+
+  dotsContainer.querySelectorAll('.dot').forEach(function(d) {
+    d.onclick = function() { currentQ = parseInt(d.dataset.i); renderQuiz(); };
+  });
+}
+
+function selectOpt(idx) {
+  if (answered.has(currentQ)) return;
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+    el.classList.toggle('selected', i === idx);
+  });
+  quizData[currentQ]._selected = idx;
+}
+
+function submitAnswer() {
+  if (answered.has(currentQ)) return;
+  var q = quizData[currentQ];
+  var selIdx = q._selected;
+  if (selIdx === undefined) { alert('请先选择一个选项'); return; }
+  answered.add(currentQ);
+
+  var isCorrect = q.options[selIdx].correct;
+  if (isCorrect) score.correct++; else score.wrong++;
+
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+    el.classList.add('locked');
+    if (q.options[i].correct) el.classList.add('correct');
+    else if (i === selIdx) el.classList.add('wrong');
+  });
+
+  showFeedback(isCorrect);
+  document.getElementById('btns' + currentQ).querySelectorAll('.q-btn').forEach(function(b) { b.disabled = true; });
+}
+
+function revealAnswer() {
+  if (answered.has(currentQ)) return;
+  answered.add(currentQ);
+  score.wrong++;
+
+  var q = quizData[currentQ];
+  q._revealed = true;
+
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+    el.classList.add('locked');
+    if (q.options[i].correct) el.classList.add('correct');
+  });
+
+  showFeedback(false);
+  document.getElementById('btns' + currentQ).querySelectorAll('.q-btn').forEach(function(b) { b.disabled = true; });
+}
+
+function showFeedback(isSubmitted) {
+  var q = quizData[currentQ];
+  var fb = document.getElementById('fb' + currentQ);
+  var src = document.getElementById('src' + currentQ);
+  var selIdx = q._selected;
+  var isCorrect = q.options[selIdx] ? q.options[selIdx].correct : false;
+
+  if (isSubmitted && isCorrect) {
+    fb.className = 'feedback show correct-fb';
+    fb.innerHTML = '<strong>✅ 正确！</strong> ' + q.explanation;
+  } else if (isSubmitted && !isCorrect) {
+    fb.className = 'feedback show wrong-fb';
+    fb.innerHTML = '<strong>❌ 错误。</strong> 正确答案是 <strong>' + q.options.find(function(o){return o.correct}).label + '</strong>。' + q.explanation;
+  } else {
+    fb.className = 'feedback show wrong-fb';
+    fb.innerHTML = '<strong>📖 参考答案：</strong>' + q.explanation;
+  }
+  src.style.display = 'block';
+}
+
+function showScore() {
+  document.getElementById('quiz-container').innerHTML = '';
+  document.getElementById('scoreBar').classList.add('show');
+  document.getElementById('scoreNum').textContent = score.correct + '/' + quizData.length;
+  document.getElementById('correctNum').textContent = score.correct;
+  document.getElementById('wrongNum').textContent = score.wrong;
+}
+
+// Init
+renderQuiz();
+</script>
+
+</body>
+</html>

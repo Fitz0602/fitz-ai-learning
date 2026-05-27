@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>A2.1 CoT · o1/R1 机制 · Test-time Compute · T2 Agent 工程</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card-bg:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--purple-bg);color:var(--purple)}
+.tag-chapter{background:var(--purple-bg);color:var(--purple)}
+.tag-status{background:var(--teal-bg);color:var(--teal)}
+h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:4px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.progress-nav{display:flex;gap:4px;margin:16px 0 0;flex-wrap:wrap}
+.progress-nav a{font-size:11px;padding:3px 8px;border-radius:8px;text-decoration:none;background:var(--purple-bg);color:var(--purple);font-weight:500}
+.progress-nav a.done{background:var(--teal-bg);color:var(--teal)}
+section{margin-top:36px;padding-top:20px;border-top:1px solid #E8E8E4}
+section h2{font-size:20px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;padding:2px 8px;border-radius:8px}
+h3{font-size:16px;font-weight:600;margin:16px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--amber-bg);border-color:var(--amber)}
+.card.takeaway{background:var(--teal-bg);border-color:var(--teal)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card.deepen{background:var(--blue-bg);border-color:var(--blue)}
+.card.insight{background:var(--purple-bg);border-color:var(--purple)}
+.card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.card.intuition .card-label{color:var(--amber)}
+.card.takeaway .card-label{color:var(--teal)}
+.card.warning .card-label{color:var(--coral)}
+.card.deepen .card-label{color:var(--blue)}
+.card.insight .card-label{color:var(--purple)}
+.diagram{margin:20px 0}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid #E0E0DC;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{background:#fff}
+code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;background:#F0F0EC;padding:1px 4px;border-radius:3px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+.code-block{background:#F7F6F3;border:1px solid #E8E8E4;border-radius:8px;padding:14px 18px;margin:14px 0;font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;line-height:1.8;color:#333;overflow-x:auto;white-space:pre}
+.code-block .kw{font-weight:700;color:#534AB7}
+.code-block .cmt{color:#888780}
+.code-block .str{color:#1D9E75}
+.code-block .fn{color:#BA7517}
+.code-block .var{color:#185FA5}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<!-- ====== HEADER ====== -->
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">A2 推理规划</span>
+<span class="tag tag-chapter">A2.1</span>
+<span class="tag tag-status">✅ 完成</span>
+<a href="../../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+<a href="A2.1-cot-reasoning-quiz.html" class="nav-link">Quiz →</a>
+</div>
+<h1>CoT · o1/R1 机制 · Test-time Compute</h1>
+<p class="subtitle">让模型"想清楚再说" — 从思维链到推理模型的系统工程</p>
+<div class="spine-link">主线连接：推理能力 — 多想一步的系统工程原理（回答问题6：如何让模型想清楚再行动？）</div>
+<nav class="progress-nav">
+<a href="#is" class="done">① 是什么 ✓</a>
+<a href="#how" class="done">② 怎么实现 ✓</a>
+<a href="#why" class="done">③ 为什么 ✓</a>
+<a href="#evolution" class="done">④ 演进 ✓</a>
+<a href="#connect" class="done">⑤ 与产品 ✓</a>
+</nav>
+</div>
+
+<!-- ====== 章节一览图 ====== -->
+<div class="diagram">
+<p>章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 340" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ov-arr21" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<rect x="210" y="10" width="260" height="52" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+<text x="340" y="30" text-anchor="middle" fill="#534AB7" font-size="13" font-weight="700">① 是什么</text>
+<text x="340" y="48" text-anchor="middle" fill="#3C3489" font-size="11">系统1快思考 vs 系统2慢推理：CoT 的直觉建立</text>
+<line x1="340" y1="62" x2="340" y2="88" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr21)"/>
+<rect x="210" y="92" width="260" height="52" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="340" y="112" text-anchor="middle" fill="#185FA5" font-size="13" font-weight="700">② 怎么实现</text>
+<text x="340" y="130" text-anchor="middle" fill="#0C447C" font-size="9.5">CoT Prompting → RL训练 → o1/R1系统机制 + Test-time Compute</text>
+<line x1="340" y1="144" x2="340" y2="170" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr21)"/>
+<rect x="210" y="174" width="260" height="52" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+<text x="340" y="194" text-anchor="middle" fill="#BA7517" font-size="13" font-weight="700">③ 为什么</text>
+<text x="340" y="212" text-anchor="middle" fill="#6333806" font-size="11">第一性原理：为什么更多计算能换更多智能？推理规模定律</text>
+<line x1="340" y1="226" x2="340" y2="246" stroke="#888780" stroke-width="0.5"/>
+<line x1="340" y1="246" x2="168" y2="246" stroke="#888780" stroke-width="0.5"/>
+<line x1="340" y1="246" x2="512" y2="246" stroke="#888780" stroke-width="0.5"/>
+<line x1="168" y1="246" x2="168" y2="256" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr21)"/>
+<line x1="512" y1="246" x2="512" y2="256" stroke="#888780" stroke-width="0.5" marker-end="url(#ov-arr21)"/>
+<rect x="40" y="260" width="256" height="30" rx="8" fill="#EEEDFE" stroke="#AFA9EC" stroke-width="0.5"/>
+<text x="168" y="278" text-anchor="middle" fill="#534AB7" font-size="9" font-weight="500">④ 演进：2022 CoT → 2024 o1 → 2025 R1 → 2026 最新研究</text>
+<rect x="384" y="260" width="256" height="30" rx="8" fill="#E1F5EE" stroke="#5DCAA5" stroke-width="0.5"/>
+<text x="512" y="278" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="500">⑤ 产品：DDAgent/KBA 场景中的推理应用 + 成本权衡</text>
+</svg>
+</div>
+
+<!-- ====== §① 是什么：CoT 直觉与系统1 vs 系统2 ====== -->
+<section id="is">
+<h2><span class="sec-num">①</span> 是什么：从"脱口而出"到"三思后行"</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p><strong>想象你是一个资深运营专员，面对一个复杂的多币种换汇需求。</strong></p>
+<p>以前（传统 LLM），你的反应就像<strong>直觉回答</strong>——看到问题立刻给出答案，靠的是经验和模式匹配。"用户要换100万USD到HKD？大概778万HKD吧。"</p>
+<p>现在（CoT / 推理模型），你会先<strong>停下来想一想</strong>：当前汇率是多少？用户的换汇额度够不够？有没有更优的路径？分几笔操作手续费更低？想清楚了再给答案。</p>
+<p>核心区别只有一句话：<strong>不是直接映射 问题→答案，而是生成中间推理轨迹 (reasoning trajectory)，再基于轨迹得出结论。</strong></p>
+</div>
+
+<h3>1.1 Chain-of-Thought 的诞生</h3>
+
+<p>2022 年，Google Research 的 Wei 等人在 NeurIPS 发表了里程碑论文 <em>"Chain-of-Thought Prompting Elicits Reasoning in Large Language Models"</em>。</p>
+
+<p>他们的发现简单到令人震惊：</p>
+
+<div class="code-block"><span class="cmt"># 传统 prompt —— 模型直接输出答案（经常错）</span>
+Q: Roger 有 5 个网球，他又买了 2 罐网球，每罐有 3 个。
+   他现在总共有几个球？
+A: <span class="str">11</span>
+
+<span class="cmt"># CoT prompt —— 只加了 6 个字，模型开始展示思考过程</span>
+Q: 同上的问题
+A: <span class="kw">Let's think step by step.</span>
+   Roger 最开始有 5 个球。<span class="cmt"># step 1</span>
+   2 罐 × 3 个/罐 = 6 个球。<span class="cmt"># step 2</span>
+   5 + 6 = 11 个球。<span class="cmt"># step 3</span>
+   所以答案是 11。<span class="cmt"># final answer</span></div>
+
+<div class="card insight">
+<div class="card-label">关键洞察</div>
+<p><strong>"Let's think step by step" 这 6 个字，触发了大语言模型潜藏的推理能力。</strong></p>
+<p>在 GSM8K 数学基准测试上，PaLM 540B 从 17.9% 跃升到 55.7%。不是换了模型，不是加了数据，只是改了 prompt。这说明：<strong>推理能力一直存在于模型中，只是需要一个触发器把它释放出来。</strong></p>
+</div>
+
+<h3>1.2 系统1 vs 系统2：Kahneman 的完美类比</h3>
+
+<p>Daniel Kahneman 在《思考，快与慢》中提出的双系统理论，是理解 CoT 和推理模型的最佳心智模型：</p>
+
+<table>
+<tr><th></th><th>系统1 快思考</th><th>系统2 慢推理</th></tr>
+<tr>
+<td><strong>对应技术</strong></td>
+<td>Prompt Engineering / Few-shot</td>
+<td>Chain-of-Thought / o1 / DeepSeek-R1</td>
+</tr>
+<tr>
+<td><strong>计算时机</strong></td>
+<td>Pre-training 阶段（训练时"想好"）</td>
+<td>Test-time 推理阶段（运行时"再想"）</td>
+</tr>
+<tr>
+<td><strong>响应方式</strong></td>
+<td>直觉式、一步到位</td>
+<td>分步展开、自我验证</td>
+</tr>
+<tr>
+<td><strong>典型场景</strong></td>
+<td>"今天天气怎么样？" / "翻译这句话"</td>
+<td>"证明这个数学定理" / "排查这个 Bug"</td>
+</tr>
+<tr>
+<td><strong>成本特征</strong></td>
+<td>固定 token 数、低延迟</td>
+<td>可变 token 数、延迟随难度波动</td>
+</tr>
+<tr>
+<td><strong>类比</strong></td>
+<td>FXAgent 查汇率（1轮够用）</td>
+<td>DDAgent 做尽调（需要多步推理+工具调用）</td>
+</tr>
+</table>
+
+<div class="diagram">
+<svg viewBox="0 0 640 260" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs>
+<marker id="s1-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#993C1D" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="s2-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#185FA5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<text x="160" y="22" font-family="-apple-system,sans-serif" font-size="13" font-weight="600" fill="#993C1D" text-anchor="middle">系统1：快思考（Prompt Engineering）</text>
+<rect x="30" y="36" width="260" height="44" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+<text x="160" y="56" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#993C1D" text-anchor="middle">Question → LLM → Answer</text>
+<text x="160" y="72" font-family="-apple-system,sans-serif" font-size="9.5" fill="#711B0C" text-anchor="middle">单次前向传播，固定计算量</text>
+<line x1="160" y1="80" x2="160" y2="106" stroke="#993C1D" stroke-width="1.2" marker-end="url(#s1-arr)"/>
+<rect x="70" y="110" width="180" height="28" rx="6" fill="#FAECE7" stroke="#993C1D" stroke-width="0.5"/>
+<text x="160" y="128" font-family="-apple-system,sans-serif" font-size="10" fill="#993C1D" text-anchor="middle">⚡ 低延迟 · 固定成本 · 可能出错</text>
+<text x="480" y="22" font-family="-apple-system,sans-serif" font-size="13" font-weight="600" fill="#185FA5" text-anchor="middle">系统2：慢推理（CoT / 推理模型）</text>
+<rect x="350" y="36" width="260" height="44" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="480" y="56" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#185FA5" text-anchor="middle">Question → [中间推理步骤...] → Answer</text>
+<text x="480" y="72" font-family="-apple-system,sans-serif" font-size="9.5" fill="#0C447C" text-anchor="middle">多次自回归展开，可变计算量</text>
+<line x1="480" y1="80" x2="480" y2="106" stroke="#185FA5" stroke-width="1.2" marker-end="url(#s2-arr)"/>
+<rect x="370" y="110" width="220" height="28" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="480" y="128" font-family="-apple-system,sans-serif" font-size="10" fill="#185FA5" text-anchor="middle">🧠 高精度 · 可变成本 · 自我验证</text>
+<line x1="290" y1="58" x2="350" y2="58" stroke="#ccc" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="320" y="52" font-family="-apple-system,sans-serif" font-size="9" fill="#888780" text-anchor="middle">升级</text>
+<rect x="140" y="165" width="360" height="85" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.6"/>
+<text x="320" y="186" font-family="-apple-system,sans-serif" font-size="11.5" font-weight="600" fill="#534AB7" text-anchor="middle">核心转变：把计算从训练时搬到推理时</text>
+<text x="320" y="206" font-family="-apple-system,sans-serif" font-size="10.5" fill="#3C3489" text-anchor="middle">传统模型：训练时"学完所有知识"，推理时只做一次检索</text>
+<text x="320" y="222" font-family="-apple-system,sans-serif" font-size="10.5" fill="#3C3489" text-anchor="middle">推理模型：训练时学"如何思考"，推理时根据题目难度动态分配计算量</text>
+<text x="320" y="242" font-family="-apple-system,sans-serif" font-size="10" font-style="italic" fill="#777" text-anchor="middle">→ 这就是 Test-time Compute Scaling 的本质</text>
+</svg>
+</div>
+
+<h3>1.3 CoT 不是魔法——它的工作原理</h3>
+
+<p>CoT 有效的根本原因可以用一个公式概括：</p>
+
+<p style="text-align:center;margin:18px 0;">$$ P(\text{Answer} \mid Q) = \sum_{\tau \in \mathcal{T}} P(\tau \mid Q) \cdot P(\text{Answer} \mid \tau, Q) $$</p>
+
+<p>其中 $\tau$ 是一条推理轨迹 (reasoning trajectory)。传统模型直接估计 $P(\text{Answer} \mid Q)$，而 CoT 把它分解为两步：</p>
+
+<div class="card deepen">
+<div class="card-label">第一步：生成轨迹 $P(\tau \mid Q)$</div>
+<p>模型先生成一系列中间推理步骤。这些步骤就像解题时的草稿纸——不需要给用户看，但它们为最终答案提供了<strong>计算路径</strong>。</p>
+</div>
+
+<div class="card deepen">
+<div class="card-label">第二步：基于轨迹推导答案 $P(\text{Answer} \mid \tau, Q)$</div>
+<p>有了完整的推理链路后，得出最终答案的概率大幅提高——因为模型不需要"跳过"中间逻辑，而是沿着已验证的路径一步步到达结论。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">第一性原理</div>
+<p><strong>CoT 的本质是将一个高难度的条件概率分解为多个低难度的条件概率的乘积。</strong>这和人类解决复杂数学题时的策略完全一致：不会试图一步心算出答案，而是先在草稿纸上列出中间步骤。</p>
+</div>
+</section>
+
+<!-- ====== §② 怎么实现 ====== -->
+<section id="how">
+<h2><span class="sec-num">②</span> 怎么实现：从 Prompt 技巧到系统工程</h2>
+
+<h3>2.1 三代 CoT 技术</h3>
+
+<p>CoT 技术在过去四年经历了三代演进：</p>
+
+<table>
+<tr><th>世代</th><th>技术</th><th>核心方法</th><th>效果提升</th><th>代表工作</th></tr>
+<tr>
+<td><strong>G1: Prompting</strong></td>
+<td>Zero-shot / Few-shot CoT</td>
+<td>加 "Let's think step by step" 或手写示例</td>
+<td>GSM8K: 17%→55%</td>
+<td>Wei et al. NeurIPS 2022</td>
+</tr>
+<tr>
+<td><strong>G2: Training</strong></td>
+<td>CoT Fine-tuning + RLVR / GRPO</td>
+<td>SFT 训练长推理链 + RL 优化推理策略</td>
+<td>AIME: 可解中等竞赛题</td>
+<td>DeepSeek-Math, OpenRLHF</td>
+</tr>
+<tr>
+<td><strong>G3: System</strong></td>
+<td>o1 / R1 推理模型架构</td>
+<td>Reasoning tokens + Test-time compute scaling</td>
+<td>Codeforces Elo 1800+</td>
+<td>OpenAI o1/o3, DeepSeek R1</td>
+</tr>
+</table>
+
+<h3>2.2 G1: CoT Prompting——零样本触发</h3>
+
+<p>最简单的 CoT 形式，只需要在问题后面追加一句 magic words：</p>
+
+<div class="code-block"><span class="cmt"># Zero-shot CoT：最简形式</span>
+prompt = <span class="str">"""
+{question}
+
+Let's think step by step.
+"""</span>
+
+<span class="cmt"># Few-shot CoT：提供示例引导（效果更好但需要人工编写示例）</span>
+prompt = <span class="str">"""
+Q: 小明有 3 个苹果，小红比小明多 2 个，小刚是小红的 2 倍。小刚有几个？
+A: 小明 3 个。小红 3+2=5 个。小刚 5×2=10 个。答案是 10。
+
+Q: {question}
+A: Let's think step by step.
+"""</span></div>
+
+<div class="card warning">
+<div class="card-label">G1 的局限</div>
+<ul style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>依赖模型规模</strong>：CoT 效果只在 ~100B 参数以上的模型上显著（小模型反而可能被干扰）</li>
+<li><strong>不可控的轨迹质量</strong>：模型生成的推理步骤可能是错的，但没有反馈机制纠正</li>
+<li><strong>固定计算预算</strong>：不管问题多难，都只能跑一轮推理</li>
+</ul>
+</div>
+
+<h3>2.3 G2: CoT Training——从提示到训练</h3>
+
+<p>当 Prompt Engineering 到达天花板后，研究者转向<strong>让模型学会生成长推理链</strong>：</p>
+
+<div class="card deepen">
+<div class="card-label">RLVR: Reinforcement Learning with Verifiable Rewards</div>
+<p><strong>核心思想</strong>：对于数学/代码等有确定正确答案的任务，不需要人工标注推理过程——只需验证最终答案是否正确即可作为奖励信号。</p>
+<p><strong>流程</strong>：
+<ol style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+<li>对每个问题采样多条不同的推理轨迹 $\{\tau_1, \tau_2, ..., \tau_k\}$</li>
+<li>验证每条轨迹的最终答案：$r_i = \mathbb{1}[\text{answer}(\tau_i) = \text{ground\_truth}]$</li>
+<li>用 PPO 或类似算法优化策略，使高质量轨迹获得更高概率</li>
+</ol>
+</p>
+<p><strong>关键优势</strong>：无需人工标注 CoT 数据，模型自己探索出有效的推理策略。</p>
+</div>
+
+<div class="card deepen">
+<div class="card-label">GRPO: Group Relative Policy Optimization（DeepSeek R1 核心创新）</div>
+<p><strong>PPO 的问题</strong>：需要一个独立的 critic 网络来估计状态价值 $V(s)$，训练复杂且不稳定。</p>
+<p><strong>GRPO 的解法</strong>：放弃 critic 网络，改为<strong>组内相对比较</strong>：</p>
+<p style="text-align:center;margin:12px 0;">$$ A_i = \frac{r_i - \text{mean}(\{r_1,...,r_G\})}{\text{std}(\{r_1,...,r_G\})} $$</p>
+<p>对同一个问题采样 $G$ 条轨迹（一个 group），用组内奖励的归一化值作为优势函数。$G$ 条轨迹互相作为 baseline——不需要额外的 value model。</p>
+<p><strong>效果</strong>：训练效率提升显著，且避免了 PPO 的不稳定性。这是 R1-Zero 能"纯 RL 无 SFT 就涌现推理能力"的关键技术支撑。</p>
+</div>
+
+<h3>2.4 G3: o1/R1 系统机制——推理模型架构</h3>
+
+<p>2024 年 9 月，OpenAI 发布 o1 系列，首次将 CoT 从"技巧"升级为"系统级基础设施"：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 640 300" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs>
+<marker id="o1-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<text x="320" y="20" font-family="-apple-system,sans-serif" font-size="13" font-weight="600" fill="#333" text-anchor="middle">o1/R1 推理模型的 token 结构</text>
+<rect x="50" y="34" width="258" height="42" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.8"/>
+<text x="179" y="53" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#BA7517" text-anchor="middle">User Question</text>
+<text x="179" y="69" font-family="-apple-system,sans-serif" font-size="9" fill="#633806" text-anchor="middle">"证明 √2 是无理数"</text>
+<line x1="179" y1="76" x2="179" y2="96" stroke="#534AB7" stroke-width="1" marker-end="url(#o1-arr)"/>
+<rect x="30" y="100" width="298" height="120" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.2"/>
+<text x="179" y="120" font-family="-apple-system,sans-serif" font-size="11.5" font-weight="600" fill="#534AB7" text-anchor="middle">Reasoning Tokens（隐藏）</text>
+<text x="179" y="142" font-family="-apple-system,sans-serif" font-size="9.5" fill="#3C3489" text-anchor="middle">模型内部推理过程，用户不可见</text>
+<line x1="55" y1="152" x2="303" y2="152" stroke="#AFA9EC" stroke-width="0.5" stroke-dasharray="3,2"/>
+<text x="179" y="168" font-family="-apple-system,sans-serif" font-size="9" fill="#777" text-anchor="middle">假设√2 = a/b（最简分数）...</text>
+<text x="179" y="183" font-family="-apple-system,sans-serif" font-size="9" fill="#777" text-anchor="middle">则 2 = a²/b² → a² = 2b² ...</text>
+<text x="179" y="198" font-family="-apple-system,sans-serif" font-size="9" fill="#777" text-anchor="middle">所以 a 是偶数，设 a=2k ...</text>
+<text x="179" y="213" font-family="-apple-system,sans-serif" font-size="9" fill="#777" text-anchor="middle">矛盾！√2 不能表示为分数 ✓</text>
+<text x="270" y="210" font-family="-apple-system,sans-serif" font-size="8" fill="#534AB7" font-weight="500">可变长度</text>
+<text x="270" y="222" font-family="-apple-system,sans-serif" font-size="8" fill="#888780">取决于问题难度</text>
+<line x1="179" y1="220" x2="179" y2="240" stroke="#1D9E75" stroke-width="1" marker-end="url(#o1-arr)"/>
+<rect x="50" y="244" width="258" height="42" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.8"/>
+<text x="179" y="263" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#1D9E75" text-anchor="middle">Completion Tokens（可见）</text>
+<text x="179" y="279" font-family="-apple-system,sans-serif" font-size="9" fill="#085041" text-anchor="middle">"因此√2是无理数。（证毕）"</text>
+<rect x="358" y="100" width="250" height="90" rx="8" fill="#FDEEE8" stroke="#993C1D" stroke-width="0.6"/>
+<text x="483" y="120" font-family="-apple-system,sans-serif" font-size="11" font-weight="600" fill="#993C1D" text-anchor="middle">o1 学会的能力（通过 RL）</text>
+<text x="483" y="140" font-family="-apple-system,sans-serif" font-size="9" fill="#711B0C" text-anchor="middle">✦ 问题分解：拆成子目标逐步求解</text>
+<text x="483" y="155" font-family="-apple-system,sans-serif" font-size="9" fill="#711B0C" text-anchor="middle">✦ 错误识别：发现推理中的矛盾点</text>
+<text x="483" y="170" font-family="-apple-system,sans-serif" font-size="9" fill="#711B0C" text-anchor="middle">✦ 策略尝试：探索不同解法并回溯</text>
+<text x="483" y="185" font-family="-apple-system,sans-serif" font-size="9" fill="#711B0C" text-anchor="middle">✦ 答案验证：确认最终结果的一致性</text>
+</svg>
+</div>
+
+<p>o1 架构的两个核心设计：</p>
+
+<div class="card insight">
+<div class="card-label">Reasoning Tokens（推理 Token）</div>
+<p>这是 o1 最重要的设计决策之一。模型在回答之前会先生成一串<strong>不可见的 reasoning tokens</strong>——这些就是它的"思维过程"。用户看不到，API 也返回不了（除非使用特殊参数）。</p>
+<p><strong>为什么要隐藏？</strong>因为推理过程包含大量试错、回溯、甚至错误假设。暴露出来会：(1) 干扰用户体验；(2) 被竞争对手用于蒸馏攻击；（3）产生安全风险（推理过程中可能出现有害思路）。</p>
+</div>
+
+<div class="card insight">
+<div class="card-label">Test-time Compute Scaling</div>
+<p>o1 的推理时间（和 token 消耗）<strong>不是固定的</strong>——它根据问题难度动态调整。简单问题可能只用几百个 reasoning tokens，复杂问题可能用数万个。</p>
+<p>这引入了一条全新的 scaling law：除了预训练计算 (pre-training compute) 和后训练计算 (post-training compute)，还有第三条——<strong>推理时计算 (test-time compute)</strong>。</p>
+</div>
+
+<h3>2.5 OpenAI o 系列演进</h3>
+
+<table>
+<tr><th>模型</th><th>发布时间</th><th>核心突破</th><th>代表 benchmark 表现</th><th>定位</th></tr>
+<tr>
+<td><strong>o1 / o1-mini</strong></td>
+<td>2024-09</td>
+<td>首个商用推理模型；reasoning tokens 概念</td>
+<td>AIME 2024: 83.3%（o1）</td>
+<td>推理时代开启者</td>
+</tr>
+<tr>
+<td><strong>o3</strong></td>
+<td>2025</td>
+<td>ARC-AGI 87.5%；Codeforces Elo 显著提升</td>
+<td>SWE-bench Verified SOTA; MMMU SOTA</td>
+<td>前沿推理旗舰</td>
+</tr>
+<tr>
+<td><strong>o4-mini</strong></td>
+<td>2025</td>
+<td>AIME 性价比之王</td>
+<td>接近 o3 性能，成本大幅降低</td>
+<td>生产级推理首选</td>
+</tr>
+</table>
+
+<h3>2.6 DeepSeek R1：开源推理模型的里程碑</h3>
+
+<p>2025 年 1 月，DeepSeek 发布 R1（arXiv:2501.12948），成为开源社区最重要的推理模型：</p>
+
+<div class="card deepen">
+<div class="card-label">R1-Zero：纯 RL 的"Aha Moment"</div>
+<p>DeepSeek 做了一个大胆实验：<strong>完全不使用 SFT（监督微调），仅用纯 RL 训练基础模型</strong>。</p>
+<p>令人惊讶的事情发生了——模型<strong>自发涌现</strong>出了推理能力：</p>
+<ul style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+<li>训练早期：模型输出的都是乱码和无意义文本</li>
+<li>训练中期：突然出现长文本的<strong>思维链结构</strong>（Aha Moment!）</li>
+<li>训练后期：CoT 质量和任务表现持续提升</li>
+</ul>
+<p><strong>这意味着什么？</strong>推理能力不需要被"教"——只要奖励信号设计得当（GRPO），模型会自己学会如何思考。</p>
+</div>
+
+<div class="card deepen">
+<div class="card-label">R1：Cold-start SFT 解决工程问题</div>
+<p>R1-Zero 虽然证明了原理，但有严重的工程缺陷：</p>
+<ul style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>语言混合</strong>：推理过程中混杂中英文，可读性差</li>
+<li><strong>格式混乱</strong>：缺乏统一的 CoT 格式</li>
+<li><strong>重复冗余</strong>：大量无意义的循环推理</li>
+</ul>
+<p>R1 的解决方案：先用数千条<strong>长 CoT 样本做 cold-start SFT</strong>（这些样本来自 R1-Zero 的少量高质量输出 + 人工筛选），然后再用 GRPO 做 RL 训练。最终效果：保持推理能力的同时，解决了可读性和格式问题。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">R1 的三个关键数字</div>
+<ol style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>671B 参数（MoE，37B 激活）</strong>——与 o1 同级规模的推理能力</li>
+<li><strong>MIT 开源</strong>——完全开放权重，任何人都可以部署和研究</li>
+<li><strong>蒸馏到 7B：GSM8K +27%</strong>——用 R1 生成的 80 万条 CoT 微调小模型，性能大幅提升，实现近 100x 的模型压缩</li>
+</ol>
+</div>
+
+<h3>2.7 Test-time Compute Scaling：第三条规模定律</h3>
+
+<p>Snell et al. (2024) 在论文 <em>"Scaling LLM test-time compute optimally can be more effective than scaling model parameters"</em> 中提出了一个颠覆性的观点：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 640 280" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs>
+<marker id="ttc-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<text x="320" y="20" font-family="-apple-system,sans-serif" font-size="13" font-weight="600" fill="#333" text-anchor="middle">三条 Scaling Laws</text>
+<line x1="80" y1="240" x2="560" y2="240" stroke="#ccc" stroke-width="2"/>
+<circle cx="130" cy="240" r="6" fill="#993C1D"/>
+<text x="130" y="262" font-family="-apple-system,sans-serif" font-size="10.5" font-weight="600" fill="#993C1D" text-anchor="middle">Pre-train</text>
+<text x="130" y="276" font-family="-apple-system,sans-serif" font-size="9" fill="#711B0C" text-anchor="middle">更多数据·更大模型</text>
+<rect x="58" y="150" width="144" height="76" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+<text x="130" y="172" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#993C1D" text-anchor="middle">Scaling Law 1</text>
+<text x="130" y="190" font-family="-apple-system,sans-serif" font-size="9" fill="#711B0C" text-anchor="middle">预训练阶段</text>
+<text x="130" y="206" font-family="-apple-system,sans-serif" font-size="9" fill="#711B0C" text-anchor="middle">L(N,D) ∝ power law</text>
+<text x="130" y="220" font-family="-apple-system,sans-serif" font-size="8.5" fill="#999" text-anchor="middle">(Kaplan et al. 2020)</text>
+<line x1="130" y1="226" x2="130" y2="234" stroke="#993C1D" stroke-width="1"/>
+<circle cx="320" cy="240" r="6" fill="#185FA5"/>
+<text x="320" y="262" font-family="-apple-system,sans-serif" font-size="10.5" font-weight="600" fill="#185FA5" text-anchor="middle">Post-train</text>
+<text x="320" y="276" font-family="-apple-system,sans-serif" font-size="9" fill="#0C447C" text-anchor="middle">SFT·RL·DPO</text>
+<rect x="248" y="150" width="144" height="76" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="320" y="172" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#185FA5" text-anchor="middle">Scaling Law 2</text>
+<text x="320" y="190" font-family="-apple-system,sans-serif" font-size="9" fill="#0C447C" text-anchor="middle">后训练阶段</text>
+<text x="320" y="206" font-family="-apple-system,sans-serif" font-size="9" fill="#0C447C" text-anchor="middle">更多计算·更好对齐</text>
+<text x="320" y="220" font-family="-apple-system,sans-serif" font-size="8.5" fill="#999" text-anchor="middle">(OpenAI et al.)</text>
+<line x1="320" y1="226" x2="320" y2="234" stroke="#185FA5" stroke-width="1"/>
+<circle cx="510" cy="240" r="6" fill="#1D9E75"/>
+<text x="510" y="262" font-family="-apple-system,sans-serif" font-size="10.5" font-weight="600" fill="#1D9E75" text-anchor="middle">Test-time ⭐</text>
+<text x="510" y="276" font-family="-apple-system,sans-serif" font-size="9" fill="#085041" text-anchor="middle">推理时动态计算</text>
+<rect x="438" y="135" width="144" height="91" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="1"/>
+<text x="510" y="155" font-family="-apple-system,sans-serif" font-size="11" font-weight="500" fill="#1D9E75" text-anchor="middle">Scaling Law 3</text>
+<text x="510" y="173" font-family="-apple-system,sans-serif" font-size="9" fill="#085041" text-anchor="middle">推理时计算扩展</text>
+<text x="510" y="189" font-family="-apple-system,sans-serif" font-size="9" fill="#085041" text-anchor="middle">更长思考 = 更高智能</text>
+<text x="510" y="205" font-family="-apple-system,sans-serif" font-size="9" fill="#085041" text-anchor="middle">4B+2000tok > 14B</text>
+<text x="510" y="220" font-family="-apple-system,sans-serif" font-size="8.5" fill="#999" text-anchor="middle">(Snell et al. 2024)</text>
+<line x1="510" y1="226" x2="510" y2="234" stroke="#1D9E75" stroke-width="1"/>
+<path d="M202 188 L248 188" fill="none" stroke="#ccc" stroke-width="0.8" stroke-dasharray="3,2" marker-end="url(#ttc-arr)"/>
+<path d="M392 178 L438 178" fill="none" stroke="#ccc" stroke-width="0.8" stroke-dasharray="3,2" marker-end="url(#ttc-arr)"/>
+</svg>
+</div>
+
+<p><strong>核心发现</strong>：在固定的推理计算预算下，合理分配计算资源（如搜索更多推理路径或延长单条推理链），其效果可能<strong>超过直接增大模型参数</strong>。</p>
+
+<p>具体数据来自 EuroMLSys 2026：</p>
+
+<table>
+<tr><th>配置</th><th>模型大小</th><th>推理预算</th><th>GSM8K 准确率</th><th>内存占用</th></tr>
+<tr>
+<td><strong>基线</strong></td>
+<td>14B 参数</td>
+<td>标准推理（~500 tok）</td>
+<td>82%</td>
+<td>~28GB</td>
+</tr>
+<tr>
+<td><strong>TTC 加持</strong></td>
+<td>4B 参数</td>
+<td>2000 token 推理预算</td>
+<td><strong>90%</strong></td>
+<td>~8GB</td>
+</tr>
+</table>
+
+<p><strong>结论</strong>：4B 小模型 + 充足的 test-time compute，不仅准确率超过 14B 大模型，还节省了 <strong>71% 内存</strong>。这对边缘设备和成本敏感场景意义重大。</p>
+
+<div class="card warning">
+<div class="card-label">NeurIPS 2025 Kinetics 的冷水</div>
+<p>不过，Kinetics (NeurIPS 2025) 也指出：<strong>小模型 + TTC 的效果在某些场景下被高估了</strong>。原因在于注意力机制的二次复杂度——当推理序列变长时，注意力的计算成本成为主导因素，而非参数本身的 FLOPs。稀疏注意力 (sparse attention) 是解决这个问题的关键方向。</p>
+</div>
+</section>
+
+<!-- ====== §③ 为什么 ====== -->
+<section id="why">
+<h2><span class="sec-num">③</span> 为什么：第一性原理——计算如何转化为智能</h2>
+
+<h3>3.1 推理规模定律的形式化</h3>
+
+<p>为什么更多的推理时计算能换来更好的答案？让我们回到第一性原理。</p>
+
+<p>对于一个给定的问题 $Q$ 和答案空间 $\mathcal{A}$，最优推理策略可以形式化为：</p>
+
+<p style="text-align:center;margin:16px 0;">$$ \pi^*(Q) = \arg\max_{\tau \in \mathcal{T}(Q)} \left[ \log P(A^* \mid \tau, Q) + \log P(\tau \mid Q) \right] $$</p>
+
+<p>其中：</p>
+<ul style="margin:8px 0 0 16px;padding:0;line-height:1.8;">
+<li>$\mathcal{T}(Q)$ 是所有可能的推理轨迹空间</li>
+<li>$P(\tau \mid Q)$ 是模型生成某条轨迹的概率</li>
+<li>$P(A^* \mid \tau, Q)$ 是该轨迹导出正确答案的条件概率</li>
+</ul>
+
+<div class="card intuition">
+<div class="card-label">直觉解释</div>
+<p>这个公式的含义是：<strong>最好的推理策略是在"轨迹的可能性"和"轨迹的正确性"之间找到平衡。</strong></p>
+<ul style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>短轨迹</strong>：$P(\tau|Q)$ 高（容易生成），但 $P(A^*|\tau,Q)$ 可能低（容易跳过关键步骤）</li>
+<li><strong>长轨迹</strong>：$P(\tau|Q)$ 低（需要更多计算），但 $P(A^*|\tau,Q)$ 高（覆盖更多推理细节）</li>
+</ul>
+<p>Test-time compute 的作用就是允许模型探索更大的 $\mathcal{T}(Q)$ 子集，找到更优的 $\tau^*$。</p>
+</div>
+
+<h3>3.2 为什么 RL 能教会模型"如何思考"？</h3>
+
+<p>这可能是本章最深的问题：为什么强化学习能让模型学会推理，而不是仅仅记住答案？</p>
+
+<div class="card deepen">
+<div class="card-label">关键洞察：RL 优化的是策略，而非记忆</div>
+<p>在 SFT（监督微调）中，模型学习的是 $P(\tau \mid Q_{train})$——即<strong>模仿训练集中已有的推理轨迹</strong>。如果训练集里的 CoT 示例质量不高或覆盖不足，模型就学不到好的推理策略。</p>
+<p>而在 RL（特别是 RLVR/GRPO）中，模型学习的是一个<strong>探索策略</strong>：</p>
+<ol style="margin:8px 0 0 16px;padding:0;line-height:1.8;">
+<li>对每个问题，模型<strong>自主采样</strong>多条不同的推理路径</li>
+<li>每条路径根据最终答案的正确性获得奖励</li>
+<li>策略更新使<strong>高奖励路径的概率增加</strong>，低奖励路径的概率降低</li>
+<li>经过大量迭代，模型学会了哪些推理模式倾向于产生正确答案</li>
+</ol>
+<p><strong>关键区别</strong>：SFT 教模型"别人是怎么想的"，RL 让模型自己发现"怎么想才能做对"。这就是 R1-Zero 能纯 RL 涌现推理能力的根本原因。</p>
+</div>
+
+<h3>3.3 计算换智能的边界在哪里？</h3>
+
+<p>Test-time compute 不是无限的——存在明显的边际递减效应和新的失效模式：</p>
+
+<div class="card warning">
+<div class="card-label">2026 年最新发现（重要！）</div>
+<p><strong>发现 1：位置偏差放大效应</strong>（arXiv:2605.06672）</p>
+<p>更长的推理轨迹会<strong>放大位置偏差 (Position Bias)</strong>——模型倾向于过度关注推理链末尾的信息，忽略前面的关键步骤。在 12/13 种实验配置中，推理链长度与位置偏差呈正相关。这意味着：想得越久，不一定越好，还可能在系统性偏见的道路上越走越远。</p>
+<br>
+<p><strong>发现 2：停止条件的困境</strong>（arXiv:2605.06690）</p>
+<p>新框架提出用 <strong>epistemic state graph（认识状态图）</strong> 来决定何时停止推理。核心指标是 <strong>order-gap</strong>——衡量当前认知状态的"不确定性"是否已经足够收敛。基于置信度的 Early-Stopping 在 MathQA 上将得分从 81 提升到 83.6（ICLR 2026 Self-Calibration）。</p>
+<br>
+<p><strong>核心结论</strong>：<strong>不是"想越久越好"，而是需要更智能的停止点。</strong>理想的推理模型应该像一个经验丰富的人——知道什么时候已经"想够了"，而不是无限纠结下去。</p>
+</div>
+
+<div class="diagram">
+<svg viewBox="0 0 620 200" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="stop-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#BA7517" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<text x="310" y="20" font-family="-apple-system,sans-serif" font-size="12.5" font-weight="600" fill="#333" text-anchor="middle">推理时长 vs 准确率：理想曲线 vs 实际曲线</text>
+<line x1="60" y1="170" x2="560" y2="170" stroke="#ccc" stroke-width="1.5"/>
+<line x1="60" y1="170" x2="60" y2="45" stroke="#ccc" stroke-width="1"/>
+<text x="55" y="43" font-family="-apple-system,sans-serif" font-size="9" fill="#888" text-anchor="end">准确率</text>
+<text x="565" y="175" font-family="-apple-system,sans-serif" font-size="9" fill="#888">推理 token 数 →</text>
+<text x="52" y="68" font-family="-apple-system,sans-serif" font-size="8" fill="#888" text-anchor="end">100%</text>
+<text x="52" y="115" font-family="-apple-system,sans-serif" font-size="8" fill="#888" text-anchor="end">50%</text>
+<text x="52" y="163" font-family="-apple-model,sans-serif" font-size="8" fill="#888" text-anchor="end">0%</text>
+<path d="M70 160 Q150 100 230 65 Q310 50 400 48 Q500 47 550 46" fill="none" stroke="#1D9E75" stroke-width="2"/>
+<text x="420" y="40" font-family="-apple-system,sans-serif" font-size="9" fill="#1D9E75" font-weight="500">理想：持续上升</text>
+<path d="M70 160 Q130 95 200 70 Q270 58 330 62 Q400 72 470 85 540 98" fill="none" stroke="#993C1D" stroke-width="2"/>
+<text x="480" y="115" font-family="-apple-system,sans-serif" font-size="9" fill="#993C1D" font-weight="500">实际：先升后降</text>
+<text x="330" y="80" font-family="-apple-system,sans-serif" font-size="8" fill="#BA7517" font-weight="500">↑ 最佳停止点</text>
+<line x1="330" y1="84" x2="330" y2="168" stroke="#BA7517" stroke-width="0.8" stroke-dasharray="3,2"/>
+<circle cx="330" cy="62" r="4" fill="#BA7517"/>
+</svg>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">第一性原理总结</div>
+<p><strong>推理规模定律的核心命题</strong>：智能不完全等于参数规模。在特定条件下，将计算从"训练时"重新分配到"推理时"，可以获得更高的智能产出。</p>
+<p><strong>但这有三个前提</strong>：</p>
+<ol style="margin:6px 0 0 16px;padding:0;line-height:1.8;">
+<li>模型必须具备基本的推理能力（太小的不行——G1 的局限性）</li>
+<li>奖励信号必须能区分好坏答案（数学/代码天然适合，主观评价难）</li>
+<li>必须有合理的停止条件（否则边际递减甚至负收益）</li>
+</ol>
+<p>这三条也是当前研究的活跃方向。</p>
+</div>
+</section>
+
+<!-- ====== §④ 演进与对比 ====== -->
+<section id="evolution">
+<h2><span class="sec-num">④</span> 演进与对比：从 6 个字到推理系统的四年之路</h2>
+
+<h3>4.1 时间线</h3>
+
+<div class="diagram">
+<svg viewBox="0 0 720 300" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="evo-arr21" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<line x1="50" y1="260" x2="670" y2="260" stroke="#ccc" stroke-width="2"/>
+<polygon points="670,255 682,260 670,265" fill="#ccc"/>
+<line x1="100" y1="260" x2="100" y2="232" stroke="#534AB7" stroke-width="1.5"/><circle cx="100" cy="260" r="6" fill="#534AB7"/>
+<text x="100" y="278" font-family="-apple-system,sans-serif" font-size="10.5" font-weight="600" fill="#534AB7" text-anchor="middle">2022</text>
+<rect x="32" y="158" width="136" height="68" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.8"/>
+<text x="100" y="178" font-family="-apple-system,sans-serif" font-size="11" font-weight="600" fill="#534AB7" text-anchor="middle">CoT Paper</text>
+<text x="100" y="194" font-family="-apple-system,sans-serif" font-size="10" fill="#3C3489" text-anchor="middle">Wei et al. NeurIPS</text>
+<text x="100" y="212" font-family="-apple-system,sans-serif" font-size="9.5" fill="#777" text-anchor="middle">"Let's think step by step"</text>
+<line x1="235" y1="260" x2="235" y2="232" stroke="#185FA5" stroke-width="1.5"/><circle cx="235" cy="260" r="6" fill="#185FA5"/>
+<text x="235" y="278" font-family="-apple-system,sans-serif" font-size="10.5" font-weight="600" fill="#185FA5" text-anchor="middle">2023-24</text>
+<rect x="162" y="158" width="146" height="68" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.8"/>
+<text x="235" y="178" font-family="-apple-system,sans-serif" font-size="11" font-weight="600" fill="#185FA5" text-anchor="middle">CoT Training</text>
+<text x="235" y="194" font-family="-apple-system,sans-serif" font-size="10" fill="#0C447C" text-anchor="middle">RLVR · DeepSeek-Math</text>
+<text x="235" y="212" font-family="-apple-system,sans-serif" font-size="9.5" fill="#777" text-anchor="middle">从 Prompt 到 Training 的跨越</text>
+<line x1="385" y1="260" x2="385" y2="232" stroke="#1D9E75" stroke-width="1.5"/><circle cx="385" cy="260" r="6" fill="#1D9E75"/>
+<text x="385" y="278" font-family="-apple-system,sans-serif" font-size="10.5" font-weight="600" fill="#1D9E75" text-anchor="middle">2024.09</text>
+<rect x="308" y="154" width="154" height="72" rx="8" fill="#E1F5EE" stroke="#1D9E75" stroke-width="0.8"/>
+<text x="385" y="174" font-family="-apple-system,sans-serif" font-size="11.5" font-weight="600" fill="#1D9E75" text-anchor="middle">OpenAI o1</text>
+<text x="385" y="192" font-family="-apple-system,sans-serif" font-size="10" fill="#085041" text-anchor="middle">首个商用推理模型</text>
+<text x="385" y="208" font-family="-apple-system,sans-serif" font-size="9.5" fill="#777" text-anchor="middle">Reasoning Tokens · TTC Scaling</text>
+<text x="385" y="222" font-family="-apple-system,sans-serif" font-size="9" fill="#777" text-anchor="middle">Codeforces Elo 1750+</text>
+<line x1="520" y1="260" x2="520" y2="232" stroke="#BA7517" stroke-width="1.5"/><circle cx="520" cy="260" r="6" fill="#BA7517"/>
+<text x="520" y="278" font-family="-apple-system,sans-serif" font-size="10.5" font-weight="600" fill="#BA7517" text-anchor="middle">2025.01</text>
+<rect x="445" y="150" width="150" height="76" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.8"/>
+<text x="520" y="170" font-family="-apple-system,sans-serif" font-size="11.5" font-weight="600" fill="#BA7517" text-anchor="middle">DeepSeek R1</text>
+<text x="520" y="188" font-family="-apple-system,sans-serif" font-size="10" fill="#633806" text-anchor="middle">开源推理里程碑</text>
+<text x="520" y="204" font-family="-apple-system,sans-serif" font-size="9.5" fill="#777" text-anchor="middle">GRPO · R1-Zero Aha Moment</text>
+<text x="520" y="220" font-family="-apple-system,sans-serif" font-size="9" fill="#777" text-anchor="middle">MIT 开源 · 671B MoE</text>
+<line x1="635" y1="260" x2="635" y2="232" stroke="#993C1D" stroke-width="1.5"/><circle cx="635" cy="260" r="6" fill="#993C1D"/>
+<text x="635" y="278" font-family="-apple-system,sans-serif" font-size="10.5" font-weight="600" fill="#993C1D" text-anchor="middle">2026</text>
+<rect x="566" y="86" width="138" height="58" rx="8" fill="#FAECE7" stroke="#993C1D" stroke-width="0.8"/>
+<text x="635" y="106" font-family="-apple-system,sans-serif" font-size="11" font-weight="600" fill="#993C1D" text-anchor="middle">最新前沿</text>
+<text x="635" y="122" font-family="-apple-system,sans-serif" font-size="9.5" fill="#711B0C" text-anchor="middle">位置偏差 · 停止条件</text>
+<text x="635" y="137" font-family="-apple-system,sans-serif" font-size="9" fill="#777" text-anchor="middle">Epistemic State Graph</text>
+<line x1="635" y1="144" x2="635" y2="150" stroke="#993C1D" stroke-width="0.8" stroke-dasharray="3,2" marker-end="url(#evo-arr21)"/>
+<path d="M168 192 L162 192" fill="none" stroke="#534AB7" stroke-width="1" marker-end="url(#evo-arr21)"/>
+<path d="M308 192 L302 192" fill="none" stroke="#185FA5" stroke-width="1" marker-end="url(#evo-arr21)"/>
+<path d="M462 190 L452 190" fill="none" stroke="#1D9E75" stroke-width="1" marker-end="url(#evo-arr21)"/>
+<path d="M595 188 L580 152" fill="none" stroke="#BA7517" stroke-width="1" marker-end="url(#evo-arr21)"/>
+</svg>
+</div>
+
+<h3>4.2 o1 vs R1：两大路线对比</h3>
+
+<table>
+<tr><th>维度</th><th>OpenAI o 系列</th><th>DeepSeek R1</th></tr>
+<tr>
+<td><strong>训练方法</strong></td>
+<td>未公开细节（推测含大规模 RL）</td>
+<td>公开透明：GRPO + Cold-start SFT</td>
+</tr>
+<tr>
+<td><strong>开源性</strong></td>
+<td>闭源 API</td>
+<td>MIT 开源（权重全开放）</td>
+</tr>
+<tr>
+<td><strong>推理可见性</strong></td>
+<td>Reasoning tokens 默认隐藏</td>
+<td>支持输出完整推理过程</td>
+</tr>
+<tr>
+<td><strong>架构</strong></td>
+<td>推测为 Dense + MoE 混合</td>
+<td>671B MoE（37B 激活参数）</td>
+</tr>
+<tr>
+<td><strong>生态影响</strong></td>
+<td>定义了"推理模型"的产品形态</td>
+<td>引爆开源推理生态（蒸馏链）</td>
+</tr>
+<tr>
+<td><strong>成本</strong></td>
+<td>按 reasoning token 计费（较高）</td>
+<td>可自部署（硬件门槛高但可控）</td>
+</tr>
+</table>
+
+<h3>4.3 2026 年最新研究方向</h3>
+
+<div class="card deepen">
+<div class="card-label">方向 1：推理过程的可控性</div>
+<p>当前推理模型的最大问题是<strong>不可控</strong>——你无法指定模型应该用什么策略、走哪条路径、花多少计算量。2026 年的研究聚焦于：</p>
+<ul style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>Structured Reasoning</strong>：约束推理过程遵循特定的逻辑结构（如先定义变量、再列方程、最后求解）</li>
+<li><strong>Budget-aware Inference</strong>：在给定的 token 预算内最大化推理质量</li>
+<li><strong>Verifiable CoT</strong>：每一步都可以被自动验证（数学/代码领域已有进展）</li>
+</ul>
+</div>
+
+<div class="card deepen">
+<div class="card-label">方向 2：推理效率优化</div>
+<ul style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>Speculative Decoding for Reasoning</strong>：用小模型草拟推理链，大模型验证修正</li>
+<li><strong>Sparse Attention in Long CoT</strong>：解决长推理序列的注意力瓶颈（Kinetics 2025 关键建议）</li>
+<li><strong>Early Exiting</strong>：基于置信度提前终止推理（Self-Calibration, ICLR 2026）</li>
+</ul>
+</div>
+
+<div class="card deepen">
+<div class="card-label">方向 3：推理安全与对齐</div>
+<ul style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>Reasoning-level Safety</strong>：不仅检查输出，还要监控推理过程中的危险思维路径</li>
+<li><strong>Distillation Defense</strong>：防止通过 reasoning tokens 蒸馏出模型能力（o1 隐藏 reasoning tokens 的动机之一）</li>
+</ul>
+</div>
+</section>
+
+<!-- ====== §⑤ 与产品连接 ====== -->
+<section id="connect">
+<h2><span class="sec-num">⑤</span> 与产品连接：推理能力在实际 Agent 中的应用</h2>
+
+<p>理解了 CoT 和推理模型的抽象机制后，关键问题是：<strong>这些能力如何在 Fitz 的 Agent 产品中落地？</strong></p>
+
+<h3>5.1 什么时候该用推理模型？</h3>
+
+<p>不是所有任务都需要推理模型。决策矩阵如下：</p>
+
+<table>
+<tr><th>任务特征</th><th>推荐方案</th><th>理由</th></tr>
+<tr>
+<td><strong>简单查询 / 翻译 / 摘要</strong></td>
+<td>标准模型（GPT-4o / Claude Sonnet）</td>
+<td>推理模型浪费 token，延迟更高</td>
+</tr>
+<tr>
+<td><strong>多步规划 / 复杂分析</strong></td>
+<td>推理模型（o1 / R1 / o4-mini）</td>
+<td>长 CoT 能显著减少错误</td>
+</tr>
+<tr>
+<td><strong>代码生成 / 数学计算 / Debug</strong></td>
+<td>推理模型（优先 o3 / R1）</td>
+<td>这些领域有确定性奖励信号，RL 训练效果最好</td>
+</tr>
+<tr>
+<td><strong>高频低延迟场景</strong></td>
+<td>标准模型 + 缓存</td>
+<td>FXAgent 这种 40 万月活的场景，延迟敏感</td>
+</tr>
+</table>
+
+<h3>5.2 DDAgent 尽调场景中的推理应用</h3>
+
+<p>DDAgent（企业尽调）是最需要推理能力的场景之一——它需要在多个信息源之间做交叉验证、识别矛盾、推断隐含风险：</p>
+
+<div class="code-block"><span class="cmt"># DDAgent 使用推理模型的伪代码</span>
+<span class="kw">def</span> <span class="fn">ddagent_reasoning_analysis</span>(company_data: dict) -> dict:
+    <span class="str">"""
+    用推理模型做深度尽调分析
+    
+    场景：发现财务报表和工商信息之间的不一致，
+    需要模型进行多步推理来推断真实情况。
+    """</span>
+    
+    analysis_prompt = <span class="str">f"""
+    你是企业尽职调查分析师。以下是一家公司的多源数据，请仔细分析：
+
+    ## 工商信息
+    注册资本: {company_data['registered_capital']}
+    成立日期: {company_data['founded_date']}
+    法人: {company_data['legal_representative']}
+
+    ## 财务报表（最近3年）
+    {<span class="fn">json</span>.dumps(company_data['financials'], ensure_ascii=False, indent=2)}
+
+    ## 法律风险扫描
+    {<span class="fn">json</span>.dumps(company_data['legal_risks'], ensure_ascii=False, indent=2)}
+
+    请逐一分析：
+    1. 财务数据与注册资本是否匹配？有无异常？
+    2. 法律案件是否暗示经营风险？
+    3. 综合评估这家公司的信用等级（A/B/C/D）及理由。
+    """</span>
+
+    <span class="cmt"># 使用推理模型（如 o4-mini 或 DeepSeek-R1-Distill-Qwen-7B）</span>
+    response = <span class="fn">call_reasoning_model</span>(
+        model=<span class="str">"deepseek-reasoner"</span>,  <span class="cmt"># 或 "o4-mini"</span>
+        prompt=analysis_prompt,
+        max_tokens=<span class="var">16000</span>  <span class="cmt"># 推理模型需要更大的 token 预算</span>
+    )
+    
+    <span class="kw">return</span> {
+        <span class="str">"credit_grade"</span>: <span class="fn">parse_credit_grade</span>(response),
+        <span class="str">"risk_flags"</span>: <span class="fn">extract_risk_flags</span>(response),
+        <span class="str">"reasoning_trace"</span>: response.reasoning_tokens  <span class="cmt"># 用于调试和审计</span>
+    }</div>
+
+<div class="card intuition">
+<div class="card-label">为什么 DDAgent 需要推理模型？</div>
+<p>考虑这个真实案例：一家公司注册资本 100 万，但财务报表显示年收入 5 亿。标准模型可能会分别报告这两个数字，但<strong>推理模型会注意到这个比例异常</strong>（500 倍！），主动去查找是否有未披露的关联交易或虚增收入嫌疑。</p>
+<p>这就是推理模型的价值：<strong>不只是报告数据，而是发现数据之间的关系和异常。</strong></p>
+</div>
+
+<h3>5.3 成本权衡：推理模型的经济账</h3>
+
+<p>推理模型不是免费的午餐。以 o4-mini 为例（2025 定价）：</p>
+
+<table>
+<tr><th>场景</th><th>标准模型成本</th><th>推理模型成本</th><th>倍数</th><th>值得吗？</th></tr>
+<tr>
+<td>FXAgent 单次汇率查询</td>
+<td>~$0.001</td>
+<td>~$0.008-0.02</td>
+<td>8-20x</td>
+<td>❌ 不值得（简单任务）</td>
+</tr>
+<tr>
+<td>BAAgent 月度经营分析</td>
+<td>~$0.15</td>
+<td>~$0.40-0.80</td>
+<td>3-5x</td>
+<td>⚠️ 看场景（有时值得）</td>
+</tr>
+<tr>
+<td>DDAgent 企业尽调</td>
+<td>~$0.50</td>
+<td>~$1.20-2.00</td>
+<td>2-4x</td>
+<td>✅ 值得（减少误判损失更大）</td>
+</tr>
+<tr>
+<td>代码审查 / 安全扫描</td>
+<td>~$0.30</td>
+<td>~$0.60-1.50</td>
+<td>2-5x</td>
+<td>✅ 值得（漏检代价高昂）</td>
+</tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">成本优化策略</div>
+<ol style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>分级路由</strong>：简单问题走标准模型，复杂问题升级到推理模型（可用轻量分类器做前置路由）</li>
+<li><strong>蒸馏模型替代</strong>：用 R1 蒸馏出的 7B/14B 模型处理大部分场景，仅在极端困难问题上调用原生 R1/o1</li>
+<li><strong>缓存常见问题</strong>：尽调中的标准化分析模板可以缓存推理结果</li>
+<li><strong>控制推理预算</strong>：设置 max_completion_tokens 上限，防止简单问题也跑满推理 budget</li>
+</ol>
+</div>
+
+<h3>5.4 KBA（Knowledge Base Agent）场景</h3>
+
+<p>KBA 场景涉及知识库问答，推理模型在这里的价值体现在：</p>
+
+<div class="card deepen">
+<div class="card-label">推理模型在 KBA 中的三种用法</div>
+<ol style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>Query 理解</strong>：将模糊的自然语言问题转化为精确的结构化查询。例如"去年我们亏了多少"→ 解析为"查询 2025 财年净利润字段，关注亏损金额"</li>
+<li><strong>多文档综合推理</strong>：当答案分散在多个 KB 文档中时，推理模型能更好地做信息聚合和矛盾消解</li>
+<li><strong>答案置信度校准</strong>：推理模型的长 CoT 过程天然包含了"我对这个答案有多大把握"的信息——可用于决定是否需要人工审核</li>
+</ol>
+</div>
+
+<h3>5.5 2026 落地建议</h3>
+
+<div class="card insight">
+<div class="card-label">Fitz 的行动清单</div>
+<ol style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>立即</strong>：在 DDAgent 的风险分析模块试点 o4-mini / R1-Distill-Qwen-7B，对比准确率和成本</li>
+<li><strong>短期</strong>：构建"问题难度分类器"——在调用推理模型之前先判断是否真的需要，避免不必要的成本开销</li>
+<li><strong>中期</strong>：关注 ICLR 2026 Self-Calibration 的 Early-Stopping 技术，将其集成到推理模型的调用层</li>
+<li><strong>长期</strong>：跟踪位置偏差（arXiv:2605.06672）的研究进展——如果你的推理链超过 2000 步，需要特别关注这个问题</li>
+</ol>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">本章核心收获</div>
+<ol style="margin:4px 0 0 16px;padding:0;line-height:1.8;">
+<li><strong>CoT 本质</strong>：将 $P(A|Q)$ 分解为 $P(\tau|Q) \cdot P(A|\tau,Q)$——用中间推理轨迹降低问题的条件复杂度</li>
+<li><strong>系统1 vs 系统2</strong>：Prompt Engineering 是快思考，CoT/推理模型是慢思考——两者互补而非替代</li>
+<li><strong>三代技术</strong>：G1 Prompting（6个字触发）→ G2 Training（RLVR/GRPO 教会思考）→ G3 System（o1/R1 的 reasoning tokens + TTC scaling）</li>
+<li><strong>三条 Scaling Laws</strong>：Pre-train / Post-train / Test-time compute——第三条是 2024-25 年最大的范式转移</li>
+<li><strong>不是想越久越好</strong>：位置偏差放大 + 停止条件困境——2026 年的核心课题是"智能停止"而非"无限推理"</li>
+<li><strong>产品落地的关键是分级路由</strong>：简单问题用标准模型省成本，复杂问题用推理模型保质量</li>
+</ol>
+</div>
+</section>
+
+<!-- 底部导航 -->
+<div class="chapter-footer">
+<a href="../../../INDEX.html">← 返回知识图谱</a>
+<a href="A2.1-cot-reasoning-quiz.html">📝 做 Quiz（10 题）→</a>
+</div>
+
+</body>
+</html>

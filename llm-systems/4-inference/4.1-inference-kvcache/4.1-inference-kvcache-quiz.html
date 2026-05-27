@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.1 推理流程 + KV Cache · Quiz</title>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F9F3;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDE8E0;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card:#FFFFFF;--border:#E8E8E4;--green:#1D9E75;--red:#993C1D}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.tag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px}
+.tag-t1{background:var(--purple-bg);color:var(--purple)}
+.tag-quiz{background:var(--teal-bg);color:var(--teal)}
+h1{font-size:24px;font-weight:700;margin-bottom:4px}
+.subtitle{font-size:14px;color:var(--muted)}
+.score-box{margin:20px 0;padding:16px 20px;background:var(--purple-bg);border-radius:10px;text-align:center}
+.score-box .score{font-size:36px;font-weight:700;color:var(--purple)}
+.score-box .label{font-size:13px;color:var(--purple)}
+.score-box .feedback{font-size:13px;margin-top:6px}
+.q-card{border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:16px 0;background:#fff}
+.q-card .q-id{font-size:11px;color:var(--muted);margin-bottom:4px}
+.q-card .q-text{font-size:15px;font-weight:500;margin-bottom:12px}
+.q-card .options{display:flex;flex-direction:column;gap:6px}
+.q-card .opt{padding:8px 12px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:14px;transition:all .15s}
+.q-card .opt:hover{border-color:var(--purple);background:var(--purple-bg)}
+.q-card .opt.selected{border-color:var(--purple);background:var(--purple-bg);font-weight:500}
+.q-card .opt.correct{border-color:var(--green);background:var(--teal-bg)}
+.q-card .opt.wrong{border-color:var(--red);background:var(--coral-bg)}
+.q-card .explain{display:none;margin-top:10px;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.6}
+.q-card .explain.show{display:block}
+.q-card .explain.correct-exp{background:var(--teal-bg);border-left:3px solid var(--green)}
+.q-card .explain.wrong-exp{background:var(--coral-bg);border-left:3px solid var(--red)}
+.q-card .explain a{color:var(--purple);text-decoration:none;font-weight:500}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-t1">T1 · LLM系统</span>
+<span class="tag tag-quiz">Quiz · 10 题</span>
+<a href="4.1-inference-kvcache-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+<a href="../../INDEX.html" class="nav-link">知识图谱</a>
+</div>
+<h1>4.1 推理流程 + KV Cache · Quiz</h1>
+<p class="subtitle">10 题 · 每节 2 题 · 点击选项即时反馈</p>
+</div>
+
+<div class="score-box">
+<div class="label">得分</div>
+<div class="score" id="score">0 / 10</div>
+<div class="feedback" id="feedback">点击选项开始答题</div>
+</div>
+
+<!-- Q1: §① 是什么 - 概念辨析 -->
+<div class="q-card" id="q1">
+<div class="q-id">T1-4.1-①-a · 概念辨析</div>
+<div class="q-text">LLM 推理的 Prefill 和 Decode 阶段，分别受限于什么资源？</div>
+<div class="options">
+<div class="opt" data-q="1" data-v="A">A. Prefill 受内存带宽限制，Decode 受算力限制</div>
+<div class="opt" data-q="1" data-v="B">B. Prefill 受算力限制，Decode 受内存带宽限制</div>
+<div class="opt" data-q="1" data-v="C">C. 两者都受算力限制</div>
+<div class="opt" data-q="1" data-v="D">D. 两者都受内存带宽限制</div>
+</div>
+<div class="explain" data-q="1">✅ 正确答案 B。Prefill 阶段一次性并行处理全部 prompt tokens，大量矩阵乘法使得 GPU 算力单元繁忙（Compute-bound，MFU ~60%）；Decode 阶段每步只生成 1 个 token，GPU 95% 时间在等内存搬运（Memory-bound，MFU ~5-10%）。→ <a href="4.1-inference-kvcache-chapter.html#is">回到 §①</a></div>
+</div>
+
+<!-- Q2: §① 是什么 - 判断/应用 -->
+<div class="q-card" id="q2">
+<div class="q-id">T1-4.1-①-b · 判断应用</div>
+<div class="q-text">某 API 定价中，输入 token 价格 $1/M，输出 token 价格 $10/M。输出比输入贵 10 倍，最根本的原因是什么？</div>
+<div class="options">
+<div class="opt" data-q="2" data-v="A">A. 输出 token 的模型参数更多</div>
+<div class="opt" data-q="2" data-v="B">B. 输出阶段需要逐 token 串行生成，GPU 算力利用率极低</div>
+<div class="opt" data-q="2" data-v="C">C. 输出 token 需要更多的训练数据</div>
+<div class="opt" data-q="2" data-v="D">D. 输出 token 的 KV Cache 更大</div>
+</div>
+<div class="explain" data-q="2">✅ 正确答案 B。Decode 阶段每个 token 都需要一次完整的前向传播（读模型权重 + KV Cache），但只产出 1 个 token，GPU MFU 仅 5-10%。Prefill 阶段一次处理多个 token 均摊了权重读取成本。→ <a href="4.1-inference-kvcache-chapter.html#is">回到 §①</a></div>
+</div>
+
+<!-- Q3: §② 怎么实现 - 概念辨析 -->
+<div class="q-card" id="q3">
+<div class="q-id">T1-4.1-②-a · 概念辨析</div>
+<div class="q-text">KV Cache 将每步注意力计算复杂度从 $O(t^2)$ 降为 $O(t)$，这个"降维"的本质是什么？</div>
+<div class="options">
+<div class="opt" data-q="3" data-v="A">A. 减少了注意力头的数量</div>
+<div class="opt" data-q="3" data-v="B">B. 缓存了历史 token 的 K/V，避免每步重新计算</div>
+<div class="opt" data-q="3" data-v="C">C. 降低了每个 token 的向量维度</div>
+<div class="opt" data-q="3" data-v="D">D. 跳过了部分 token 的注意力计算</div>
+</div>
+<div class="explain" data-q="3">✅ 正确答案 B。没有 KV Cache 时，第 t 步需要重新计算所有 1~t 个 token 的 K/V 矩阵（$O(t^2)$）；有 KV Cache 后，只需计算新 token 的 $K_t, V_t$，历史 $K_{1:t-1}, V_{1:t-1}$ 直接从缓存读取，计算量降为 $O(t)$。→ <a href="4.1-inference-kvcache-chapter.html#how">回到 §②</a></div>
+</div>
+
+<!-- Q4: §② 怎么实现 - 判断/应用 -->
+<div class="q-card" id="q4">
+<div class="q-id">T1-4.1-②-b · 判断应用</div>
+<div class="q-text">一个 70B 参数模型（80层，GQA 8个KV头，d_k=128）在 FP16 下处理 128K 上下文，KV Cache 约占多少显存？</div>
+<div class="options">
+<div class="opt" data-q="4" data-v="A">A. 约 4 GB</div>
+<div class="opt" data-q="4" data-v="B">B. 约 40 GB</div>
+<div class="opt" data-q="4" data-v="C">C. 约 140 GB</div>
+<div class="opt" data-q="4" data-v="D">D. 约 800 GB</div>
+</div>
+<div class="explain" data-q="4">✅ 正确答案 B。计算：2 × 80(层) × 131072(128K) × 8(KV头) × 128(维度) × 2(FP16字节) = 2 × 80 × 131072 × 8 × 128 × 2 = 2 × 80 × 131072 × 2048 ≈ 2 × 80 × 268M ≈ 42.9 GB。→ <a href="4.1-inference-kvcache-chapter.html#how">回到 §②</a></div>
+</div>
+
+<!-- Q5: §③ 为什么 - 概念辨析 -->
+<div class="q-card" id="q5">
+<div class="q-id">T1-4.1-③-a · 概念辨析</div>
+<div class="q-text">传统连续内存分配方案下，KV Cache 有效利用率仅 20-38%，最核心的浪费来源是什么？</div>
+<div class="options">
+<div class="opt" data-q="5" data-v="A">A. GPU 算力不足导致缓存未命中</div>
+<div class="opt" data-q="5" data-v="B">B. 为每个请求预分配最大长度的连续空间，实际输出远短于预分配</div>
+<div class="opt" data-q="5" data-v="C">C. 注意力机制本身的计算冗余</div>
+<div class="opt" data-q="5" data-v="D">D. 模型权重复制导致显存不足</div>
+</div>
+<div class="explain" data-q="5">✅ 正确答案 B。传统方案为每个请求预分配最大可能长度的连续 KV Cache，但实际输出往往短得多。加上不同请求长度差异导致的外部碎片，以及为未来 token 预留的空间，综合利用率仅 20-38%（vLLM SOSP 2023 论文数据）。→ <a href="4.1-inference-kvcache-chapter.html#why">回到 §③</a></div>
+</div>
+
+<!-- Q6: §③ 为什么 - 判断/应用 -->
+<div class="q-card" id="q6">
+<div class="q-id">T1-4.1-③-b · 判断应用</div>
+<div class="q-text">Decode 阶段，GPU MFU 只有 5-10%。如果我们将 GPU 换成算力翻倍但内存带宽不变的新卡，Decode 速度会怎样？</div>
+<div class="options">
+<div class="opt" data-q="6" data-v="A">A. 速度翻倍</div>
+<div class="opt" data-q="6" data-v="B">B. 速度几乎不变</div>
+<div class="opt" data-q="6" data-v="C">C. 速度下降</div>
+<div class="opt" data-q="6" data-v="D">D. 速度提升 50%</div>
+</div>
+<div class="explain" data-q="6">✅ 正确答案 B。Decode 是 Memory-bound，瓶颈在内存带宽而非算力。延迟 ≈ (权重大小 + KV Cache 大小) / 内存带宽。算力翻倍但带宽不变，瓶颈没变，速度几乎不变。这就是"Memory Wall"的含义。→ <a href="4.1-inference-kvcache-chapter.html#why">回到 §③</a></div>
+</div>
+
+<!-- Q7: §④ 演进 - 概念辨析 -->
+<div class="q-card" id="q7">
+<div class="q-id">T1-4.1-④-a · 概念辨析</div>
+<div class="q-text">PagedAttention 借鉴了操作系统的哪个经典机制？它解决了什么核心问题？</div>
+<div class="options">
+<div class="opt" data-q="7" data-v="A">A. 虚拟内存分页 → 解决 KV Cache 内存碎片和预分配浪费</div>
+<div class="opt" data-q="7" data-v="B">B. 中断机制 → 解决 Decode 阶段延迟过高</div>
+<div class="opt" data-q="7" data-v="C">C. 文件系统 → 解决 KV Cache 持久化存储</div>
+<div class="opt" data-q="7" data-v="D">D. 进程调度 → 解决多请求并发排序</div>
+</div>
+<div class="explain" data-q="7">✅ 正确答案 A。PagedAttention 将 KV Cache 划分为固定大小的 Block，每个请求维护 Block Table（类比页表），逻辑块到物理块无需连续。内存浪费仅限最后一个 Block 未满部分（&lt;4%），利用率从 20-38% 提升至 95%+。→ <a href="4.1-inference-kvcache-chapter.html#evolution">回到 §④</a></div>
+</div>
+
+<!-- Q8: §④ 演进 - 判断/应用 -->
+<div class="q-card" id="q8">
+<div class="q-id">T1-4.1-④-b · 判断应用</div>
+<div class="q-text">你的团队部署了一个 Agent 服务，5 个并发 Agent 共享相同的 System Prompt（2000 token）。用 SGLang 的 RadixAttention 比 vLLM 的块级哈希前缀缓存更优，根本原因是什么？</div>
+<div class="options">
+<div class="opt" data-q="8" data-v="A">A. SGLang 的推理速度更快</div>
+<div class="opt" data-q="8" data-v="B">B. RadixAttention 用基数树维护 LRU 缓存，跨多次生成调用自动复用 KV Block</div>
+<div class="opt" data-q="8" data-v="C">C. vLLM 不支持前缀缓存</div>
+<div class="opt" data-q="8" data-v="D">D. SGLang 使用更小的 Block 大小</div>
+</div>
+<div class="explain" data-q="8">✅ 正确答案 B。vLLM 在 Block 级别做基于哈希的前缀匹配，简洁但在复杂多调用场景（Agent、思维树）中缓存命中率较低。SGLang 的 RadixAttention 用基数树结构维护 KV Block 的 LRU 缓存，支持跨多次生成调用的自动复用，在 Agent 场景中命中率更高。→ <a href="4.1-inference-kvcache-chapter.html#evolution">回到 §④</a></div>
+</div>
+
+<!-- Q9: §⑤ 产品 - 概念辨析 -->
+<div class="q-card" id="q9">
+<div class="q-id">T1-4.1-⑤-a · 概念辨析</div>
+<div class="q-text">PD 分离架构（Prefill/Decode 分离）能带来 30-50% 吞吐提升，其核心物理原理是什么？</div>
+<div class="options">
+<div class="opt" data-q="9" data-v="A">A. Prefill 和 Decode 的资源瓶颈不同，分离后各自用最合适的硬件</div>
+<div class="opt" data-q="9" data-v="B">B. 分离后网络带宽翻倍</div>
+<div class="opt" data-q="9" data-v="C">C. 分离后模型权重减半</div>
+<div class="opt" data-q="9" data-v="D">D. 分离后 KV Cache 不再需要</div>
+</div>
+<div class="explain" data-q="9">✅ 正确答案 A。Prefill 受算力约束，Decode 受内存带宽约束。混合部署时两者互相干扰：Prefill 抢占 Decode 的计算资源，Decode 占用 Prefill 的内存带宽。分离后，Prefill 用算力强的 GPU（H100/B200），Decode 用带宽大的 GPU（MI300X），各自最优化。→ <a href="4.1-inference-kvcache-chapter.html#connect">回到 §⑤</a></div>
+</div>
+
+<!-- Q10: §⑤ 产品 - 判断/应用 -->
+<div class="q-card" id="q10">
+<div class="q-id">T1-4.1-⑤-b · 判断应用</div>
+<div class="q-text">DDAgent 处理跨境汇款投诉时，每轮对话累积上下文，KV Cache 持续增长。以下哪个优化对降低 DDAgent 推理成本最直接有效？</div>
+<div class="options">
+<div class="opt" data-q="10" data-v="A">A. 增大模型参数量</div>
+<div class="opt" data-q="10" data-v="B">B. 启用前缀缓存（System Prompt 的 KV 跨请求复用）</div>
+<div class="opt" data-q="10" data-v="C">C. 减少训练数据量</div>
+<div class="opt" data-q="10" data-v="D">D. 增大 Batch Size 而不优化 KV 管理</div>
+</div>
+<div class="explain" data-q="10">✅ 正确答案 B。Agent 场景的核心特征是"长上下文+短追加+高前缀复用"（DualPath 论文：KV 命中率 &gt;95%）。System Prompt 的 KV Cache 跨请求复用可以避免重复计算，直接降低 Prefill 开销。增大 Batch Size 而不优化 KV 管理只会更快地打满显存。→ <a href="4.1-inference-kvcache-chapter.html#connect">回到 §⑤</a></div>
+</div>
+
+<div class="chapter-footer">
+<a href="4.1-inference-kvcache-chapter.html">← 返回章节</a>
+<a href="../../INDEX.html">返回知识图谱 →</a>
+</div>
+
+<script>
+const answers = {1:'B',2:'B',3:'B',4:'B',5:'B',6:'B',7:'A',8:'B',9:'A',10:'B'};
+const explanations = {
+1:'Prefill 受算力限制（Compute-bound），Decode 受内存带宽限制（Memory-bound）。',
+2:'Decode 每步生成 1 个 token，GPU 算力利用率仅 5-10%，单位成本远高于 Prefill。',
+3:'KV Cache 缓存历史 K/V 向量，每步只算新 token 的 K/V，复杂度从 O(t²)→O(t)。',
+4:'2×80×131072×8×128×2(FP16) ≈ 42.9 GB。',
+5:'预分配最大长度的连续空间，实际输出远短，加上碎片，利用率仅 20-38%。',
+6:'Decode 是 Memory-bound，算力翻倍但带宽不变，瓶颈未变。',
+7:'PagedAttention 借鉴虚拟内存分页，Block Table 类比页表，解决碎片和预分配浪费。',
+8:'RadixAttention 基数树+LRU 支持跨多次生成的自动复用，Agent 场景命中率更高。',
+9:'Prefill 和 Decode 瓶颈不同，分离后各自用最合适硬件，消除互相干扰。',
+10:'前缀缓存复用 System Prompt 的 KV，避免重复计算，直接降低 Agent 推理成本。'
+};
+let score = 0;
+let answered = {};
+document.querySelectorAll('.opt').forEach(opt => {
+opt.addEventListener('click', function() {
+const q = this.dataset.q;
+if (answered[q]) return;
+answered[q] = true;
+const v = this.dataset.v;
+const correct = answers[q] === v;
+if (correct) score++;
+document.getElementById('score').textContent = score + ' / 10';
+const feedbacks = {0:'重读章节，加深理解',1:'重读章节，加深理解',2:'重读章节，加深理解',3:'重读章节，加深理解',4:'重读章节，加深理解',5:'良好，继续加油',6:'良好，继续加油',7:'良好，继续加油',8:'扎实掌握！',9:'扎实掌握！',10:'满分！完美掌握'};
+document.getElementById('feedback').textContent = feedbacks[score] || '';
+// Mark this option
+this.classList.add(correct ? 'correct' : 'wrong');
+// Show correct answer
+const card = document.getElementById('q' + q);
+card.querySelectorAll('.opt').forEach(o => {
+o.style.pointerEvents = 'none';
+if (o.dataset.v === answers[q]) o.classList.add('correct');
+});
+// Show explanation
+const exp = card.querySelector('.explain');
+exp.classList.add('show');
+exp.classList.add(correct ? 'correct-exp' : 'wrong-exp');
+exp.innerHTML = (correct ? '✅ 正确！' : '❌ 错误。正确答案 ' + answers[q] + '。') + explanations[q] + ' ' + exp.innerHTML;
+});
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz · 1.1 Tokenization</title>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE;
+  --amber: #BA7517; --amber-bg: #FAEEDA;
+  --coral: #993C1D; --coral-bg: #FAECE7;
+  --blue: #185FA5; --blue-bg: #E6F1FB;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7;
+  max-width: 700px; margin: 0 auto; padding: 32px 24px 80px; font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+.tag.t1 { background: var(--purple-bg); color: var(--purple); }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 20px; font-weight: 600; margin: 8px 0 2px; }
+.subtitle { color: var(--muted); font-size: 13px; }
+.section-divider { font-size: 11px; color: var(--purple); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 28px 0 8px; padding: 4px 10px; background: var(--purple-bg); border-radius: 6px; display: inline-block; }
+.q-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 12px 0; transition: opacity 0.2s; }
+.q-block.answered { opacity: 0.85; }
+.q-num { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.multi-badge { font-size: 10px; background: var(--amber-bg); color: var(--amber); padding: 1px 6px; border-radius: 4px; font-weight: 500; }
+.q-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt { padding: 10px 14px 10px 42px; border-radius: 8px; border: 1.5px solid var(--border); cursor: pointer; font-size: 14px; transition: all 0.15s; background: var(--card); line-height: 1.5; position: relative; }
+.opt:hover { border-color: var(--purple); background: var(--purple-bg); }
+.opt.selected { border-color: var(--purple); background: var(--purple-bg); }
+.opt.correct { border-color: var(--teal); background: var(--teal-bg); }
+.opt.wrong { border-color: var(--coral); background: var(--coral-bg); }
+/* 单选圆形指示器 / 多选方形指示器 */
+.opt::before { content: ''; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 50%; transition: all 0.15s; background: white; flex-shrink: 0; }
+.q-block[data-type="multi"] .opt::before { border-radius: 4px; }
+.opt.selected::before { border-color: var(--purple); background: var(--purple); }
+.opt.selected::after { content: ''; position: absolute; left: 14px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; }
+.q-block[data-type="multi"] .opt.selected::after { width: 9px; height: 5px; transform: translateY(-50%) rotate(0); border-width: 2px 0 0 2px; left: 13px; }
+.opt.locked { pointer-events: none; }
+
+.action-btns { display: flex; gap: 8px; margin-top: 14px; }
+.q-btn { flex: 1; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; text-align: center; }
+.q-btn:hover { border-color: var(--purple); background: var(--purple-bg); }
+.q-btn.submit-btn { background: var(--purple); color: white; border-color: var(--purple); }
+.q-btn.submit-btn:hover { background: #3C3489; }
+.q-btn.reveal-btn { color: var(--muted); }
+.q-btn.reveal-btn:hover { color: var(--text); }
+.q-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: 14px; display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.correct-fb { background: var(--teal-bg); color: #085041; }
+.feedback.wrong-fb { background: var(--coral-bg); color: #711B0C; }
+.source { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.score-bar { background: var(--purple-bg); border-radius: 12px; padding: 24px; margin-top: 32px; text-align: center; display: none; }
+.score-bar.show { display: block; }
+.score-num { font-size: 44px; font-weight: 700; color: var(--purple); }
+.score-label { font-size: 14px; color: var(--muted); margin-top: 6px; }
+.global-actions { display: flex; gap: 10px; margin-top: 24px; }
+.global-btn { flex: 1; padding: 13px; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+.global-btn.primary { background: var(--purple); color: white; }
+.global-btn.primary:hover { background: #3C3489; }
+.global-btn.secondary { background: var(--card); color: var(--purple); border: 1.5px solid var(--purple); }
+.global-btn.secondary:hover { background: var(--purple-bg); }
+.global-btn:disabled { background: #ccc; border-color: #ccc; color: #666; cursor: not-allowed; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: #f1f1ee; padding: 2px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t1">T1 LLM 系统</span>
+    <span class="tag" style="background:#f1f1f1;color:var(--muted);">1.1 Quiz</span>
+    <span class="tag" style="background:var(--teal-bg);color:var(--teal);">10 题 · 单选+多选 · ≈ 10 min</span>
+    <a href="1.1-tokenization-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+<a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+  </div>
+  <h1>Quiz · 1.1 Tokenization</h1>
+  <div class="subtitle">概念辨析 + 判断应用 · 覆盖全章 5 节 · 每题可独立提交</div>
+</div>
+
+<div class="section-divider">① 是什么</div>
+
+<div class="q-block" data-q="1">
+  <div class="q-num">Q1 · 概念辨析</div>
+  <div class="q-text">关于 token 和词表（Vocabulary），以下哪项描述最准确？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 1 个汉字总是等于 1 个 token，1 个英文单词总是等于 1 个 token</div>
+    <div class="opt" data-val="B">B. Token 是模型处理的原子单位，可以是字、子词、标点甚至空格；词表大小等于 Embedding 矩阵的行数</div>
+    <div class="opt" data-val="C">C. Token 的数量等于输入文本的字符数</div>
+    <div class="opt" data-val="D">D. 词表里的 token 按出现频率从高到低排序，ID 越小越常见</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(1)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(1)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb1"></div>
+  <div class="source">参考：<a href="1.1-tokenization-chapter.html#s1-is">§① 是什么</a></div>
+</div>
+
+<div class="q-block" data-q="2">
+  <div class="q-num">Q2 · 判断应用</div>
+  <div class="q-text">以下关于 Tokenizer 的说法，哪一项是错误的？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. Tokenizer 是一个确定性程序：同一段文本用同一份 tokenizer，任何时候切出的结果完全相同</div>
+    <div class="opt" data-val="B">B. Byte-level BPE 把 256 个字节作为词表的兜底，因此能编码任意 UTF-8 文本，不存在 OOV（未登录词）</div>
+    <div class="opt" data-val="C">C. 同一段中文，GPT-4 和 Qwen3 切出的 token 数量相同，因为它们都用 BPE 算法</div>
+    <div class="opt" data-val="D">D. Tokenizer 把文本转成 token ID 序列后，模型才能进行矩阵运算</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(2)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(2)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb2"></div>
+  <div class="source">参考：<a href="1.1-tokenization-chapter.html#s1-is">§① 是什么</a></div>
+</div>
+
+<div class="section-divider">② 怎么实现</div>
+
+<div class="q-block" data-q="3">
+  <div class="q-num">Q3 · 概念辨析</div>
+  <div class="q-text">BPE 训练期（构建词表）和推理期（切分文本）的核心区别是什么？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 训练期是统计频次并贪心合并字符对，最终固化一份合并规则表；推理期是按这份规则表对新文本执行确定性切分</div>
+    <div class="opt" data-val="B">B. 训练期和推理期都是实时统计频次，每次切文本都重新算</div>
+    <div class="opt" data-val="C">C. 训练期只运行一次，推理期每次切分都会微调词表</div>
+    <div class="opt" data-val="D">D. BPE 只有推理期，训练期不需要任何数据统计</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(3)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(3)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb3"></div>
+  <div class="source">参考：<a href="1.1-tokenization-chapter.html#s2-how">§② 怎么实现</a></div>
+</div>
+
+<div class="q-block" data-q="4">
+  <div class="q-num">Q4 · 判断应用</div>
+  <div class="q-text">对于 tiktoken（GPT-4 使用的 cl100k_base），输入 <code>12345</code> 这串数字，以下哪种切分结果最符合实际？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 切成 1 个 token：<code>[12345]</code>（数字被当成整体词汇收录）</div>
+    <div class="opt" data-val="B">B. 切成 5 个 token：<code>[1][2][3][4][5]</code>（每个数字独立）</div>
+    <div class="opt" data-val="C">C. 切成 2 个 token：<code>[123][45]</code>（3 位一组，行业工程实践）</div>
+    <div class="opt" data-val="D">D. 切成 3 个 token：<code>[12][3][45]</code>（随机切分）</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(4)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(4)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb4"></div>
+  <div class="source">参考：<a href="1.1-tokenization-chapter.html#s2-how">§② 怎么实现</a></div>
+</div>
+
+<div class="section-divider">③ 为什么</div>
+
+<div class="q-block" data-q="5">
+  <div class="q-num">Q5 · 概念辨析</div>
+  <div class="q-text">Tokenization 本质上是一个"有损压缩编码"问题。以下哪项最能解释 BPE 为什么能让"常见词压缩率高，罕见词不丢信息"？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. BPE 每轮选择出现频次最高的相邻字符对进行合并：常见词被多次合并变成整体 token（压缩高效），罕见词相关字符对达不到合并阈值，保持拆散到子词或字节级（信息完整）</div>
+    <div class="opt" data-val="B">B. BPE 专门为常见词保留完整词条，罕见词直接丢弃</div>
+    <div class="opt" data-val="C">C. BPE 使用 Huffman 编码，频次越高编码越短</div>
+    <div class="opt" data-val="D">D. BPE 在推理时动态调整词表，遇到罕见词就临时添加</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(5)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(5)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb5"></div>
+  <div class="source">参考：<a href="1.1-tokenization-chapter.html#s3-why">§③ 为什么</a></div>
+</div>
+
+<!-- 多选题 -->
+<div class="q-block" data-q="6" data-type="multi">
+  <div class="q-num">Q6 · 判断应用<span class="multi-badge">多选</span></div>
+  <div class="q-text">以下关于"词表大小"对模型的影响，哪些说法是<strong>正确的</strong>？（选所有适用的选项）</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 词表大小直接决定 Embedding 矩阵的行数，是模型参数量的重要组成部分</div>
+    <div class="opt" data-val="B">B. 词表越大，中文每个汉字被切成的 token 数越少，理论上有利于中文理解效率</div>
+    <div class="opt" data-val="C">C. 词表越大，模型性能一定越好，所以应该尽可能扩大词表</div>
+    <div class="opt" data-val="D">D. 从 LLaMA 2 的 32K 到 Gemini 3 的 262K，词表增长背后的驱动力包括多语言覆盖需求和编码效率优化</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(6)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(6)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb6"></div>
+  <div class="source">参考：<a href="1.1-tokenization-chapter.html#s3-why">§③ 为什么</a></div>
+</div>
+
+<div class="section-divider">④ 演进格局</div>
+
+<div class="q-block" data-q="7">
+  <div class="q-num">Q7 · 概念辨析</div>
+  <div class="q-text">以下关于 2024-2026 主流模型 tokenizer 的表述，哪项符合行业共识？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 各家模型都用同一套标准 BPE 词表，词表大小固定在 32,768</div>
+    <div class="opt" data-val="B">B. Byte-level BPE（BBPE）是当前最主流的方案，各家词表大小差异显著（128K~262K），但都以字节为兜底保证无 OOV</div>
+    <div class="opt" data-val="C">C. SentencePiece Unigram 是 2024-2026 的主流选择，已经完全替代了 BPE</div>
+    <div class="opt" data-val="D">D. LLaMA 从始至终使用同一套 SentencePiece tokenizer</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(7)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(7)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb7"></div>
+  <div class="source">参考：<a href="1.1-tokenization-chapter.html#s4-evo">§④ 演进格局</a></div>
+</div>
+
+<!-- 多选题 -->
+<div class="q-block" data-q="8" data-type="multi">
+  <div class="q-num">Q8 · 判断应用<span class="multi-badge">多选</span></div>
+  <div class="q-text">以下关于 tokenizer 演进史的关键节点，哪些描述是<strong>正确的</strong>？（选所有适用的选项）</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 早期 NLP 用字符级或词级切分，字符级参数量过大，词级有 OOV 问题，BPE 是对两者的折中</div>
+    <div class="opt" data-val="B">B. LLaMA 3 从 SentencePiece 切换到 tiktoken，词表从 32K 扩大到 128K，是主流中文模型追随的标志性架构切换</div>
+    <div class="opt" data-val="C">C. BLT（Byte Latent Transformer）在 2025 年开源，代表"无 tokenizer"方向的前沿探索，已被 Qwen/DeepSeek 等头部模型采用</div>
+    <div class="opt" data-val="D">D. Gemini 3 词表达到 262K，是当前主流开源模型中词表最大的</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(8)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(8)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb8"></div>
+  <div class="source">参考：<a href="1.1-tokenization-chapter.html#s4-evo">§④ 演进格局</a></div>
+</div>
+
+<div class="section-divider">⑤ 产品决策</div>
+
+<div class="q-block" data-q="9">
+  <div class="q-num">Q9 · 概念辨析</div>
+  <div class="q-text">DDAgent 的一段提示词包含约 1500 个中文字 + 200 个英文字符。按经验粗估，这段提示词大约消耗多少 token（用主流中文模型如 Qwen / DeepSeek）？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 约 500 token（中文 1 字 = 0.3 token）</div>
+    <div class="opt" data-val="B">B. 约 1600 token（中文 1 字约 1 token，英文 4 字符约 1 token）</div>
+    <div class="opt" data-val="C">C. 约 3500 token（中文 1 字 = 2-3 token）</div>
+    <div class="opt" data-val="D">D. 约 7000 token（中文 1 字 = 4-5 token）</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(9)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(9)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb9"></div>
+  <div class="source">参考：<a href="1.1-tokenization-chapter.html#s5-product">§⑤ 产品决策</a></div>
+</div>
+
+<div class="q-block" data-q="10">
+  <div class="q-num">Q10 · 判断应用</div>
+  <div class="q-text">KBA 知识库 90% 是中文金融专有名词（如"离境退税"、"网联清算"）。从 tokenizer 角度，以下哪个选型建议最合理？</div>
+  <div class="options">
+    <div class="opt" data-val="A">A. 只要都用 BPE 算法，选哪个模型在 tokenizer 层面没有区别</div>
+    <div class="opt" data-val="B">B. 词表最大的模型（如 262K）一定是最优选择，因为词表越大中文覆盖越好</div>
+    <div class="opt" data-val="C">C. 优先选中文语料训练比例高的模型（如 Qwen / DeepSeek），验证专有名词是否被切成完整 token；名词被切碎则模型难以稳定学到语义整体</div>
+    <div class="opt" data-val="D">D. 最稳妥的办法是自己重新训练一套包含金融术语的 tokenizer</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="checkOne(10)">提交本题</button>
+    <button class="q-btn reveal-btn" onclick="revealOne(10)">查看答案</button>
+  </div>
+  <div class="feedback" id="fb10"></div>
+  <div class="source">参考：<a href="1.1-tokenization-chapter.html#s5-product">§⑤ 产品决策</a></div>
+</div>
+
+<div class="global-actions">
+  <button class="global-btn primary" id="submitAllBtn" onclick="submitRemaining()">提交剩余题目</button>
+  <button class="global-btn secondary" id="revealAllBtn" onclick="revealAll()">查看所有答案</button>
+</div>
+
+<div class="score-bar" id="scorebar">
+  <div class="score-num" id="scorenum">0/10</div>
+  <div class="score-label" id="scoremsg"></div>
+</div>
+
+<script>
+const answers = {
+  1:'B', 2:'C', 3:'A', 4:'C', 5:'A',
+  6:['A','B','D'], 7:'B', 8:['A','B','D'],
+  9:'B', 10:'C'
+};
+const multiSet = new Set([6, 8]);
+const feedbacks = {
+  1: {
+    B: '正确。Token 是模型处理的原子单位，长度不固定——"ing"、"美"、"12"、空格都可能是独立的 token。词表大小决定了 Embedding 矩阵的行数，这是理解后续参数量计算的关键。',
+    default: 'A 错：汉字不固定 1 token，有些汉字组合会被合并为一个 token；C 错：token 数 ≠ 字符数；D 错：词表 ID 是训练期生成的固定索引，不按频率排序。正确答案是 B。'
+  },
+  2: {
+    C: '正确，这是错误的说法。GPT-4 和 Qwen3 虽然都用 BPE 算法，但词表不同（GPT-4 约 200K，Qwen3 约 152K），切同一段中文的 token 数可能差 20-30%，这直接影响 API 成本。算法相同 ≠ 词表相同 ≠ 切分结果相同。',
+    default: 'A、B、D 都是正确描述。错误的是 C——算法相同不代表切分结果相同，词表不同则切分必然不同。'
+  },
+  3: {
+    A: '正确。这是 BPE 最容易误解的地方：训练期是"学习阶段"，统计语料中的字符对频次，贪心合并，最终输出一份固化的合并规则表（merges.txt）。推理期只是按这份表做确定性查找，完全不涉及统计——这也是为什么 tokenizer 速度极快。',
+    default: '不对。BPE 训练期和推理期严格分离：训练期跑一次得到固化规则表，推理期只按规则查找，不重新统计（B 错），不微调词表（C 错），训练期必须用语料统计（D 错）。'
+  },
+  4: {
+    C: '正确。行业实践（GPT-4 / LLaMA 3 / DeepSeek）普遍把数字按 3 位一组切分，这是预分词正则规则的典型设计——先于 BPE 合并把数字规整化。这背后有工程直觉：3 位一组符合千进制阅读习惯，减少数字推理中的歧义。',
+    default: '12345 这种 5 位数字，在 tiktoken 的预分词规则下会被按 3 位分组处理。A（整体 token）不对，词表不收录大数字；B（每位独立）效率太低；D（随机切分）不存在——BPE 是确定性的。'
+  },
+  5: {
+    A: '正确。BPE 的核心机制：每轮合并频次最高的相邻字符对。常见词（如"的"、"换汇"）因为频次极高，相关字符对被反复合并，最终成为独立 token（高压缩率）。罕见词（如偏僻地名、专有名词）相关字符对从未达到合并阈值，保持最小粒度（字节级），信息完整但 token 数多。',
+    default: 'B 错：BPE 不会直接丢弃罕见词；C 错：Huffman 是另一种编码方案，BPE 不使用 Huffman；D 错：tokenizer 在推理期是固定的，不会动态修改词表。'
+  },
+  6: {
+    AB_D: '正确！A、B、D 均为正确描述。A 说明词表与参数量的关系；B 反映中文压缩效率；D 解释词表增长的真实驱动力（多语言+编码效率）。C 是错误项——词表并非越大越好，过大的词表会导致低频 token 学习不充分且增加参数负担。',
+    default: '你漏选了或多选了错误项。正确答案是 A、B、D。C 是错误的——词表大小与模型性能不是单调正相关，过大词表有代价。'
+  },
+  7: {
+    B: '正确。2024-2026 主流格局：Byte-level BPE 是绝对主流（Qwen3、DeepSeek-V3、GPT-4o、LLaMA 4 全部采用），词表大小差异显著（128K-262K）。各家词表不同但都以字节兜底，确保无 OOV。这是多家头部公司行动一致的行业共识。',
+    A: '32,768 是 LLaMA 1/2 时代（2022-2023）的词表大小，2024 年起已被大幅扩展。',
+    C: 'SentencePiece Unigram 主要用于 Gemini/Gemma 系列，不是主流。',
+    D: 'LLaMA 从 LLaMA 3 开始从 SentencePiece 切换到 tiktoken，这是重要的架构演进，不是"始终使用同一套"。'
+  },
+  8: {
+    AB_D: '正确！A、B、D 均为正确的历史/现状描述。A 是 BPE 的历史定位；B 是 LLaMA 3 架构切换的关键事件；D 是当前词表规模的事实。C 是错误项——BLT 尚未被任何头部生产模型采用，属于研究前沿而非行业共识。',
+    default: '你漏选了或多选了错误项。正确答案是 A、B、D。C 是错误的——BLT 代表"无 tokenizer"方向的研究前沿，但目前没有任何头部公司（Qwen/DeepSeek/Google/Anthropic）在生产模型中采用。这是"研究前沿 ≠ 行业共识"的典型案例。'
+  },
+  9: {
+    B: '正确。粗估方法：1500 中文字 × 1.0-1.1 token/字 ≈ 1500-1650 token；200 英文字符 ÷ 4 字符/token ≈ 50 token。合计约 1600 token。注意：不同模型差异可达 30%——GPT-4o 中文优化版可能低至 ~1300，早期 LLaMA 2（32K 词表）可能高到 ~2500。同样内容，选对模型可以节省 30-50% 的 token 成本。',
+    default: '中文在主流优化模型（Qwen/DeepSeek）下约 1 字 = 1 token，英文约 4 字符 = 1 token。A 明显低估，C/D 是老旧词表下的结果（如 GPT-3 era）。'
+  },
+  10: {
+    C: '正确。这是 tokenizer 选型的核心判断：算法相同（BPE）不代表效果相同，决定因素是"中文训练比例"和"专有名词是否被收录为完整 token"。"离境退税"如果被切成 4 个独立 token，模型每次见到它的向量组合都不稳定，难以学到语义整体。Qwen/DeepSeek 在中文金融语料上预训练充分，是这个场景的最佳选择。',
+    A: '算法相同 ≠ 词表相同 ≠ 切分结果相同。',
+    B: '词表越大不必然中文越好——关键是训练语料的中文比例和中文 token 的质量。',
+    D: '自训 tokenizer 等于重训整个模型，成本天文数字，不是实际可行的选项。'
+  }
+};
+
+let selected = {};
+let answered = new Set();
+let score = 0;
+
+document.querySelectorAll('.opt').forEach(opt => {
+  opt.addEventListener('click', function() {
+    const block = this.closest('.q-block');
+    const q = parseInt(block.dataset.q);
+    if (answered.has(q)) return;
+    const isMulti = block.dataset.type === 'multi';
+    if (!isMulti) {
+      // 单选：radio 行为
+      block.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+      this.classList.add('selected');
+      selected[q] = this.dataset.val;
+    } else {
+      // 多选：checkbox 行为
+      this.classList.toggle('selected');
+      if (!selected[q]) selected[q] = [];
+      const val = this.dataset.val;
+      if (this.classList.contains('selected')) {
+        if (!selected[q].includes(val)) selected[q].push(val);
+      } else {
+        selected[q] = selected[q].filter(v => v !== val);
+      }
+    }
+  });
+});
+
+function normalizeAnswer(ans) {
+  return Array.isArray(ans) ? ans.slice().sort().join(',') : ans;
+}
+
+function checkOne(q) {
+  const block = document.querySelector('[data-q="' + q + '"]');
+  const userAns = selected[q];
+  const correct = answers[q];
+  const isMulti = multiSet.has(q);
+
+  if (!userAns || (Array.isArray(userAns) && userAns.length === 0)) {
+    alert('请先选择至少一个选项'); return;
+  }
+
+  const userKey = normalizeAnswer(userAns);
+  const correctKey = normalizeAnswer(correct);
+  const isCorrect = userKey === correctKey;
+
+  // 标记选项状态
+  block.querySelectorAll('.opt').forEach(o => {
+    const val = o.dataset.val;
+    if (correct.includes(val)) o.classList.add('correct');
+    else if ((Array.isArray(userAns) ? userAns.includes(val) : userAns === val))
+      o.classList.add('wrong');
+    o.classList.add('locked');
+  });
+
+  // 显示反馈
+  const fb = document.getElementById('fb' + q);
+  fb.classList.add('show');
+
+  if (isCorrect) {
+    score++;
+    fb.classList.add('correct-fb');
+    fb.innerHTML = '<strong style="color:#085041">✓ 正确。</strong> ' + (feedbacks[q][correctKey] || feedbacks[q][Object.keys(feedbacks[q]).find(k => !k.startsWith('_') && k !== 'default')] || '');
+  } else {
+    fb.classList.add('wrong-fb');
+    const msg = feedbacks[q][userKey] || feedbacks[q]['default'] || '';
+    fb.innerHTML = '<strong style="color:#711B0C">✗ 不正确。</strong> ' + msg + '<br><em style="color:var(--muted)">正确答案：' + (Array.isArray(correct) ? correct.join(' + ') : correct) + '</em>';
+  }
+
+  // 锁定按钮
+  block.querySelectorAll('.q-btn').forEach(b => b.disabled = true);
+  block.classList.add('answered');
+  answered.add(q);
+  updateScore();
+}
+
+function revealOne(q) {
+  const block = document.querySelector('[data-q="' + q + '"]');
+  const correct = answers[q];
+
+  // 显示正确答案高亮
+  block.querySelectorAll('.opt').forEach(o => {
+    if (correct.includes(o.dataset.val)) o.classList.add('correct');
+    o.classList.add('locked');
+  });
+
+  // 显示反馈（不计分）
+  const fb = document.getElementById('fb' + q);
+  fb.classList.add('show');
+  fb.style.background = '#f5f5f0';
+  fb.style.color = 'var(--text)';
+  fb.innerHTML = '<strong>参考答案：' + (Array.isArray(correct) ? correct.join(' + ') : correct) + '</strong><br>' +
+    (feedbacks[q][normalizeAnswer(correct)] || '');
+
+  // 锁定按钮，标记已答但不计分
+  block.querySelectorAll('.q-btn').forEach(b => b.disabled = true);
+  if (!answered.has(q)) {
+    answered.add(q);
+    updateScore();
+  }
+  block.classList.add('answered');
+}
+
+function submitRemaining() {
+  let anyLeft = false;
+  for (let q = 1; q <= Object.keys(answers).length; q++) {
+    if (!answered.has(q)) {
+      anyLeft = true;
+      const userAns = selected[q];
+      if (userAns && !(Array.isArray(userAns) && userAns.length === 0)) {
+        checkOne(q);
+      } else {
+        revealOne(q);
+      }
+    }
+  }
+  if (!anyLeft) alert('所有题目已作答！');
+}
+
+function revealAll() {
+  for (let q = 1; q <= Object.keys(answers).length; q++) {
+    if (!answered.has(q)) revealOne(q);
+  }
+}
+
+function updateScore() {
+  const total = Object.keys(answers).length;
+  document.getElementById('scorenum').textContent = score + '/' + total;
+
+  let msgs;
+  if (total >= 10) {
+    msgs = [
+      '0-4：建议重读章节，从§①概念入手',
+      '0-4：建议重读章节，从§①概念入手',
+      '0-4：建议重读章节，从§①概念入手',
+      '0-4：建议重读章节，从§①概念入手',
+      '0-4：建议重读章节，从§①概念入手',
+      '5-7：基础扎实，建议重点看错题对应节',
+      '5-7：基础扎实，建议重点看错题对应节',
+      '5-7：基础扎实，建议重点看错题对应节',
+      '8-9：理解很好，可以追问深挖边界情况',
+      '8-9：理解很好，可以追问深挖边界情况',
+      '满分！可以自信进入 1.2 Embedding 章节了'
+    ];
+  }
+  document.getElementById('scoremsg').textContent = msgs[score] || '';
+  document.getElementById('scorebar').classList.add('show');
+
+  // 更新全局按钮状态
+  const remaining = total - answered.size;
+  const submitBtn = document.getElementById('submitAllBtn');
+  if (remaining === 0) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = '已全部完成';
+  } else {
+    submitBtn.textContent = '提交剩余题目（' + remaining + '）';
+  }
+}
+</script>
+
+</body>
+</html>

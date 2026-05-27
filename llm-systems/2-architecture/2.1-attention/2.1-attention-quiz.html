@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz · 2.1 Attention 机制</title>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE;
+  --amber: #BA7517; --amber-bg: #FAEEDA;
+  --blue: #185FA5; --blue-bg: #E6F1FB;
+  --coral: #993C1D; --coral-bg: #FAECE7;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7;
+  max-width: 700px; margin: 0 auto; padding: 32px 24px 80px; font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.tag.t1 { background: var(--purple-bg); color: var(--purple); }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 20px; font-weight: 600; margin: 8px 0 2px; }
+.subtitle { color: var(--muted); font-size: 13px; }
+.section-divider { font-size: 11px; color: var(--purple); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 28px 0 8px; padding: 4px 10px; background: var(--purple-bg); border-radius: 6px; display: inline-block; }
+.q-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 12px 0; transition: opacity 0.2s; }
+.q-block.answered { opacity: 0.85; }
+.q-num { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.q-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt { padding: 10px 14px 10px 42px; border-radius: 8px; border: 1.5px solid var(--border); cursor: pointer; font-size: 14px; transition: all 0.15s; background: var(--card); line-height: 1.5; position: relative; }
+.opt:hover { border-color: var(--purple); background: var(--purple-bg); }
+.opt.selected { border-color: var(--purple); background: var(--purple-bg); }
+.opt.correct { border-color: var(--teal); background: var(--teal-bg); }
+.opt.wrong { border-color: var(--coral); background: var(--coral-bg); }
+.opt::before { content: ''; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 50%; transition: all 0.15s; background: white; }
+.opt.selected::before { border-color: var(--purple); background: var(--purple); }
+.opt.selected::after { content: ''; position: absolute; left: 14px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; }
+.opt.locked { pointer-events: none; }
+.action-btns { display: flex; gap: 8px; margin-top: 14px; }
+.q-btn { flex: 1; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; text-align: center; }
+.q-btn:hover { border-color: var(--purple); background: var(--purple-bg); }
+.q-btn.submit-btn { background: var(--purple); color: white; border-color: var(--purple); }
+.q-btn.submit-btn:hover { background: #3C3489; }
+.q-btn.reveal-btn { color: var(--muted); }
+.q-btn.reveal-btn:hover { color: var(--text); }
+.q-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: 14px; display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.correct-fb { background: var(--teal-bg); color: #085041; }
+.feedback.wrong-fb { background: var(--coral-bg); color: #711B0C; }
+.source { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.score-bar { background: var(--purple-bg); border-radius: 12px; padding: 24px; margin-top: 32px; text-align: center; display: none; }
+.score-bar.show { display: block; }
+.score-num { font-size: 44px; font-weight: 700; color: var(--purple); }
+.score-label { font-size: 14px; color: var(--muted); margin-top: 6px; }
+.global-actions { display: flex; gap: 10px; margin-top: 24px; }
+.global-btn { flex: 1; padding: 13px; border-radius: 8px; font-size: 15px; font-weight: 500; cursor: pointer; border: none; transition: all 0.15s; }
+.global-btn.primary { background: var(--purple); color: white; }
+.global-btn.primary:hover { background: #3C3489; }
+.global-btn.secondary { background: var(--card); color: var(--purple); border: 1.5px solid var(--purple); }
+.global-btn.secondary:hover { background: var(--purple-bg); }
+.global-btn:disabled { background: #ccc; border-color: #ccc; color: #666; cursor: not-allowed; }
+code { font-family: "SF Mono", Menlo, monospace; font-size: 13px; background: #f1f1ee; padding: 2px 5px; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t1">T1 · 2.1</span>
+    <a href="2.1-attention-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+<a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+  </div>
+  <h1>Quiz · Attention 机制</h1>
+  <div class="subtitle">10 题 · 5节各2题 · 做完后查看得分解析</div>
+</div>
+
+<!-- ===== §① 是什么 ===== -->
+<div class="section-divider">§① 是什么</div>
+
+<div class="q-block" id="q1">
+  <div class="q-num">Q1 &nbsp;·&nbsp; <span>T1-2.1-①</span></div>
+  <div class="q-text">Attention 机制相比 RNN 解决的核心问题是什么？</div>
+  <div class="options">
+    <div class="opt" onclick="select_opt(this,'q1')">A. 减少了模型的参数量，使训练更快</div>
+    <div class="opt" onclick="select_opt(this,'q1')">B. 让任意两个位置之间的依赖关系可以在 O(1) 步内建立，避免长距离信息衰减</div>
+    <div class="opt" onclick="select_opt(this,'q1')">C. 消除了序列建模对位置编码的需求</div>
+    <div class="opt" onclick="select_opt(this,'q1')">D. 用并行化取代了所有的矩阵乘法操作</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="submit_q('q1', 1)">提交</button>
+    <button class="q-btn reveal-btn" onclick="reveal_q('q1', 1)">直接揭示</button>
+  </div>
+  <div class="feedback" id="q1-fb">
+    <div id="q1-fb-text"></div>
+    <div class="source"><a href="2.1-attention-chapter.html#is" style="color:var(--purple);">→ 章节 §① 是什么</a></div>
+  </div>
+</div>
+
+<div class="q-block" id="q2">
+  <div class="q-num">Q2 &nbsp;·&nbsp; <span>T1-2.1-①</span></div>
+  <div class="q-text">关于 Query、Key、Value 三者的类比，以下哪项说法<strong>最准确</strong>？</div>
+  <div class="options">
+    <div class="opt" onclick="select_opt(this,'q2')">A. Q 是内容，K 是位置，V 是权重</div>
+    <div class="opt" onclick="select_opt(this,'q2')">B. Q 是检索需求，K 是索引标签，V 是实际内容</div>
+    <div class="opt" onclick="select_opt(this,'q2')">C. Q、K、V 三者在训练开始时完全相同，只是后来分化</div>
+    <div class="opt" onclick="select_opt(this,'q2')">D. K 和 V 总是相等的，只有 Q 不同</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="submit_q('q2', 1)">提交</button>
+    <button class="q-btn reveal-btn" onclick="reveal_q('q2', 1)">直接揭示</button>
+  </div>
+  <div class="feedback" id="q2-fb">
+    <div id="q2-fb-text"></div>
+    <div class="source"><a href="2.1-attention-chapter.html#is" style="color:var(--purple);">→ 章节 §① 是什么</a></div>
+  </div>
+</div>
+
+<!-- ===== §② 怎么实现 ===== -->
+<div class="section-divider">§② 怎么实现</div>
+
+<div class="q-block" id="q3">
+  <div class="q-num">Q3 &nbsp;·&nbsp; <span>T1-2.1-②</span></div>
+  <div class="q-text">Scaled Dot-Product Attention 的计算步骤顺序是？</div>
+  <div class="options">
+    <div class="opt" onclick="select_opt(this,'q3')">A. Softmax → QKᵀ → 除以√dₖ → 乘V</div>
+    <div class="opt" onclick="select_opt(this,'q3')">B. QKᵀ → Softmax → 除以√dₖ → 乘V</div>
+    <div class="opt" onclick="select_opt(this,'q3')">C. QKᵀ → 除以√dₖ → Softmax → 乘V</div>
+    <div class="opt" onclick="select_opt(this,'q3')">D. 除以√dₖ → QKᵀ → Softmax → 乘V</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="submit_q('q3', 2)">提交</button>
+    <button class="q-btn reveal-btn" onclick="reveal_q('q3', 2)">直接揭示</button>
+  </div>
+  <div class="feedback" id="q3-fb">
+    <div id="q3-fb-text"></div>
+    <div class="source"><a href="2.1-attention-chapter.html#how" style="color:var(--purple);">→ 章节 §② 怎么实现</a></div>
+  </div>
+</div>
+
+<div class="q-block" id="q4">
+  <div class="q-num">Q4 &nbsp;·&nbsp; <span>T1-2.1-②</span></div>
+  <div class="q-text">在序列长度 n=512、Q/K 维度 dₖ=64 时，注意力矩阵 A（Softmax 后）的形状是？</div>
+  <div class="options">
+    <div class="opt" onclick="select_opt(this,'q4')">A. 512 × 64</div>
+    <div class="opt" onclick="select_opt(this,'q4')">B. 64 × 64</div>
+    <div class="opt" onclick="select_opt(this,'q4')">C. 512 × 512</div>
+    <div class="opt" onclick="select_opt(this,'q4')">D. 512 × d_model</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="submit_q('q4', 2)">提交</button>
+    <button class="q-btn reveal-btn" onclick="reveal_q('q4', 2)">直接揭示</button>
+  </div>
+  <div class="feedback" id="q4-fb">
+    <div id="q4-fb-text"></div>
+    <div class="source"><a href="2.1-attention-chapter.html#how" style="color:var(--purple);">→ 章节 §② 怎么实现</a></div>
+  </div>
+</div>
+
+<!-- ===== §③ 为什么 ===== -->
+<div class="section-divider">§③ 为什么</div>
+
+<div class="q-block" id="q5">
+  <div class="q-num">Q5 &nbsp;·&nbsp; <span>T1-2.1-③</span></div>
+  <div class="q-text">不除以 √dₖ 会导致什么问题？选出最精准的描述。</div>
+  <div class="options">
+    <div class="opt" onclick="select_opt(this,'q5')">A. 点积值的方差随 dₖ 线性增大，导致 Softmax 输出趋近 one-hot，梯度消失</div>
+    <div class="opt" onclick="select_opt(this,'q5')">B. 模型训练速度变慢，因为需要更多的矩阵乘法</div>
+    <div class="opt" onclick="select_opt(this,'q5')">C. KV Cache 占用更多显存</div>
+    <div class="opt" onclick="select_opt(this,'q5')">D. 注意力矩阵变成稀疏矩阵，无法表达复杂依赖</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="submit_q('q5', 0)">提交</button>
+    <button class="q-btn reveal-btn" onclick="reveal_q('q5', 0)">直接揭示</button>
+  </div>
+  <div class="feedback" id="q5-fb">
+    <div id="q5-fb-text"></div>
+    <div class="source"><a href="2.1-attention-chapter.html#why" style="color:var(--purple);">→ 章节 §③ 为什么</a></div>
+  </div>
+</div>
+
+<div class="q-block" id="q6">
+  <div class="q-num">Q6 &nbsp;·&nbsp; <span>T1-2.1-③</span></div>
+  <div class="q-text">以下关于 Q/K/V 分离设计的说法，哪一项是<strong>错误</strong>的？</div>
+  <div class="options">
+    <div class="opt" onclick="select_opt(this,'q6')">A. K 专注于"如何被发现"，V 专注于"传递什么内容"，两者独立优化</div>
+    <div class="opt" onclick="select_opt(this,'q6')">B. 若令 W^K = W^V，则"被检索"和"内容传递"的能力完全绑定，灵活性下降</div>
+    <div class="opt" onclick="select_opt(this,'q6')">C. Q 和 K 必须维度相同（都是 dₖ），否则无法做点积</div>
+    <div class="opt" onclick="select_opt(this,'q6')">D. 为减少 KV Cache，Q 可以和 K 共享权重矩阵，这是 GQA 的核心思想</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="submit_q('q6', 3)">提交</button>
+    <button class="q-btn reveal-btn" onclick="reveal_q('q6', 3)">直接揭示</button>
+  </div>
+  <div class="feedback" id="q6-fb">
+    <div id="q6-fb-text"></div>
+    <div class="source"><a href="2.1-attention-chapter.html#why" style="color:var(--purple);">→ 章节 §③ 为什么</a></div>
+  </div>
+</div>
+
+<!-- ===== §④ 演进 ===== -->
+<div class="section-divider">§④ 演进格局</div>
+
+<div class="q-block" id="q7">
+  <div class="q-num">Q7 &nbsp;·&nbsp; <span>T1-2.1-④</span></div>
+  <div class="q-text">Qwen3、Llama3 等主流大模型选择 GQA 而非 MQA 的最主要原因是？</div>
+  <div class="options">
+    <div class="opt" onclick="select_opt(this,'q7')">A. GQA 的参数量更少，训练成本更低</div>
+    <div class="opt" onclick="select_opt(this,'q7')">B. GQA 在推理速度和模型质量之间取得均衡，MQA 共享一组 KV 导致质量下降明显</div>
+    <div class="opt" onclick="select_opt(this,'q7')">C. GQA 是 MLA 的简化版本，MLA 还未产品化</div>
+    <div class="opt" onclick="select_opt(this,'q7')">D. MQA 不支持长上下文，GQA 可以支持 128K+</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="submit_q('q7', 1)">提交</button>
+    <button class="q-btn reveal-btn" onclick="reveal_q('q7', 1)">直接揭示</button>
+  </div>
+  <div class="feedback" id="q7-fb">
+    <div id="q7-fb-text"></div>
+    <div class="source"><a href="2.1-attention-chapter.html#evolution" style="color:var(--purple);">→ 章节 §④ 演进</a></div>
+  </div>
+</div>
+
+<div class="q-block" id="q8">
+  <div class="q-num">Q8 &nbsp;·&nbsp; <span>T1-2.1-④</span></div>
+  <div class="q-text">DeepSeek-V2 的 MLA 与 GQA 的核心区别在哪里？</div>
+  <div class="options">
+    <div class="opt" onclick="select_opt(this,'q8')">A. MLA 增加了 Query 头的数量，GQA 减少了 KV 头的数量</div>
+    <div class="opt" onclick="select_opt(this,'q8')">B. GQA 让多个 Q 头共享同一组 K/V，MLA 将 K/V 压缩到低维潜向量 c 后缓存，推理时再解压</div>
+    <div class="opt" onclick="select_opt(this,'q8')">C. MLA 是 MHA 的多头扩展，GQA 是 MQA 的多头扩展</div>
+    <div class="opt" onclick="select_opt(this,'q8')">D. 两者在推理时的 KV Cache 大小完全相同，只是训练方式不同</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="submit_q('q8', 1)">提交</button>
+    <button class="q-btn reveal-btn" onclick="reveal_q('q8', 1)">直接揭示</button>
+  </div>
+  <div class="feedback" id="q8-fb">
+    <div id="q8-fb-text"></div>
+    <div class="source"><a href="2.1-attention-chapter.html#evolution" style="color:var(--purple);">→ 章节 §④ 演进</a></div>
+  </div>
+</div>
+
+<!-- ===== §⑤ 与产品 ===== -->
+<div class="section-divider">§⑤ 与产品</div>
+
+<div class="q-block" id="q9">
+  <div class="q-num">Q9 &nbsp;·&nbsp; <span>T1-2.1-⑤</span></div>
+  <div class="q-text">DDAgent 用 LLM 分析 80 页跨境合同，能跨段落定位"逾期"与"交割日"的依赖关系，这依赖 Attention 的哪个核心特性？</div>
+  <div class="options">
+    <div class="opt" onclick="select_opt(this,'q9')">A. Attention 可以减少 KV Cache 占用，处理长文档时显存不足</div>
+    <div class="opt" onclick="select_opt(this,'q9')">B. Attention 让任意两个位置直接通信，O(1) 距离的长距离依赖能力</div>
+    <div class="opt" onclick="select_opt(this,'q9')">C. Attention 的因果掩码保证了合同条款的顺序不会被打乱</div>
+    <div class="opt" onclick="select_opt(this,'q9')">D. Multi-Head 多头机制让不同的头分别关注不同语言</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="submit_q('q9', 1)">提交</button>
+    <button class="q-btn reveal-btn" onclick="reveal_q('q9', 1)">直接揭示</button>
+  </div>
+  <div class="feedback" id="q9-fb">
+    <div id="q9-fb-text"></div>
+    <div class="source"><a href="2.1-attention-chapter.html#connect" style="color:var(--purple);">→ 章节 §⑤ 与产品</a></div>
+  </div>
+</div>
+
+<div class="q-block" id="q10">
+  <div class="q-num">Q10 &nbsp;·&nbsp; <span>T1-2.1-⑤</span></div>
+  <div class="q-text">团队要自部署一个推理服务（H100 显存有限），同时需要支持长上下文合同分析（128K+），最优技术方案组合是？</div>
+  <div class="options">
+    <div class="opt" onclick="select_opt(this,'q10')">A. MHA 模型 + 标准 PyTorch Attention（质量最高）</div>
+    <div class="opt" onclick="select_opt(this,'q10')">B. GQA 模型（如 Qwen3-8B）+ FlashAttention（KV Cache 小 + IO 高效）</div>
+    <div class="opt" onclick="select_opt(this,'q10')">C. MQA 模型 + 关闭 KV Cache（最省显存）</div>
+    <div class="opt" onclick="select_opt(this,'q10')">D. MLA 模型（如 DeepSeek-V3）+ 不需要 FlashAttention（MLA 已经足够快）</div>
+  </div>
+  <div class="action-btns">
+    <button class="q-btn submit-btn" onclick="submit_q('q10', 1)">提交</button>
+    <button class="q-btn reveal-btn" onclick="reveal_q('q10', 1)">直接揭示</button>
+  </div>
+  <div class="feedback" id="q10-fb">
+    <div id="q10-fb-text"></div>
+    <div class="source"><a href="2.1-attention-chapter.html#connect" style="color:var(--purple);">→ 章节 §⑤ 与产品</a></div>
+  </div>
+</div>
+
+<!-- 得分区 -->
+<div class="score-bar" id="score-bar">
+  <div class="score-num" id="score-display">0/10</div>
+  <div class="score-label" id="score-label">完成所有题目后查看得分</div>
+  <div class="global-actions">
+    <button class="global-btn primary" onclick="location.href='2.1-attention-chapter.html'">回顾章节</button>
+    <button class="global-btn secondary" onclick="location.href='../2.2-multihead-variants/2.2-multihead-variants-chapter.html'">下一章 →</button>
+  </div>
+</div>
+
+<script>
+const ANSWERS = {
+  q1: { correct: 1, explanation: '正确！Attention 让序列中任意两个位置可以直接交互（O(1) 步），RNN 需要通过隐向量逐步传递（O(n) 步），长距离信息会衰减。减少参数量、消除位置编码的需求都不是 Attention 解决的问题。' },
+  q2: { correct: 1, explanation: '正确！Q=检索需求（我要找什么），K=索引标签（我能被怎样找到），V=实际内容（我能提供什么）。三者分离使检索和内容传递各自独立优化。' },
+  q3: { correct: 2, explanation: '正确顺序：先做 QKᵀ 点积，再除以√dₖ 缩放，然后 Softmax 归一化得到权重，最后乘以 V 得到输出。Softmax 必须在缩放之后——如果先 Softmax 再缩放，归一化就没有意义了。' },
+  q4: { correct: 2, explanation: '正确！注意力矩阵是 Q（n×dₖ）乘以 Kᵀ（dₖ×n）得到 n×n 的矩阵。这里 n=512，所以是 512×512。注意：dₖ 是头维度，n 是序列长度，两者不同！' },
+  q5: { correct: 0, explanation: '正确！当 Q 和 K 各元素方差为1时，点积的方差为 dₖ。dₖ 越大（如 64、128），点积取值范围越大，Softmax 面对超大输入会趋近 one-hot，梯度接近 0，模型无法从该 token 学习——这是梯度消失的根源。' },
+  q6: { correct: 3, explanation: 'D 项错误！GQA 的核心思想是"多个 Q 头共享同一组 K/V 头"（减少 KV 的数量），而不是让 Q 和 K 共享权重矩阵。Q 和 K 共享权重会破坏"检索"与"被检索"的语义分离，是完全不同的概念。' },
+  q7: { correct: 1, explanation: '正确！GQA 是 MQA（极端共享1组KV）和 MHA（每头独立KV）之间的折中——用 g 组 KV（g<h）在质量损失可接受的前提下大幅减少 KV Cache。Llama3 用 8组KV，Qwen3 全系列采用 GQA。MLA 已经产品化（DeepSeek），不是"未产品化"。' },
+  q8: { correct: 1, explanation: '正确！GQA 的节省来自"减少 KV 头数量"（共享），MLA 的节省来自"压缩存储格式"——把 K/V 投影到低维潜向量 c（512 维 vs 5120 维），推理时从 c 动态解压。MLA 在相同质量下 KV Cache 减少 93.3%。' },
+  q9: { correct: 1, explanation: '正确！Attention 让"逾期"可以直接关注整个文档中的"交割日"，不受段落距离影响（O(1) 距离）。因果掩码是解码阶段的约束，不是文档理解的关键；多头分语言是 MHA 的特性但不是核心。' },
+  q10: { correct: 1, explanation: '正确！GQA 模型（如 Qwen3-8B）KV Cache 小，适合显存有限的自部署；FlashAttention 提升 IO 效率，让 128K+ 长上下文计算实际可行。MQA 关闭 KV Cache 会让推理极慢；DeepSeek-V3 是 API 优先的超大模型，自部署成本远超 Qwen3-8B。' }
+};
+
+const state = {};
+let answered = 0;
+
+function select_opt(el, qid) {
+  if (state[qid] && state[qid].submitted) return;
+  const block = document.getElementById(qid);
+  block.querySelectorAll('.opt').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+  if (!state[qid]) state[qid] = {};
+  state[qid].selected = Array.from(block.querySelectorAll('.opt')).indexOf(el);
+}
+
+function submit_q(qid, correct_idx) {
+  const block = document.getElementById(qid);
+  const opts = block.querySelectorAll('.opt');
+  const fb = document.getElementById(qid + '-fb');
+  const fbText = document.getElementById(qid + '-fb-text');
+  const info = ANSWERS[qid];
+
+  if (!state[qid] || state[qid].selected === undefined) {
+    alert('请先选择一个答案');
+    return;
+  }
+  if (state[qid].submitted) return;
+
+  state[qid].submitted = true;
+  const sel = state[qid].selected;
+  opts.forEach(o => o.classList.add('locked'));
+  opts[info.correct].classList.add('correct');
+  if (sel !== info.correct) opts[sel].classList.add('wrong');
+
+  const isCorrect = sel === info.correct;
+  fb.classList.add('show', isCorrect ? 'correct-fb' : 'wrong-fb');
+  fbText.innerHTML = (isCorrect ? '✓ ' : '✗ ') + info.explanation;
+  block.classList.add('answered');
+
+  if (!state[qid].counted) {
+    state[qid].counted = true;
+    if (isCorrect) answered++;
+  }
+  check_all_done();
+}
+
+function reveal_q(qid, correct_idx) {
+  const block = document.getElementById(qid);
+  const opts = block.querySelectorAll('.opt');
+  const fb = document.getElementById(qid + '-fb');
+  const fbText = document.getElementById(qid + '-fb-text');
+  const info = ANSWERS[qid];
+
+  if (state[qid] && state[qid].submitted) return;
+  state[qid] = { submitted: true, selected: info.correct, counted: false };
+
+  opts.forEach(o => o.classList.add('locked'));
+  opts[info.correct].classList.add('correct');
+  fb.classList.add('show', 'wrong-fb');
+  fbText.innerHTML = '💡 答案揭示：' + info.explanation;
+  block.classList.add('answered');
+  check_all_done();
+}
+
+function check_all_done() {
+  const total = Object.keys(ANSWERS).length;
+  const done = Object.values(state).filter(s => s.submitted).length;
+  if (done >= total) {
+    const bar = document.getElementById('score-bar');
+    bar.classList.add('show');
+    document.getElementById('score-display').textContent = answered + '/10';
+    const labels = { 0:'重读章节，基础概念需要夯实', 5:'良好理解，继续深入', 8:'掌握扎实，可以追问延伸', 10:'满分！可以尝试追问 DeepSeek MLA 细节或 FlashAttention 实现' };
+    const threshold = answered >= 10 ? 10 : answered >= 8 ? 8 : answered >= 5 ? 5 : 0;
+    document.getElementById('score-label').textContent = answered + ' 分 · ' + labels[threshold];
+  }
+}
+</script>
+
+</body>
+</html>

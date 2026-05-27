@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6.1 Benchmark 与 LLM-as-Judge · Quiz</title>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F9F3;--coral:#993C1D;--coral-bg:#FDEEE8;--bg:#FAFAF8;--text:#1A1A1A;--muted:#6B6B6B;--border:#E5E5E0}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;max-width:680px;margin:0 auto;padding:24px 20px}
+.header{text-align:center;padding:24px 0 16px;border-bottom:2px solid var(--purple);margin-bottom:24px}
+h1{font-size:22px;font-weight:700;color:var(--purple);margin-bottom:4px}
+.subtitle{font-size:13px;color:var(--muted)}
+.quiz-section{margin-bottom:28px}
+.section-label{font-size:11px;font-weight:600;color:#fff;background:var(--purple);padding:3px 10px;border-radius:10px;display:inline-block;margin-bottom:12px}
+.question{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:12px;transition:all 0.2s}
+.q-num{font-size:11px;font-weight:600;color:var(--purple);margin-bottom:4px}
+.q-text{font-size:14px;font-weight:500;margin-bottom:10px;line-height:1.6}
+.options{display:flex;flex-direction:column;gap:6px}
+.option{padding:10px 14px;border:2px solid var(--border);border-radius:8px;font-size:13px;cursor:pointer;transition:all 0.15s;display:flex;align-items:center;gap:8px}
+.option:hover:not(.disabled){border-color:var(--purple);background:var(--purple-bg)}
+.option .opt-letter{width:22px;height:22px;border-radius:50%;background:var(--purple-bg);color:var(--purple);font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.option.correct{border-color:var(--teal);background:var(--teal-bg)}
+.option.correct .opt-letter{background:var(--teal);color:#fff}
+.option.wrong{border-color:var(--coral);background:var(--coral-bg)}
+.option.wrong .opt-letter{background:var(--coral);color:#fff}
+.option.disabled{cursor:not-allowed;opacity:0.7}
+.explanation{display:none;margin-top:10px;padding:10px 12px;background:#f5f5f2;border-radius:6px;font-size:12px;color:#444;line-height:1.6;border-left:3px solid var(--teal)}
+.explanation a{color:var(--purple);text-decoration:none}
+.result-panel{position:fixed;top:20px;right:20px;background:var(--card);border:2px solid var(--purple);border-radius:12px;padding:16px 20px;box-shadow:0 8px 30px rgba(0,0,0,0.12);z-index:100;min-width:180px;display:none}
+.score-big{font-size:36px;font-weight:700;color:var(--purple);text-align:center}
+.score-label{font-size:12px;color:var(--muted);text-align:center;margin-bottom:8px}
+.score-comment{font-size:13px;text-align:center;margin-top:4px;padding:6px 10px;border-radius:6px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.top-nav{display:flex;align-items:center;gap:8px;margin-bottom:20px}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>6.1 Benchmark · LLM-as-Judge</h1>
+  <p class="subtitle">如何判断模型和 Agent 好不好用 · 10 题 Quiz</p>
+</div>
+
+<div id="quiz-container">
+
+<!-- ====== §① 是什么 (Q1-Q2) ====== -->
+<div class="quiz-section">
+<span class="section-label">§① 是什么 —— 从考试分数到系统度量</span>
+
+<div class="question" id="q1">
+<div class="q-num">Q1 / 10 · §① 概念辨析</div>
+<div class="q-text">以下关于 Benchmark 的描述，哪项<strong>最准确</strong>？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q1','A')"><span class="opt-letter">A</span>Benchmark 分数高的模型在所有场景下表现都更好</div>
+<div class="option" onclick="check(this,'q1','B')"><span class="opt-letter">B</span>Benchmark 是标准化考试，但分数不等于你的场景表现（如 MMLU 高分 ≠ 客服机器人好用）</div>
+<div class="option" onclick="check(this,'q1','C')"><span class="opt-letter">C</span>只需要关注 Chatbot Arena 排名即可选择模型，其他 Benchmark 已经过时</div>
+<div class="option" onclick="check(this,'q1','D')"><span class="opt-letter">D</span>SWE-bench Verified 是目前最权威的编程能力评测，短期内不会退役</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B</strong><br>这是本章的核心命题之一。Mason AI Lab 明确指出"MMLU 考的是通用知识,你的客服机器人需要的是能根据知识库准确回答"。Benchmark 分数是通用能力的参考指标，不能直接映射到特定场景。<a href="#is">→ 回到 §① 复习</a></div>
+</div>
+
+<div class="question" id="q2">
+<div class="q-num">Q2 / 10 · §① 应用判断</div>
+<div class="q-text">你负责的 FxAgent（换汇咨询）AI 采纳率达 98-99.75%。以下哪种解读<strong>最合理</strong>？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q2','A')"><span class="opt-letter">A</span>采纳率高 = 模型能力极强，不需要额外评测投入</div>
+<div class="option" onclick="check(this,'q2','B')"><span class="opt-letter">B</span>应该用 GPQA 推理分数来验证底层模型能力是否足够</div>
+<div class="option" onclick="check(this,'q2','C')"><span class="opt-letter">C</span>高采纳率可能源于"没得选"效应，需要用户满意度调研+汇率准确性校验来交叉验证</div>
+<div class="option" onclick="check(this,'q2','D')"><span class="opt-letter">D</span>40万 MAU 足够说明质量，采样偏差可以忽略</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：C</strong><br>"用户满意是因为真的好还是因为没得选"正是 PM 需要持续追问的问题。本章强调评测必须结合场景特点——FxAgent 应该用 L1 用户反馈 + L2 A/B Test + L3 汇率实时校验的组合方案。<a href="#connect">→ 回到 §⑤ 产品连接复习</a></div>
+</div>
+</div>
+
+<!-- ====== §② 怎么实现 (Q3-Q4) ====== -->
+<div class="quiz-section">
+<span class="section-label">§② 怎么实现 —— 三层架构与 Judge 偏差</span>
+
+<div class="question" id="q3">
+<div class="q-num">Q3 / 10 · §② 核心概念</div>
+<div class="q-text">Agent 评测三层架构中，L1 规则引擎最适合评测以下哪种维度？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q3','A')"><span class="opt-letter">A</span>回复内容的事实准确性和相关性</div>
+<div class="option" onclick="check(this,'q3','B')"><span class="opt-letter">B</span>尽调报告的分析深度和洞察价值</div>
+<div class="option" onclick="check(this,'q3','C')"><span class="opt-letter">C</span>输出是否符合 JSON 格式、是否包含禁止词、响应延迟是否超限</div>
+<div class="option" onclick="check(this,'q3','D')><span class="opt-letter">D</span>多轮对话中上下文理解的连贯性</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：C</strong><br>L1 规则引擎的核心优势是确定性边界检测——格式合规性、安全边界、性能阈值这些可以用代码精确判断的维度。而 A/B/D 属于主观质量评估，应该用 L2 LLM-as-Judge 来处理。<a href="#how">→ 回到 §② 复习</a></div>
+</div>
+
+<div class="question" id="q4">
+<div class="q-num">Q4 / 10 · §② 方法论</div>
+<div class="q-text">Jason Wei（前 Google Brain）提出 LLM-as-Judge 的核心原则是什么？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q4','A')"><span class="opt-letter">A</span>Judge 模型必须比被评测模型强至少一代</div>
+<div class="option" onclick="check(this,'q4','B')><span class="opt-letter">B</span>准确性(accuracy) > 一致性(agreement)，优先追求绝对正确</div>
+<div class="option" onclick="check(this,'q4','C')"><span class="opt-letter">C</span>一致性(agreement) > 准确性(accuracy)，稳定的系统性偏差可以通过校准修正</div>
+<div class="option" onclick="check(this,'q4','D')"><span class="opt-letter">D</span>必须使用成对比较(pairwise)，单输出评分(single-output)已被淘汰</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：C</strong><br>这是本章引用的关键方法论原则。只要 Judge 的评分在不同运行之间高度一致（可复现），即使与人类评分有系统性偏差，也可以通过校准锚点来修正。这大大降低了部署 Judge 的门槛。<a href="#how">→ 回到 §② 复习</a></div>
+</div>
+</div>
+
+<!-- ====== §③ 为什么 (Q5-Q6) ====== -->
+<div class="quiz-section">
+<span class="section-label">§③ 为什么 —— 评测的第一性原理</span>
+
+<div class="question" id="q5">
+<div class="q-num">Q5 / 10 · §③ 第一性原理</div>
+<div class="q-text">2026年3月 OpenAI 官宣退役 SWE-bench Verified 的<strong>最主要原因</strong>是什么？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q5','A')"><span class="opt-letter">A</span>测试成本太高，无法维持大规模评测</div>
+<div class="option" onclick="check(this,'q5','B')"><span class="opt-letter">B</span>数据污染导致模型背题、天花板效应导致区分度丧失、59.4% 测试用例存在缺陷（三因叠加）</div>
+<div class="option" onclick="check(this,'q5','C')"><span class="opt-letter">C</span>SWE-bench Pro 发布后法律原因强制要求退役旧版</div>
+<div class="option" onclick="check(this,'q5','D')"><span class="opt-letter">D</span>Claude Opus 4.7 分数太高导致其他厂商集体投诉不公平</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B</strong><br>三大原因是：(1) 数据污染 — 模型预训练见过考题；(2) 天花板效应 — 6个月只涨6%；(3) 测试缺陷 — 近60%问题过宽或过窄。替代方案是 SWE-bench Pro（1865题抗污染企业级）和 SWE-bench-Live（动态更新）。<a href="#why">→ 回到 §③ 复习</a></div>
+</div>
+
+<div class="question" id="q6">
+<div class="q-num">Q6 / 10 · §③ 深层理解</div>
+<div class="q-text">伯克利 SkyLab 的 Terminator-1 事件暴露了 Agent Benchmark 的什么致命弱点？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q6','A')><span class="opt-letter">A</span>Agent 在多步任务中的记忆管理能力不足</div>
+<div class="option" onclick="check(this,'q6','B')><span class="opt-letter">B</span>评测指标可以被 gaming（刷榜），高分不一定代表真实任务解决能力</div>
+<div class="option" onclick="check(this,'q6','C')><span class="opt-letter">C</span>开源模型在 Agent 场景中始终不如闭源模型</div>
+<div class="option" onclick="check(this,'q6','D')"><span class="opt-letter">D</span>终端操作类任务对当前模型来说太难了</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B</strong><br>Terminator-1 在排行榜上高分但实际解决了 0 个任务——极端案例说明"结果导向"评测（SWE-bench 通过单元测试即得分）可能忽略过程质量。这也是 SWE-bench Pro 引入三阶段人工验证流程的原因。<a href="#why">→ 回到 §③ 复习</a></div>
+</div>
+</div>
+
+<!-- ====== §④ 演进 (Q7-Q8) ====== -->
+<div class="quiz-section">
+<span class="section-label">§④ 演进 —— 2024-2026 评测格局</span>
+
+<div class="question" id="q7">
+<div class="q-num">Q7 / 10 · §④ 行业格局</div>
+<div class="q-text">以下哪个 Benchmark 被 Mason AI Lab（2026）认为是<strong>最难被 gaming</strong>的评测方式？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q7','A')"><span class="opt-letter">A</span>MMLU — 57个学科覆盖面广难以针对性优化</div>
+<div class="option" onclick="check(this,'q7','B')"><span class="opt-letter">B</span>HumanEval — Python函数补全需要真正的编程能力</div>
+<div class="option" onclick="check(this,'q7','C')"><span class="opt-letter">C</span>Chatbot Arena — 动态题库+匿名盲评+集体投票ELO，无法针对人类喜好优化</div>
+<div class="option" onclick="check(this,'q7','D')"><span class="opt-letter">D</span>GPQA Diamond — 博士级题目难度极高无法刷榜</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：C</strong><br>Arena 的四大防 gaming 机制：动态题库（用户实时提问）、匿名盲评（不知道哪个模型）、集体理性（数千票 ELO 收敛）、长尾覆盖（各种语言/领域/风格）。相比之下 MMLU/HumanEval 都是静态题库已被证明可被污染。<a href="#evolution">→ 回到 §④ 复习</a></div>
+</div>
+
+<div class="question" id="q8">
+<div class="q-num">Q8 / 10 · §④ 工具链</div>
+<div class="q-text">以下哪个评测框架<strong>不是</strong>以 LLM-as-Judge 为核心能力的？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q8','A')"><span class="opt-letter">A</span>DeepEval — G-Eval + Arena G-Eval + 多轮 Agent 评测</div>
+<div class="option" onclick="check(this,'q8','B')"><span class="opt-letter">B</span>EvalScope — 100+ 数据集 + Web Dashboard + Agent Evaluation Mode</td></div>
+<div class="option" onclick="check(this,'q8','C')"><span class="opt-letter">C</span>LangSmith — Trace + Dataset + Evaluate + Annotation</div>
+<div class="option" onclick="check(this,'q8','D')><span class="opt-letter">D</span>以上三个都是围绕 LLM-as-Judge 或 Agent 可观测性的框架</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：D</strong><br>这三个都是 2026 年主流评测/可观测框架。DeepEval 专精 LLM-as-Judge SDK；EvalScope 是全栈评测平台（ModelScope 出品），支持 100+ 数据集和 Agent 评测模式；LangSmith 是 LangChain 生态的 Agent 可观测平台。三者定位互补而非竞争。<a href="#evolution">→ 回到 §④ 复习</a></div>
+</div>
+</div>
+
+<!-- ====== §⑤ 产品连接 (Q9-Q10) ====== -->
+<div class="quiz-section">
+<span class="section-label">§⑤ 与产品连接 —— Fitz 的三层评测体系</span>
+
+<div class="question" id="q9">
+<div class="q-num">Q9 / 10 · §⑤ 实战应用</div>
+<div class="q-text">根据出错代价和用户可见度的 ROI 分析，<strong>TRSAgent</strong>（跨境汇款售后邮件）应该采用什么级别的评测策略？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q9','A')><span class="opt-letter">A</span>L1 用户反馈即可，投入过高 ROI 不划算</div>
+<div class="option" onclick="check(this,'q9','B')"><span class="opt-letter">B</span>L1+L2+L3 全套 + 金标准回归集 + 持续 CI/CD 回归（出错代价极高+用户直接感知）</div>
+<div class="option" onclick="check(this,'q9','C')><span class="opt-letter">C</span>L1 数据脚本验证 + L2 季度专家审核（参考 KBA 的策略）</div>
+<div class="option" onclick="check(this,'q9','D')><span class="opt-letter">D</span>只做 LLM-as-Judge 抽检，每月人工审核 20 条即可</div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B</strong><br>TRSAgent 处理资金相关售后邮件，出错代价涉及资金损失和合规风险，且客户直接感知。因此需要最高级别的评测投入。你已建立的 206 封金标准测试邮件就是最佳实践——需要扩展并嵌入自动化回归流水线。<a href="#connect">→ 回到 §⑤ 复习</a></div>
+</div>
+
+<div class="question" id="q10">
+<div class="q-num">Q10 / 10 · §⑤ 主线定位</div>
+<div class="q-text">T1 D6.1（Benchmark与LLM-as-Judge）在贯穿主线中回答了什么问题？它如何服务于 T2 A4 Harness 工程？</div>
+<div class="options">
+<div class="option" onclick="check(this,'q10','A')"><span class="opt-letter">A</span>回答"信息如何进入模型" → 服务于 T2 A1 Agent Loop 的输入设计</div>
+<div class="option" onclick="check(this,'q10','B')"><span class="opt-letter">B</span>回答"如何判断模型和Agent好不好用" → 构成 T2 Harness 六组件中"Evaluate 评估反馈闭环"的理论基础</span></div>
+<div class="option" onclick="check(this,'q10','C')><span class="opt-letter">C</span>回答"模型如何学会对的行为" → 服务于 T2 A2 CoT 推理机制的设计</span></div>
+<div class="option" onclick="check(this,'q10','D')"><span class="opt-letter">D</span>回答"训练好的模型如何高效输出" → 服务于 T2 A3 Context Engineering 的成本控制</span></div>
+</div>
+<div class="explanation"><strong>✅ 正确答案：B</strong><br>D6.1 的主线定位是回答"如何判断模型和Agent好不好用"。没有评测就没有反馈，没有反馈就无法形成闭环——这正是 Harness 六组件中 "Evaluate（评估反馈）" 组件存在的意义。本章知识直接决定了你在 T2 A4 中设计评估体系时的理论深度。<a href="#connect">→ 回到 §⑤ 复习</a></div>
+</div>
+</div>
+
+</div><!-- end quiz-container -->
+
+<div class="result-panel" id="resultPanel">
+<div class="score-label">得分</div>
+<div class="score-big" id="scoreNum">0</div>
+<div class="score-comment" id="scoreComment"></div>
+</div>
+
+<div class="top-nav">
+<a href="6.1-benchmark-judge-chapter.html" class="nav-link">← 返回章节</a>
+<a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+</div>
+
+<script>
+let score=0,total=10,answered=0;
+const answers={q1:'B',q2:'C',q3:'C',q4:'C',q5:'B',q6:'B',q7:'C',q8:'D',q9:'B',q10:'B'};
+
+function check(btn,qid,choice){
+const parent=document.getElementById(qid);
+if(parent.classList.contains('done'))return;
+const opts=parent.querySelectorAll('.option');
+opts.forEach(o=>{o.classList.add('disabled');o.onclick=null;});
+answered++;
+const isCorrect=choice===answers[qid];
+if(isCorrect){btn.classList.add('correct');score++;}
+else btn.classList.add('wrong');
+// show correct answer
+opts.forEach(o=>{
+const letter=o.querySelector('.opt-letter').textContent;
+if(letter===answers[qid]&&!isCorrect)o.classList.add('correct');
+});
+parent.querySelector('.explanation').style.display='block';
+parent.classList.add('done');
+showResult();
+}
+
+function showResult(){
+const panel=document.getElementById('resultPanel');
+document.getElementById('scoreNum').textContent=score+'/'+total;
+const comment=document.getElementById('scoreComment');
+panel.style.display='block';
+if(score<=3){comment.textContent='🔴 建议重读本章';comment.style.background='#FDEEE8';comment.style.color='#993C1D';}
+else if(score<=6){comment.textContent='🟡 良好 — 建议回顾标红的错题';comment.style.background='#FAEEDA';comment.style.color='#BA7517';}
+else if(score<=8){comment.textContent='🟢 扎实 — 关键概念已掌握';comment.style.background='#E6F9F3';comment.style.color='#1D9E75';}
+else{comment.textContent='⭐ 满分 — 完全掌握！';comment.style.background='#EEEDFE';comment.style.color='#534AB7';}}
+</script>
+
+</body>
+</html>

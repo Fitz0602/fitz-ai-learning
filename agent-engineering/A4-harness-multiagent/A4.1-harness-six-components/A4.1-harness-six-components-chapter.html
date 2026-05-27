@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>T2 A4.1 · Harness 六组件 · Fitz 框架对比</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card-bg:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--teal-bg);color:#0F6E56}
+.tag-chapter{background:var(--purple-bg);color:var(--purple)}
+.tag-status{background:var(--amber-bg);color:var(--amber)}
+h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:4px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.progress-nav{display:flex;gap:4px;margin:16px 0 0;flex-wrap:wrap}
+.progress-nav a{font-size:11px;padding:3px 8px;border-radius:8px;text-decoration:none;background:var(--purple-bg);color:var(--purple);font-weight:500}
+.progress-nav a.done{background:var(--teal-bg);color:var(--teal)}
+section{margin-top:36px;padding-top:20px;border-top:1px solid #E8E8E4}
+section h2{font-size:20px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;padding:2px 8px;border-radius:8px}
+h3{font-size:16px;font-weight:600;margin:16px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--amber-bg);border-color:var(--amber)}
+.card.takeaway{background:var(--teal-bg);border-color:var(--teal)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card.deepen{background:var(--blue-bg);border-color:var(--blue)}
+.card.insight{background:var(--purple-bg);border-color:var(--purple)}
+.card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.card.intuition .card-label{color:var(--amber)}
+.card.takeaway .card-label{color:var(--teal)}
+.card.warning .card-label{color:var(--coral)}
+.card.deepen .card-label{color:var(--blue)}
+.card.insight .card-label{color:var(--purple)}
+.diagram{margin:20px 0}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid #E0E0DC;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{background:#fff}
+code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;background:#F0F0EC;padding:1px 4px;border-radius:3px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+pre{background:#F7F6F3;border:1px solid #E8E8E4;border-radius:8px;padding:14px 18px;margin:14px 0;font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;line-height:1.8;overflow-x:auto}
+.token{display:inline-block;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:500;font-family:"SF Mono",Monaco,Consolas,monospace}
+.token.goal{background:var(--coral-bg);color:var(--coral)}
+.token.context{background:var(--amber-bg);color:var(--amber)}
+.token.tools{background:var(--blue-bg);color:var(--blue)}
+.token.scaffold{background:var(--purple-bg);color:var(--purple)}
+.token.feedback{background:var(--teal-bg);color:var(--teal)}
+.token.memory{background:#E6F1FB;color:#185FA5}
+ul,ol{padding-left:20px}
+li{margin-bottom:4px}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+.example-box{border-left:3px solid var(--purple);background:#fafafa;padding:14px 18px;margin:14px 0;border-radius:0 8px 8px 0}
+.example-box .example-label{font-size:11px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.compare-table{margin:16px 0}
+.compare-table th{background:linear-gradient(135deg,var(--purple),#6B5CE7);color:#fff}
+.compare-table td:first-child{font-weight:500}
+.flow-step{display:flex;gap:12px;align-items:flex-start;margin:10px 0}
+.step-num{min-width:28px;height:28px;background:var(--purple);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.step-content{flex:1;padding-top:3px}
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">T2 Agent 工程</span>
+<span class="tag tag-chapter">A4 Harness 工程</span>
+<span class="tag tag-status">✅ 完成</span>
+<a href="../../INDEX.html" class="nav-link" style="margin-left:auto;">&larr; 知识图谱</a>
+<a href="A4.1-harness-six-components-quiz.html" class="nav-link">Quiz &middot; 10 题 &rarr;</a>
+</div>
+<h1>A4.1 Harness 六组件 &middot; Fitz 框架对比</h1>
+<p class="subtitle">从"模型够强就行"到"系统决定上限" — Harness 工程的六组件解构与原创框架的行业审视</p>
+<div class="spine-link">🔗 主线连接：系统可靠性 → 原创六组件 vs 行业实践的系统审视（回答问题8：如何让系统可靠运行？）</div>
+<!-- 5 节进度导航 -->
+<div class="progress-nav">
+<a href="#is" class="done">① 是什么</a>
+<a href="#how" class="done">② 怎么实现</a>
+<a href="#why" class="done">③ 为什么</a>
+<a href="#evolution" class="done">④ 演进</a>
+<a href="#connect" class="done">⑤ 产品</a>
+</div>
+</div>
+
+<!-- ===== 章节一览图 ===== -->
+<div class="diagram">
+<p>章节一览 &middot; 5节脉络速览</p>
+<svg viewBox="0 0 680 300" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs>
+<marker id="ov-arr41" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<!-- ① 紫 -->
+<rect x="20" y="30" width="120" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="80" y="55" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">① 是什么</text>
+<text x="80" y="75" text-anchor="middle" fill="#534AB7" font-size="10">Harness = 缰绳</text>
+<!-- ② 蓝 -->
+<rect x="170" y="30" width="120" height="60" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="230" y="55" text-anchor="middle" fill="#185FA5" font-size="12" font-weight="700">② 怎么实现</text>
+<text x="230" y="75" text-anchor="middle" fill="#185FA5" font-size="10">六组件解构</text>
+<!-- ③ 琥珀 -->
+<rect x="320" y="30" width="120" height="60" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="380" y="55" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">③ 为什么</text>
+<text x="380" y="75" text-anchor="middle" fill="#BA7517" font-size="10">第一性：无状态→可靠</text>
+<!-- ④ 紫 -->
+<rect x="470" y="30" width="120" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="530" y="55" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">④ 演进</text>
+<text x="530" y="75" text-anchor="middle" fill="#534AB7" font-size="10">2026 成词与扩散</text>
+<!-- ⑤ 绿 -->
+<rect x="250" y="130" width="180" height="60" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="340" y="155" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="700">⑤ 产品连接</text>
+<text x="340" y="175" text-anchor="middle" fill="#1D9E75" font-size="10">DDAgent Harness 逐组件审视</text>
+<!-- 箭头 -->
+<line x1="140" y1="60" x2="168" y2="60" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr41)"/>
+<line x1="290" y1="60" x2="318" y2="60" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr41)"/>
+<line x1="440" y1="60" x2="468" y2="60" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr41)"/>
+<line x1="530" y1="92" x2="370" y2="128" stroke="#888780" stroke-width="1.2" marker-end="url(#ov-arr41)"/>
+<!-- 底部核心公式 -->
+<text x="340" y="240" text-anchor="middle" fill="#333" font-size="14" font-weight="700">核心公式：Agent = Model + Harness</text>
+<text x="340" y="262" text-anchor="middle" fill="#888780" font-size="11">模型提供智能，Harness 让智能变得可靠</text>
+</svg>
+</div>
+
+<!-- ============================================ -->
+<!-- §① 是什么：Harness 的直觉与动机 -->
+<!-- ============================================ -->
+<section id="is">
+<h2><span class="sec-num">①</span> 是什么：Harness = 给野马套上缰绳</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>把大模型比作一匹力气惊人但方向感混乱的野马——它能跑，但不知道往哪跑、什么时候停。Harness 就是马具：缰绳控制方向、马鞍固定位置、马镫传递指令、眼罩限制视野。不是让马更聪明，而是让马的力量<strong>被可靠地使用</strong>。</p>
+</div>
+
+<h3>1. 从"模型够强就行"到"系统决定上限"</h3>
+<p>2024 年之前，业界普遍的信念是：<strong>更好的模型 → 更好的 Agent</strong>。如果 Agent 表现不佳，等下一个模型。但 2026 年的实验数据颠覆了这个假设——</p>
+
+<table>
+<tr><th>实验</th><th>模型</th><th>改变</th><th>效果</th></tr>
+<tr><td>LangChain / TerminalBench 2.0</td><td>GPT-5.2-Codex（不变）</td><td>仅优化 Harness</td><td>52.8% → 66.5%（+13.7pp，Top 30 → Top 5）</td></tr>
+<tr><td>OpenAI Codex 内部实验</td><td>Codex（不变）</td><td>重构 Harness</td><td>3人 × 5月 = 百万行生产代码（零手写）</td></tr>
+<tr><td>Claude Opus + 不同 Harness</td><td>同一模型</td><td>Harness 配置差异</td><td>64.9% vs 57.6%（7pp 来自架构）</td></tr>
+</table>
+
+<div class="card insight">
+<div class="card-label">核心洞察</div>
+<p><strong>Agent = Model + Harness</strong>。同一模型在不同 Harness 下表现差距可达 13+ 个百分点——这超过了同期典型新模型发布带来的提升。不是模型不行，是围绕模型的系统没建好。</p>
+</div>
+
+<h3>2. Harness 到底包含什么？</h3>
+<p>Harness 不是模型本身，也不是应用业务逻辑。它是<strong>模型和应用之间的一切</strong>：</p>
+
+<svg viewBox="0 0 680 200" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<rect x="20" y="50" width="160" height="100" rx="12" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="100" y="90" text-anchor="middle" fill="#BA7517" font-size="14" font-weight="700">模型 (Model)</text>
+<text x="100" y="115" text-anchor="middle" fill="#BA7517" font-size="10">推理、生成、工具调用</text>
+<text x="100" y="132" text-anchor="middle" fill="#BA7517" font-size="10">无状态、无记忆、无目标</text>
+
+<rect x="240" y="30" width="200" height="140" rx="12" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+<text x="340" y="65" text-anchor="middle" fill="#534AB7" font-size="14" font-weight="700">Harness（缰绳系统）</text>
+<text x="340" y="90" text-anchor="middle" fill="#534AB7" font-size="10">上下文 / 约束 / 工具 / 验证</text>
+<text x="340" y="108" text-anchor="middle" fill="#534AB7" font-size="10">记忆 / 反馈 / 子Agent</text>
+<text x="340" y="126" text-anchor="middle" fill="#534AB7" font-size="10">错误处理 / 进度追踪</text>
+<text x="340" y="155" text-anchor="middle" fill="#534AB7" font-size="10">← 可设计、可迭代、可度量 →</text>
+
+<rect x="500" y="50" width="160" height="100" rx="12" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="580" y="90" text-anchor="middle" fill="#185FA5" font-size="14" font-weight="700">应用 (Application)</text>
+<text x="580" y="115" text-anchor="middle" fill="#185FA5" font-size="10">DDAgent / KBA / FxAgent</text>
+<text x="580" y="132" text-anchor="middle" fill="#185FA5" font-size="10">业务目标、用户交互</text>
+
+<line x1="180" y1="100" x2="238" y2="100" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr41)"/>
+<line x1="440" y1="100" x2="498" y2="100" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr41)"/>
+</svg>
+
+<p>Mitchell Hashimoto（HashiCorp 联合创始人）的指导原则精准概括了 Harness 工程的工作方式：</p>
+
+<div class="example-box">
+<div class="example-label">Mitchell Hashimoto 原则（2026.02）</div>
+<p>"每当你发现 Agent 出错时，不要只是修复输出——要花时间设计一个工程化方案，使该 Agent <strong>永远不会再犯同样的错误</strong>。"</p>
+<p>这不是 Prompt Engineering（改一句话）。这是<strong>系统工程</strong>——构建环境、划定边界、建立反馈回路。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>Harness 是模型和应用之间的<strong>工程化支撑系统</strong>，包含上下文、约束、工具、验证、记忆、反馈六个维度。它让"智能但不可控"的模型变成"智能且可靠"的 Agent。核心证据：仅优化 Harness（不换模型），准确率可提升 13+ 个百分点。</p>
+</div>
+</section>
+
+<!-- ============================================ -->
+<!-- §② 怎么实现：六组件完整解构 -->
+<!-- ============================================ -->
+<section id="how">
+<h2><span class="sec-num">②</span> 怎么实现：Fitz 六组件 vs 行业分解</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>把 Agent 想象成一位刚入职的实习生——Model 是她的智商和学历，Harness 是公司的入职体系：<strong>Goal Boundary</strong>=岗位描述（不该做的事别做）、<strong>Context</strong>=知识库和文档（该看什么）、<strong>Tools</strong>=工牌和系统权限（能用什么）、<strong>Scaffolding</strong>=SOP和检查清单（怎么做才对）、<strong>Feedback</strong>=周报和1on1（做对了没）、<strong>Memory</strong>=笔记和经验沉淀（下次做得更好）。</p>
+</div>
+
+<h3>1. Fitz 原创六组件框架</h3>
+<p>在 A3.2 Memory 四层架构中，我们已理解记忆系统是 Harness 的一部分。现在将视野拉到全景——Fitz 基于对 DDAgent 工程实践的反思，提炼出六个正交组件：</p>
+
+<svg viewBox="0 0 680 380" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<!-- 六组件环形布局 -->
+<text x="340" y="24" text-anchor="middle" fill="#333" font-size="14" font-weight="700">Fitz 六组件 Harness 框架</text>
+<text x="340" y="42" text-anchor="middle" fill="#888780" font-size="10">每个组件独立可迭代，六个正交维度覆盖 Agent 可靠性的全部</text>
+
+<!-- 1. Goal Boundary（右上） -->
+<rect x="430" y="60" width="200" height="70" rx="10" fill="#FDEEE8" stroke="#993C1D" stroke-width="1.5"/>
+<text x="530" y="85" text-anchor="middle" fill="#993C1D" font-size="13" font-weight="700">① Goal Boundary</text>
+<text x="530" y="103" text-anchor="middle" fill="#993C1D" font-size="10">意图建模 · 目标边界 · 权限栅栏</text>
+<text x="530" y="118" text-anchor="middle" fill="#993C1D" font-size="9">类比：岗位描述 + 审批权限</text>
+
+<!-- 2. Context（右下） -->
+<rect x="430" y="220" width="200" height="70" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="530" y="245" text-anchor="middle" fill="#BA7517" font-size="13" font-weight="700">② Context</text>
+<text x="530" y="263" text-anchor="middle" fill="#BA7517" font-size="10">上下文工程 · 信息注入 · 滑动窗口</text>
+<text x="530" y="278" text-anchor="middle" fill="#BA7517" font-size="9">类比：知识库 + 每日简报</text>
+
+<!-- 3. Tools（右下角） -->
+<rect x="340" y="310" width="200" height="60" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="440" y="335" text-anchor="middle" fill="#185FA5" font-size="13" font-weight="700">③ Tools</text>
+<text x="440" y="353" text-anchor="middle" fill="#185FA5" font-size="10">工具注册 · MCP · 作用域限制</text>
+
+<!-- 4. Scaffolding（左下角） -->
+<rect x="50" y="220" width="200" height="70" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="150" y="245" text-anchor="middle" fill="#534AB7" font-size="13" font-weight="700">④ Scaffolding</text>
+<text x="150" y="263" text-anchor="middle" fill="#534AB7" font-size="10">SOP · 检查清单 · 架构约束</text>
+<text x="150" y="278" text-anchor="middle" fill="#534AB7" font-size="9">类比：操作手册 + 质检流程</text>
+
+<!-- 5. Feedback（左上） -->
+<rect x="50" y="60" width="200" height="70" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="150" y="85" text-anchor="middle" fill="#1D9E75" font-size="13" font-weight="700">⑤ Feedback</text>
+<text x="150" y="103" text-anchor="middle" fill="#1D9E75" font-size="10">验证循环 · 评估器 · Gate 机制</text>
+<text x="150" y="118" text-anchor="middle" fill="#1D9E75" font-size="9">类比：质检员 + 周报评审</text>
+
+<!-- 6. Memory（顶部中间） -->
+<rect x="230" y="140" width="200" height="70" rx="10" fill="#E6F1FB" stroke="#3078C0" stroke-width="1.5"/>
+<text x="330" y="165" text-anchor="middle" fill="#3078C0" font-size="13" font-weight="700">⑥ Memory</text>
+<text x="330" y="183" text-anchor="middle" fill="#3078C0" font-size="10">短/长/外部/程序性四层（→ A3.2）</text>
+<text x="330" y="198" text-anchor="middle" fill="#3078C0" font-size="9">类比：笔记本 + 肌肉记忆</text>
+
+<!-- 连线 -->
+<line x1="340" y1="175" x2="430" y2="95" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+<line x1="430" y1="255" x2="430" y2="130" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+<line x1="340" y1="195" x2="250" y2="245" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+<line x1="150" y1="220" x2="150" y2="130" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+<line x1="250" y1="255" x2="340" y2="310" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+<line x1="440" y1="310" x2="530" y2="290" stroke="#ccc" stroke-width="1" stroke-dasharray="4"/>
+</svg>
+
+<h3>2. 六组件详解</h3>
+
+<p><strong>① Goal Boundary（目标边界）</strong>——定义 Agent "不该做什么"比"该做什么"更重要。</p>
+<ul>
+<li><strong>意图建模</strong>：将用户模糊需求转化为可执行的 Agent 目标</li>
+<li><strong>权限栅栏</strong>：明确哪些动作需要审批、哪些可自主执行</li>
+<li><strong>范围控制</strong>：防止 Goal Drift（目标漂移）和 Scope Creep（范围蔓延）</li>
+</ul>
+<p>DDAgent 实例：Dispatcher 只做路由不分诊，子 Agent 只管自己银行——这是典型的 Goal Boundary 设计。</p>
+
+<p><strong>② Context（上下文工程）</strong>——Agent 能看到什么决定了它能做好什么。</p>
+<ul>
+<li>信息注入时机和方式的工程化（→ A3.1 已详述）</li>
+<li>上下文文件的精简原则（AGENTS.md ≤ 60 行）</li>
+<li>滑动窗口 vs 摘要传递 vs 结构化工件交接</li>
+</ul>
+
+<p><strong>③ Tools（工具层）</strong>——Agent 能"动手"做什么。</p>
+<ul>
+<li>工具注册和 MCP 协议标准化（→ A1.2 已详述）</li>
+<li>CLI 封装优先于自定义工具（模型训练数据中 CLI 用法丰富）</li>
+<li>工具作用域限制（文件系统隔离、API 权限控制）</li>
+</ul>
+
+<p><strong>④ Scaffolding（脚手架）</strong>——让 Agent 沿着"正确的路径"走，而不是在空旷中迷失。</p>
+<ul>
+<li>SOP 和检查清单：Agent 执行前/后必须跑的验证步骤</li>
+<li>架构约束：通过 Linter、类型检查强制执行代码规范</li>
+<li>设计原则：<strong>约束解空间</strong>而非扩大它——更少的有效选项 = 更少的错误答案</li>
+</ul>
+
+<p><strong>⑤ Feedback（反馈闭环）</strong>——没有反馈就没有改进，没有 Gate 就没有质量。</p>
+<ul>
+<li>验证循环：Agent 每步操作后自动检查（测试套件、构建验证、截图对比）</li>
+<li>评估器（Evaluator）：Anthropic 三角色系统中的 Evaluator 角色</li>
+<li>Gate 机制：DDAgent 的 auditor 只标不改——质量门槛，不是修改工具</li>
+</ul>
+
+<p><strong>⑥ Memory（记忆系统）</strong>——从"每次从零开始"到"越用越靠谱"。</p>
+<ul>
+<li>四层架构已在 A3.2 详述：主上下文 / 工作上下文 / 外部上下文 / 程序性记忆</li>
+<li>在 Harness 框架中，Memory 是跨会话持续进化的引擎</li>
+<li>进度记录：长时间任务的断点恢复和上下文重建</li>
+</ul>
+
+<h3>3. 行业分解对比：三大流派</h3>
+
+<table class="compare-table">
+<tr><th>组件</th><th>Fitz 六组件</th><th>OpenAI 三层</th><th>Anthropic 角色</th><th>Thoughtworks 2×2</th></tr>
+<tr><td>目标/意图</td><td>Goal Boundary</td><td>架构约束</td><td>Planner</td><td>Computational Guide</td></tr>
+<tr><td>信息/上下文</td><td>Context</td><td>上下文工程</td><td>Planner → Generator</td><td>Inferential Guide</td></tr>
+<tr><td>工具</td><td>Tools</td><td>架构约束</td><td>Generator</td><td>Computational Sensor</td></tr>
+<tr><td>流程约束</td><td>Scaffolding</td><td>架构约束</td><td>Generator</td><td>Computational Guide</td></tr>
+<tr><td>反馈/评估</td><td>Feedback</td><td>生命周期管理</td><td>Evaluator</td><td>Inferential Sensor</td></tr>
+<tr><td>记忆/状态</td><td>Memory</td><td>生命周期管理</td><td>—（未独立拆分）</td><td>—</td></tr>
+</table>
+
+<div class="card deepen">
+<div class="card-label">深度辨析</div>
+<p>Fitz 六组件与行业分解的关键差异：<strong>Goal Boundary 和 Memory 被独立为顶层组件</strong>。OpenAI 把目标归入"架构约束"、把记忆归入"生命周期管理"——但在 DDAgent 实践中，目标边界（谁该做什么）和记忆（跨会话状态）是错误最集中的地方，值得独立关注。Thoughtworks 的 2×2 矩阵（guides/sensors × computational/inferential）更偏理论抽象，Fitz 框架更偏工程实操。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>六组件框架的核心价值是<strong>正交性</strong>：每个组件可以独立迭代。LangChain 实验证明，仅优化 Context（AGENTS.md）和 Feedback（自我验证循环），就能带来 +13.7pp 的提升。不需要同时优化六个——找到瓶颈组件，集中火力。</p>
+</div>
+</section>
+
+<!-- ============================================ -->
+<!-- §③ 为什么：第一性原理 -->
+<!-- ============================================ -->
+<section id="why">
+<h2><span class="sec-num">③</span> 为什么：无状态函数 → 可靠系统的鸿沟</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>模型就像一个天才临时工——每次来上班都失忆，不知道公司做什么、自己负责什么、之前做过什么、什么算做好。Harness 就是让临时工变成正式员工的"入职体系"：岗位描述（Goal）、知识库（Context）、工牌（Tools）、SOP（Scaffolding）、质检（Feedback）、笔记（Memory）。天才不缺，缺的是让天才稳定发挥的系统。</p>
+</div>
+
+<h3>1. 第一性原理：模型是纯函数，Agent 需要状态机</h3>
+<p>从数学角度看，大语言模型的本质是：</p>
+<p>$$f: \text{Tokens}_{\text{in}} \rightarrow \text{Tokens}_{\text{out}}$$</p>
+<p>这是一个<strong>无状态纯函数</strong>——同样的输入永远产生同样的输出。但 Agent 需要的是：</p>
+<p>$$A: (\text{Goal}, \text{State}_t, \text{Environment}) \rightarrow (\text{Action}_t, \text{State}_{t+1})$$</p>
+<p>这是一个<strong>有状态决策系统</strong>——需要跟踪目标、维护状态、感知环境。模型和 Agent 之间的鸿沟，正是 Harness 要填补的：</p>
+
+<svg viewBox="0 0 680 220" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<text x="340" y="22" text-anchor="middle" fill="#333" font-size="13" font-weight="700">模型 vs Agent：无状态 → 有状态的鸿沟</text>
+
+<!-- 模型侧 -->
+<rect x="30" y="45" width="180" height="140" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="120" y="72" text-anchor="middle" fill="#BA7517" font-size="12" font-weight="700">模型（纯函数）</text>
+<text x="120" y="95" text-anchor="middle" fill="#BA7517" font-size="10">✓ 推理能力</text>
+<text x="120" y="112" text-anchor="middle" fill="#BA7517" font-size="10">✓ 生成能力</text>
+<text x="120" y="129" text-anchor="middle" fill="#BA7517" font-size="10">✗ 无记忆</text>
+<text x="120" y="146" text-anchor="middle" fill="#BA7517" font-size="10">✗ 无目标感知</text>
+<text x="120" y="163" text-anchor="middle" fill="#BA7517" font-size="10">✗ 无进度追踪</text>
+
+<!-- Agent 侧 -->
+<rect x="470" y="45" width="180" height="140" rx="10" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="560" y="72" text-anchor="middle" fill="#1D9E75" font-size="12" font-weight="700">Agent（状态机）</text>
+<text x="560" y="95" text-anchor="middle" fill="#1D9E75" font-size="10">✓ 目标驱动</text>
+<text x="560" y="112" text-anchor="middle" fill="#1D9E75" font-size="10">✓ 跨步状态</text>
+<text x="560" y="129" text-anchor="middle" fill="#1D9E75" font-size="10">✓ 错误恢复</text>
+<text x="560" y="146" text-anchor="middle" fill="#1D9E75" font-size="10">✓ 工具使用</text>
+<text x="560" y="163" text-anchor="middle" fill="#1D9E75" font-size="10">✓ 完成判断</text>
+
+<!-- Harness 桥梁 -->
+<rect x="230" y="65" width="220" height="100" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+<text x="340" y="92" text-anchor="middle" fill="#534AB7" font-size="12" font-weight="700">Harness（桥梁）</text>
+<text x="340" y="112" text-anchor="middle" fill="#534AB7" font-size="10">注入目标 + 状态 + 环境</text>
+<text x="340" y="130" text-anchor="middle" fill="#534AB7" font-size="10">约束行为 + 验证输出 + 追踪进度</text>
+<text x="340" y="148" text-anchor="middle" fill="#534AB7" font-size="10">将纯函数 → 状态机</text>
+
+<line x1="210" y1="115" x2="228" y2="115" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr41)"/>
+<line x1="450" y1="115" x2="468" y2="115" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr41)"/>
+</svg>
+
+<h3>2. 设计取舍：为什么 Harness 比模型更重要</h3>
+
+<p><strong>理由一：模型趋同，Harness 分化</strong></p>
+<p>2026 年 2-3 月，GPT-5.4、Gemini 3.1 Ultra、Grok 4.20 接连发布，顶级模型间的能力差距已压缩到<strong>周级别</strong>。模型正在成为商品（commodity），而 Harness 是可设计的差异化壁垒——任何有纪律的团队都能构建。</p>
+
+<p><strong>理由二：错误复利效应</strong></p>
+<p>Agent 在 5 步轨迹中，每步 5% 的错误率会复利为：</p>
+<p>$$P(\text{整体成功}) = (1 - 0.05)^5 \approx 77.4\%$$</p>
+<p>10 步轨迹则降至 60%。单步看似可靠，多步后雪崩。Harness 的 Feedback 组件在每个步骤插入验证，把复利链打断：</p>
+<p>$$P(\text{单步成功 | Gate}) = 1 - P(\text{错误}) \times P(\text{未检出})$$</p>
+<p>如果 Gate 能检出 90% 的错误，单步失败率从 5% 降至 0.5%，10 步成功率从 60% 升至 95%。</p>
+
+<p><strong>理由三：模型不可控，Harness 可控</strong></p>
+<p>模型的权重你改不了，但 Harness 的每个组件你都能改。Mitchell Hashimoto 的原则——"让 Agent 永远不再犯同样的错误"——只有通过 Harness 工程才能实现。你不能训练模型不犯某个错，但你可以加一条规则、一个检查清单、一个中间件来阻止它。</p>
+
+<h3>3. 上下文腐烂：长时运行 Agent 的头号杀手</h3>
+<p>Agent 在第 100 次工具调用后，是否还能遵循原始指令？这就是<strong>上下文腐烂（Context Rot）</strong>问题：</p>
+<ul>
+<li>每次调用消耗上下文窗口，原始目标被压缩或替换</li>
+<li>中间结果堆积，无关细节污染上下文</li>
+<li>Agent 开始重复自己（Loop Drift）或偏离目标（Goal Drift）</li>
+</ul>
+<p>Harness 的三个对策：</p>
+<table>
+<tr><th>问题</th><th>Harness 方案</th><th>组件</th></tr>
+<tr><td>上下文溢出</td><td>摘要传递 + 上下文重置</td><td>Context + Memory</td></tr>
+<tr><td>目标遗忘</td><td>定期重新锚定原始目标</td><td>Goal Boundary</td></tr>
+<tr><td>循环重复</td><td>循环检测中间件</td><td>Feedback</td></tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>Harness 的本质是<strong>将无状态纯函数转化为有状态可靠系统</strong>的工程桥梁。它比模型更重要的三个原因：模型趋同而 Harness 分化、错误在多步中复利、模型不可控但 Harness 可控。上下文腐烂是长时运行 Agent 的头号问题，需要 Context + Goal Boundary + Feedback 三组件协同应对。</p>
+</div>
+</section>
+
+<!-- ============================================ -->
+<!-- §④ 演进格局：2024-2026 -->
+<!-- ============================================ -->
+<section id="evolution">
+<h2><span class="sec-num">④</span> 演进格局：三层跃迁与 2026 成词</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>从 Prompt Engineering → Context Engineering → Harness Engineering，就像从"对临时工喊一句话"→"给临时工一份简报"→"建立完整的入职体系"。喊话改了措辞效果就变，简报信息对了效果就变，入职体系建好了效果稳定——不再依赖某个人的措辞或某天的简报。</p>
+</div>
+
+<h3>1. 三层演进时间线</h3>
+
+<svg viewBox="0 0 680 280" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<text x="340" y="22" text-anchor="middle" fill="#333" font-size="14" font-weight="700">三层演进：Prompt → Context → Harness Engineering</text>
+
+<!-- 时间轴 -->
+<line x1="40" y1="70" x2="640" y2="70" stroke="#ccc" stroke-width="2"/>
+<circle cx="120" cy="70" r="6" fill="#BA7517"/>
+<circle cx="340" cy="70" r="6" fill="#185FA5"/>
+<circle cx="560" cy="70" r="6" fill="#534AB7"/>
+
+<!-- Phase 1 -->
+<text x="120" y="58" text-anchor="middle" fill="#BA7517" font-size="10">2022-2024</text>
+<rect x="50" y="85" width="140" height="170" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="120" y="108" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="700">Prompt Engineering</text>
+<text x="120" y="128" text-anchor="middle" fill="#BA7517" font-size="9">改措辞 → 改输出</text>
+<text x="120" y="148" text-anchor="middle" fill="#BA7517" font-size="9">角色设定 + 场景约束</text>
+<text x="120" y="168" text-anchor="middle" fill="#BA7517" font-size="9">本质：意图对齐</text>
+<text x="120" y="195" text-anchor="middle" fill="#BA7517" font-size="9">脆弱：模型一换就废</text>
+<text x="120" y="215" text-anchor="middle" fill="#BA7517" font-size="9">类比：一句话指令</text>
+<text x="120" y="240" text-anchor="middle" fill="#BA7517" font-size="9">杠杆：1x</text>
+
+<!-- Phase 2 -->
+<text x="340" y="58" text-anchor="middle" fill="#185FA5" font-size="10">2024-2025</text>
+<rect x="270" y="85" width="140" height="170" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="340" y="108" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="700">Context Engineering</text>
+<text x="340" y="128" text-anchor="middle" fill="#185FA5" font-size="9">改信息 → 改决策</text>
+<text x="340" y="148" text-anchor="middle" fill="#185FA5" font-size="9">RAG + 上下文文件</text>
+<text x="340" y="168" text-anchor="middle" fill="#185FA5" font-size="9">本质：信息供给</text>
+<text x="340" y="195" text-anchor="middle" fill="#185FA5" font-size="9">较稳：模型无关</text>
+<text x="340" y="215" text-anchor="middle" fill="#185FA5" font-size="9">类比：每日简报</text>
+<text x="340" y="240" text-anchor="middle" fill="#185FA5" font-size="9">杠杆：10x</text>
+
+<!-- Phase 3 -->
+<text x="560" y="58" text-anchor="middle" fill="#534AB7" font-size="10">2026-</text>
+<rect x="490" y="85" width="140" height="170" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="2"/>
+<text x="560" y="108" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="700">Harness Engineering</text>
+<text x="560" y="128" text-anchor="middle" fill="#534AB7" font-size="9">建系统 → 建可靠性</text>
+<text x="560" y="148" text-anchor="middle" fill="#534AB7" font-size="9">六组件 + 反馈闭环</text>
+<text x="560" y="168" text-anchor="middle" fill="#534AB7" font-size="9">本质：系统工程</text>
+<text x="560" y="195" text-anchor="middle" fill="#534AB7" font-size="9">稳健：可迭代复利</text>
+<text x="560" y="215" text-anchor="middle" fill="#534AB7" font-size="9">类比：入职体系</text>
+<text x="560" y="240" text-anchor="middle" fill="#534AB7" font-size="9">杠杆：100x</text>
+</svg>
+
+<h3>2. 2026 关键事件：从实践到命名</h3>
+
+<table>
+<tr><th>时间</th><th>事件</th><th>意义</th></tr>
+<tr><td>2026.02.05</td><td>Mitchell Hashimoto 博客 "Engineer the Harness"</td><td>术语首次进入主流讨论</td></tr>
+<tr><td>2026.02.11</td><td>OpenAI "Harness Engineering: Leveraging Codex in an Agent-First World"</td><td>主流实验室背书：3人5月百万行代码</td></tr>
+<tr><td>2026.03</td><td>Anthropic "Harness Design for Long-Running Application Development"</td><td>Planner/Generator/Evaluator 三角色系统</td></tr>
+<tr><td>2026.03</td><td>LangChain TerminalBench 2.0 实验</td><td>实证数据：不换模型 +13.7pp</td></tr>
+<tr><td>2026.04</td><td>Thoughtworks / Fowler "Harness Engineering - first thoughts"</td><td>方法论抽象：Guides × Sensors 2×2 矩阵</td></tr>
+<tr><td>2026.04</td><td>湘财证券行业报告</td><td>中文圈首次系统化引入</td></tr>
+</table>
+
+<h3>3. Anthropic 三角色系统详解</h3>
+<p>Anthropic 在 "Harness Design for Long-Running Application Development" 中，将之前的 initializer/coding 二角色升级为三角色系统：</p>
+
+<table>
+<tr><th>角色</th><th>职责</th><th>类比</th><th>对应 Fitz 组件</th></tr>
+<tr><td>Planner</td><td>将模糊需求展开为完整规范，<strong>故意留下实现细节未指定</strong></td><td>产品经理写PRD</td><td>Goal Boundary + Context</td></tr>
+<tr><td>Generator</td><td>按 sprint 实现功能，编写代码和测试</td><td>工程师写代码</td><td>Tools + Scaffolding</td></tr>
+<tr><td>Evaluator</td><td>基于 Playwright 运行浏览器自动化，按 sprint 合同评分</td><td>QA 验收</td><td>Feedback</td></tr>
+</table>
+
+<div class="card insight">
+<div class="card-label">关键发现</div>
+<p>Anthropic 的对比数据：单 Agent 运行 20 分钟 / ~$9 vs 三角色系统运行 6 小时 / ~$200。成本差 20 倍，但输出质量是<strong>质的飞跃</strong>——不是边际改进，而是系统能产生<strong>不同类型</strong>的输出。Evaluator 在模型能力边界附近仍能带来明显增益，这直接证明了 Feedback 组件的价值。</p>
+</div>
+
+<h3>4. 五层可靠性架构（2026 行业共识）</h3>
+<p>2026 年生产级 Agent 的可靠性架构已形成五层共识：</p>
+
+<table>
+<tr><th>层</th><th>名称</th><th>作用</th><th>对应 Fitz 组件</th></tr>
+<tr><td>L1</td><td>Runtime Guardrails</td><td>网关级实时拦截（越狱/PII/工具异常）</td><td>Goal Boundary + Feedback</td></tr>
+<tr><td>L2</td><td>CI Eval Gates</td><td>每次变更必须通过离线评测门</td><td>Feedback</td></tr>
+<tr><td>L3</td><td>Span-attached Scoring</td><td>生产链路每个步骤自动打分</td><td>Feedback</td></tr>
+<tr><td>L4</td><td>Failure Clustering</td><td>失败轨迹自动归类+诊断</td><td>Feedback + Memory</td></tr>
+<tr><td>L5</td><td>Closed-loop Optimization</td><td>自动搜索更优 Prompt/配置</td><td>六组件协同</td></tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>2026 年是 Harness Engineering 从实践到命名的元年。三层演进（Prompt→Context→Harness）的核心转变是从"改措辞"到"建系统"。Anthropic 的三角色系统实证：Feedback（Evaluator）在模型能力边界仍有效。行业已形成五层可靠性架构共识，Fitz 六组件框架从工程实操角度覆盖了这五层的全部。</p>
+</div>
+</section>
+
+<!-- ============================================ -->
+<!-- §⑤ 与产品连接：DDAgent Harness 逐组件审视 -->
+<!-- ============================================ -->
+<section id="connect">
+<h2><span class="sec-num">⑤</span> 与产品连接：DDAgent Harness 逐组件审视</h2>
+
+<div class="card intuition">
+<div class="card-label">直觉类比</div>
+<p>DDAgent 就像一个跨境汇款专柜——Dispatcher 是大堂经理（判断客户需求路由到哪个窗口），子Agent 是各银行专柜的柜员（按SOP处理），Auditor 是后台质检员（只标错不改错）。Fitz 六组件框架就是审视这个专柜体系的设计图纸——每个组件是否到位？哪些是瓶颈？</p>
+</div>
+
+<h3>1. DDAgent 现状：六组件逐项审视</h3>
+
+<table class="compare-table">
+<tr><th>组件</th><th>DDAgent 现状</th><th>评分</th><th>改进方向</th></tr>
+<tr><td>Goal Boundary</td><td>Dispatcher 只路由不分诊；子Agent 限定单银行；跨主体知识隔离</td><td>⭐⭐⭐⭐</td><td>增加"不该做什么"的显式约束（如：不跨银行拼凑答案）</td></tr>
+<tr><td>Context</td><td>银行知识库按主体隔离；HQA 注入上下文</td><td>⭐⭐⭐½</td><td>上下文文件规范化（AGENTS.md 模式）；滑动窗口优化</td></tr>
+<tr><td>Tools</td><td>6 家银行专用工具；MCP Skill 封装</td><td>⭐⭐⭐⭐</td><td>工具文档增强（CLI 封装优先原则）</td></tr>
+<tr><td>Scaffolding</td><td>子Agent 有 SOP 流程；但缺少显式检查清单</td><td>⭐⭐⭐</td><td>增加"执行前必须确认"的检查清单；结构化输出约束</td></tr>
+<tr><td>Feedback</td><td>Auditor 只标不改（Gate 设计）</td><td>⭐⭐⭐⭐</td><td>增加 span-level 自动评分；Eval Gate 对齐 A4.2 EvalAgent</td></tr>
+<tr><td>Memory</td><td>会话内状态保持；跨会话记忆薄弱</td><td>⭐⭐</td><td>引入程序性记忆（相似案例匹配）；进度记录持久化</td></tr>
+</table>
+
+<h3>2. 瓶颈诊断：Memory 是最大短板</h3>
+<p>按 LangChain 实验的启示——不需要同时优化六个组件，找到瓶颈集中火力——DDAgent 的瓶颈在 <strong>Memory</strong>（2星）和 <strong>Scaffolding</strong>（3星）：</p>
+
+<svg viewBox="0 0 680 200" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<text x="340" y="20" text-anchor="middle" fill="#333" font-size="13" font-weight="700">DDAgent Harness 瓶颈雷达（示意）</text>
+
+<!-- 横轴 -->
+<line x1="80" y1="170" x2="600" y2="170" stroke="#e0e0dc" stroke-width="1"/>
+<!-- 纵轴 -->
+<line x1="80" y1="170" x2="80" y2="40" stroke="#e0e0dc" stroke-width="1"/>
+
+<!-- 柱状 -->
+<rect x="100" y="80" width="60" height="90" rx="4" fill="#993C1D" opacity="0.7"/>
+<text x="130" y="74" text-anchor="middle" fill="#993C1D" font-size="10" font-weight="600">4</text>
+<text x="130" y="188" text-anchor="middle" fill="#333" font-size="9">Goal</text>
+
+<rect x="180" y="90" width="60" height="80" rx="4" fill="#BA7517" opacity="0.7"/>
+<text x="210" y="84" text-anchor="middle" fill="#BA7517" font-size="10" font-weight="600">3.5</text>
+<text x="210" y="188" text-anchor="middle" fill="#333" font-size="9">Context</text>
+
+<rect x="260" y="80" width="60" height="90" rx="4" fill="#185FA5" opacity="0.7"/>
+<text x="290" y="74" text-anchor="middle" fill="#185FA5" font-size="10" font-weight="600">4</text>
+<text x="290" y="188" text-anchor="middle" fill="#333" font-size="9">Tools</text>
+
+<rect x="340" y="110" width="60" height="60" rx="4" fill="#534AB7" opacity="0.7"/>
+<text x="370" y="104" text-anchor="middle" fill="#534AB7" font-size="10" font-weight="600">3</text>
+<text x="370" y="188" text-anchor="middle" fill="#333" font-size="9">Scaffold</text>
+
+<rect x="420" y="80" width="60" height="90" rx="4" fill="#1D9E75" opacity="0.7"/>
+<text x="450" y="74" text-anchor="middle" fill="#1D9E75" font-size="10" font-weight="600">4</text>
+<text x="450" y="188" text-anchor="middle" fill="#333" font-size="9">Feedback</text>
+
+<rect x="500" y="130" width="60" height="40" rx="4" fill="#3078C0" opacity="0.7"/>
+<text x="530" y="124" text-anchor="middle" fill="#3078C0" font-size="10" font-weight="700">2</text>
+<text x="530" y="188" text-anchor="middle" fill="#333" font-size="9">Memory</text>
+
+<text x="80" y="48" text-anchor="end" fill="#888780" font-size="9">5</text>
+<text x="80" y="110" text-anchor="end" fill="#888780" font-size="9">3</text>
+<text x="80" y="174" text-anchor="end" fill="#888780" font-size="9">0</text>
+</svg>
+
+<h3>3. 具体改进路径</h3>
+
+<p><strong>Memory 改进（2→4 星）</strong>：</p>
+<div class="flow-step">
+<div class="step-num">1</div>
+<div class="step-content"><strong>引入案例库</strong>：将历史处理成功的汇款案例结构化存储，子 Agent 遇到相似场景时自动检索类比（→ A3.2 外部上下文层）</div>
+</div>
+<div class="flow-step">
+<div class="step-num">2</div>
+<div class="step-content"><strong>进度记录持久化</strong>：长时间尽调任务的断点保存，会话中断后可恢复（→ Anthropic 基于Git的进度追踪模式）</div>
+</div>
+<div class="flow-step">
+<div class="step-num">3</div>
+<div class="step-content"><strong>程序性记忆</strong>：记录"哪种银行+哪种汇款类型"的最优处理路径，下次自动复用</div>
+</div>
+
+<p><strong>Scaffolding 改进（3→4 星）</strong>：</p>
+<div class="flow-step">
+<div class="step-num">1</div>
+<div class="step-content"><strong>显式检查清单</strong>：子 Agent 在提交结果前，必须过一遍"必查项"（收款人名一致性、金额范围、合规标记）</div>
+</div>
+<div class="flow-step">
+<div class="step-num">2</div>
+<div class="step-content"><strong>结构化输出约束</strong>：用 JSON Schema 强制输出格式，而非自由文本（→ "约束解空间"原则）</div>
+</div>
+<div class="flow-step">
+<div class="step-num">3</div>
+<div class="step-content"><strong>自我验证循环</strong>：提交前 Agent 自行运行一次验证（金额是否匹配、字段是否完整）</div>
+</div>
+
+<h3>4. 跨境支付场景的选型决策</h3>
+
+<table>
+<tr><th>决策点</th><th>选项 A</th><th>选项 B</th><th>推荐</th></tr>
+<tr><td>Goal Boundary 实现</td><td>硬编码路由规则</td><td>LLM 意图识别 + 规则兜底</td><td>B（灵活性 + 安全性）</td></tr>
+<tr><td>Feedback 时机</td><td>事后审计（Auditor）</td><td>每步实时评估</td><td>混合：关键步骤实时 + 全局事后</td></tr>
+<tr><td>Memory 架构</td><td>纯向量检索</td><td>结构化知识库 + 向量补充</td><td>B（合规场景需要确定性）</td></tr>
+<tr><td>Multi-Agent 模式</td><td>Supervisor + Specialists</td><td>Pipeline 顺序流水线</td><td>A（DDAgent 天然是 Supervisor 模式）</td></tr>
+</table>
+
+<div class="card warning">
+<div class="card-label">警惕</div>
+<p>不要陷入"全组件同时升级"的陷阱。LangChain 实验证明，仅优化 2-3 个组件就能带来巨大提升。优先级：<strong>Memory → Scaffolding → Context</strong>。Goal Boundary 和 Feedback 已经做得不错，维持即可。</p>
+</div>
+
+<div class="card takeaway">
+<div class="card-label">Takeaway</div>
+<p>用 Fitz 六组件框架审视 DDAgent，发现 Memory（2星）和 Scaffolding（3星）是最大瓶颈。改进路径清晰：Memory 引入案例库+进度持久化+程序性记忆；Scaffolding 增加检查清单+结构化输出+自我验证。核心原则：<strong>找到瓶颈组件，集中火力</strong>，而非全组件均衡发力。</p>
+</div>
+</section>
+
+<!-- ===== FOOTER ===== -->
+<div class="chapter-footer">
+<a href="../../INDEX.html">&larr; 返回知识图谱</a>
+<a href="A4.1-harness-six-components-quiz.html">去做 Quiz（10 题）&rarr;</a>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3.1 预训练+SFT Quiz · T1 LLM 系统</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+h1{font-size:22px;font-weight:700;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:20px}
+.quiz-item{background:#fff;border:1px solid #E8E8E4;border-radius:10px;padding:16px 18px;margin:16px 0}
+.quiz-id{font-size:10px;font-weight:600;color:var(--purple);background:var(--purple-bg);padding:2px 6px;border-radius:6px;display:inline-block;margin-bottom:8px}
+.quiz-q{font-size:15px;font-weight:600;margin-bottom:12px;line-height:1.5}
+.quiz-opts{display:flex;flex-direction:column;gap:6px}
+.opt-btn{display:block;width:100%;text-align:left;padding:10px 14px;border:1px solid #E0E0DC;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;line-height:1.5;transition:all 0.15s}
+.opt-btn:hover{border-color:var(--purple);background:var(--purple-bg)}
+.opt-btn.correct{border-color:var(--teal);background:var(--teal-bg);color:var(--teal)}
+.opt-btn.wrong{border-color:var(--coral);background:var(--coral-bg);color:var(--coral)}
+.opt-btn:disabled{cursor:default;opacity:0.8}
+.explain{margin-top:10px;padding:10px 14px;border-radius:8px;font-size:13px;line-height:1.6;display:none}
+.explain.show{display:block}
+.explain.correct-exp{background:var(--teal-bg);border-left:3px solid var(--teal)}
+.explain.wrong-exp{background:var(--coral-bg);border-left:3px solid var(--coral)}
+.score-section{margin-top:32px;padding:20px;border-radius:10px;text-align:center;background:var(--purple-bg);display:none}
+.score-section.show{display:block}
+.score-num{font-size:36px;font-weight:700;color:var(--purple)}
+.score-label{font-size:14px;color:var(--muted);margin-top:4px}
+.score-feedback{font-size:14px;margin-top:8px;color:var(--text)}
+a{color:var(--purple);text-decoration:none}
+.back-link{display:inline-block;margin-bottom:16px;font-size:13px}
+</style>
+</head>
+<body>
+
+<a href="3.1-pretrain-sft-chapter.html" class="back-link">← 返回章节</a>
+<h1>3.1 预训练 + SFT · Quiz</h1>
+<p class="subtitle">10 题 · 每节 2 题 · 点击选项查看即时反馈</p>
+
+<!-- Q1: §① 概念辨析 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.1-①-a</div>
+<div class="quiz-q">预训练模型（Base Model）的核心训练目标是什么？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q1')">A. 学会根据用户指令生成有用回答</button>
+<button class="opt-btn" onclick="check(this, true, 'q1')">B. 预测给定前缀后的下一个最可能 Token</button>
+<button class="opt-btn" onclick="check(this, false, 'q1')">C. 最小化与人类偏好的差异</button>
+<button class="opt-btn" onclick="check(this, false, 'q1')">D. 最大化模型在不同任务上的平均准确率</button>
+</div>
+<div class="explain" id="q1-exp"></div>
+</div>
+
+<!-- Q2: §① 判断/应用 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.1-①-b</div>
+<div class="quiz-q">一个纯预训练模型收到"帮我翻译这句话为英文"的输入，最可能的行为是什么？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q2')">A. 直接输出该句子的英文翻译</button>
+<button class="opt-btn" onclick="check(this, false, 'q2')">B. 回复"好的，我来帮你翻译"</button>
+<button class="opt-btn" onclick="check(this, true, 'q2')">C. 续写"帮我翻译这句话为英文的方法有三种……"</button>
+<button class="opt-btn" onclick="check(this, false, 'q2')">D. 拒绝回答并提示需要更多上下文</button>
+</div>
+<div class="explain" id="q2-exp"></div>
+</div>
+
+<!-- Q3: §② 概念辨析 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.1-②-a</div>
+<div class="quiz-q">关于 LoRA（Low-Rank Adaptation），以下哪个说法最准确？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q3')">A. LoRA 用 4-bit 量化替代 16-bit 精度来节省显存</button>
+<button class="opt-btn" onclick="check(this, true, 'q3')">B. LoRA 冻结基础模型权重，注入低秩可训练矩阵，参数减少 90-99%</button>
+<button class="opt-btn" onclick="check(this, false, 'q3')">C. LoRA 效果等同于 Full Fine-Tuning，但速度快 10 倍</button>
+<button class="opt-btn" onclick="check(this, false, 'q3')">D. LoRA 只能用于 7B 以下的小模型</button>
+</div>
+<div class="explain" id="q3-exp"></div>
+</div>
+
+<!-- Q4: §② 判断/应用 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.1-②-b</div>
+<div class="quiz-q">Llama 3.1 405B 的预训练数据配比是 50% 通用 + 25% 数学 + 17% 代码 + 8% 多语言。如果我们要构建一个代码生成 Agent，只看数据配比，哪个预训练模型可能更有优势？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q4')">A. 数据配比完全相同，没有模型更有优势</button>
+<button class="opt-btn" onclick="check(this, true, 'q4')">B. 代码数据占比更高的模型（如 Phi-4 约 40% 合成含大量代码）</button>
+<button class="opt-btn" onclick="check(this, false, 'q4')">C. 多语言占比更高的模型（如 Qwen3 119 语言）</button>
+<button class="opt-btn" onclick="check(this, false, 'q4')">D. 通用数据占比最高的模型</button>
+</div>
+<div class="explain" id="q4-exp"></div>
+</div>
+
+<!-- Q5: §③ 概念辨析 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.1-③-a</div>
+<div class="quiz-q">为什么 SFT 只需几千到几万条数据就能有效果，而预训练需要万亿级 Tokens？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, true, 'q5')">A. SFT 不是在教新知识，而是解锁预训练中已存储的能力——教的是格式映射</button>
+<button class="opt-btn" onclick="check(this, false, 'q5')">B. SFT 用的数据质量比预训练高 100 倍，所以数据量可以少 100 倍</button>
+<button class="opt-btn" onclick="check(this, false, 'q5')">C. SFT 用 LoRA 只调 1% 参数，所以不需要那么多数据</button>
+<button class="opt-btn" onclick="check(this, false, 'q5')">D. SFT 的学习率比预训练高 100 倍，收敛更快</button>
+</div>
+<div class="explain" id="q5-exp"></div>
+</div>
+
+<!-- Q6: §③ 判断/应用 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.1-③-b</div>
+<div class="quiz-q">Chinchilla（2022）理论最优是每 1 个参数配约 20 个 Tokens，但 Llama 3.1 8B 的 token/param 比约 1875。为什么行业普遍采用"过训练"策略？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q6')">A. 因为 Chinchilla 理论被证明是错误的</button>
+<button class="opt-btn" onclick="check(this, true, 'q6')">B. 推理成本按参数量计，训练是一次性的——小模型多学比大模型少学更划算</button>
+<button class="opt-btn" onclick="check(this, false, 'q6')">C. 因为过训练可以避免灾难性遗忘</button>
+<button class="opt-btn" onclick="check(this, false, 'q6')">D. 因为更多数据总能带来更好的效果，不存在边际递减</button>
+</div>
+<div class="explain" id="q6-exp"></div>
+</div>
+
+<!-- Q7: §④ 概念辨析 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.1-④-a</div>
+<div class="quiz-q">2024-2026 预训练领域最核心的范式转变是什么？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q7')">A. 从 Transformer 架构转向 MoE 架构</button>
+<button class="opt-btn" onclick="check(this, true, 'q7')">B. 从"堆规模"到"榨数据"——数据质量与配比比模型参数量更重要</button>
+<button class="opt-btn" onclick="check(this, false, 'q7')">C. 从自监督学习转向全监督学习</button>
+<button class="opt-btn" onclick="check(this, false, 'q7')">D. 从大模型转向小模型，参数量越少越好</button>
+</div>
+<div class="explain" id="q7-exp"></div>
+</div>
+
+<!-- Q8: §④ 判断/应用 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.1-④-b</div>
+<div class="quiz-q">斯坦福 HAI 2026 年白皮书警告互联网高质量英语公共文本将在 2027 Q3 耗尽。以下哪个不是行业应对"数据墙"的主要策略？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q8')">A. 合成数据规模化（Phi-4 约 40% 训练数据为合成）</button>
+<button class="opt-btn" onclick="check(this, true, 'q8')">B. 增加模型参数量以弥补数据不足</button>
+<button class="opt-btn" onclick="check(this, false, 'q8')">C. 数据质量提升（FineWeb-Edu、DCLM 等高质量子集）</button>
+<button class="opt-btn" onclick="check(this, false, 'q8')">D. 难度自适应训练（EDCO 用推理熵动态编排课程）</button>
+</div>
+<div class="explain" id="q8-exp"></div>
+</div>
+
+<!-- Q9: §⑤ 概念辨析 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.1-⑤-a</div>
+<div class="quiz-q">你的团队要做跨境支付领域的 Agent，需要选择 Base Model 还是 Instruct Model 作为微调起点。哪种做法最合理？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q9')">A. 必须用 Instruct Model，因为 Base Model 不会回答问题</button>
+<button class="opt-btn" onclick="check(this, false, 'q9')">B. 必须用 Base Model，因为 Instruct 会有残留风格</button>
+<button class="opt-btn" onclick="check(this, true, 'q9')">C. 都可以：Base 更"干净"适合深度领域 SFT，Instruct 已有基本指令跟随能力可快速启动</button>
+<button class="opt-btn" onclick="check(this, false, 'q9')">D. 两种都不行，必须从头预训练一个领域专用模型</button>
+</div>
+<div class="explain" id="q9-exp"></div>
+</div>
+
+<!-- Q10: §⑤ 判断/应用 -->
+<div class="quiz-item">
+<div class="quiz-id">T1-3.1-⑤-b</div>
+<div class="quiz-q">DDAgent 的 83% 预填率成功背后，哪个因素对"能力天花板"的影响最大？</div>
+<div class="quiz-opts">
+<button class="opt-btn" onclick="check(this, false, 'q10')">A. SFT 数据量（越多越好）</button>
+<button class="opt-btn" onclick="check(this, false, 'q10')">B. LoRA 的 rank 参数大小</button>
+<button class="opt-btn" onclick="check(this, true, 'q10')">C. 预训练数据配比——数学和代码数据占比决定了推理链的稳定性</button>
+<button class="opt-btn" onclick="check(this, false, 'q10')">D. 使用了更大的模型（405B 而非 70B）</button>
+</div>
+<div class="explain" id="q10-exp"></div>
+</div>
+
+<!-- 得分区 -->
+<div class="score-section" id="scoreSection">
+<div class="score-num" id="scoreNum">0</div>
+<div class="score-label">/ 10</div>
+<div class="score-feedback" id="scoreFeedback"></div>
+</div>
+
+<script>
+let score = 0;
+let answered = 0;
+const total = 10;
+
+const explanations = {
+  q1: { correct: 'B', text: '预训练的核心目标是下一个Token预测（自回归语言建模）。选项A是SFT的目标，C是RLHF的目标，D是多任务学习的目标。→ 详见 §① 是什么' },
+  q2: { correct: 'C', text: '预训练模型学的是"互联网平均水平的文字接龙"，所以会续写与输入格式相似的内容，而不是按指令回答。→ 详见 §① 是什么' },
+  q3: { correct: 'B', text: 'LoRA 冻结基础模型，注入低秩矩阵 ΔW=BA，参数减少 90-99%。选项A描述的是 QLoRA，C错在LoRA质量为 85-95%，D错在LoRA可用于任意大小模型。→ 详见 §② 怎么实现' },
+  q4: { correct: 'B', text: '预训练数据配比决定能力天花板：代码占比高的模型在 Tool Use 和函数调用上更有优势。Qwen3 的多语言优势更适合 FxAgent 的多币种场景。→ 详见 §② 怎么实现 + §⑤ 与产品' },
+  q5: { correct: 'A', text: 'SFT 学的是格式映射（instruction→response 格式），不是新知识。预训练已在参数中存了海量知识，SFT 只是"解锁"这些能力。→ 详见 §③ 为什么' },
+  q6: { correct: 'B', text: '过训练的经济学逻辑：推理成本按参数量计，训练是一次性投入。小模型多学（高 token/param 比），推理时又快又便宜。→ 详见 §③ 为什么' },
+  q7: { correct: 'B', text: '2024-2026 核心范式转变是从"堆规模"到"榨数据"。Meta 暂停 1T 参数模型，GPT-4.5 参数不变但优化数据后 MMLU +12.7%。→ 详见 §④ 演进格局' },
+  q8: { correct: 'B', text: '"增加参数量弥补数据不足"不是应对数据墙的策略——数据墙的本质是高质量数据不够用，更多参数没有更多数据来训练反而浪费算力。实际策略是合成数据、质量提升和难度自适应训练。→ 详见 §④ 演进格局' },
+  q9: { correct: 'C', text: 'Base 和 Instruct 都可以做领域 SFT 起点：Base 更"干净"适合深度定制，Instruct 有基本指令跟随能力可快速启动。选择取决于团队资源与目标。→ 详见 §⑤ 与产品' },
+  q10: { correct: 'C', text: '预训练数据配比决定能力天花板：数学数据占比高→推理链稳定，代码数据占比高→Tool Use可靠。SFT注入领域知识，但推理能力的天花板在预训练阶段就定下了。→ 详见 §⑤ 与产品' }
+};
+
+function check(btn, isCorrect, qId) {
+  const item = btn.closest('.quiz-item');
+  const btns = item.querySelectorAll('.opt-btn');
+  const expEl = document.getElementById(qId + '-exp');
+
+  // Disable all buttons in this question
+  btns.forEach(b => b.disabled = true);
+
+  if (isCorrect) {
+    btn.classList.add('correct');
+    score++;
+    expEl.className = 'explain show correct-exp';
+    expEl.innerHTML = '✅ ' + explanations[qId].text;
+  } else {
+    btn.classList.add('wrong');
+    // Highlight correct answer
+    btns.forEach(b => {
+      if (b.textContent.charAt(0) === explanations[qId].correct) {
+        b.classList.add('correct');
+      }
+    });
+    expEl.className = 'explain show wrong-exp';
+    expEl.innerHTML = '❌ 正确答案是 ' + explanations[qId].correct + '。' + explanations[qId].text;
+  }
+
+  answered++;
+  if (answered === total) {
+    showScore();
+  }
+}
+
+function showScore() {
+  const sec = document.getElementById('scoreSection');
+  sec.classList.add('show');
+  document.getElementById('scoreNum').textContent = score;
+
+  let fb = '';
+  if (score <= 4) fb = '建议重读章节，重点关注 §① 和 §③ 的核心概念';
+  else if (score <= 7) fb = '良好！建议回顾错题对应的章节小节';
+  else if (score <= 9) fb = '扎实！对预训练和SFT的理解已经到位';
+  else fb = '满分！你已完全掌握本章知识';
+
+  document.getElementById('scoreFeedback').textContent = fb;
+}
+</script>
+
+</body>
+</html>

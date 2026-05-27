@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>T2 A3.2 · Memory 机制 · 四层架构</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDEEE8;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card-bg:#fff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+.header{margin-bottom:24px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;align-items:center}
+.tag{font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.tag-domain{background:var(--teal-bg);color:#0F6E56}
+.tag-chapter{background:var(--purple-bg);color:var(--purple)}
+.tag-status{background:var(--amber-bg);color:var(--amber)}
+h1{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:4px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.progress-nav{display:flex;gap:4px;margin:16px 0 0;flex-wrap:wrap}
+.progress-nav a{font-size:11px;padding:3px 8px;border-radius:8px;text-decoration:none;background:var(--purple-bg);color:var(--purple);font-weight:500}
+.progress-nav a.done{background:var(--teal-bg);color:var(--teal)}
+section{margin-top:36px;padding-top:20px;border-top:1px solid #E8E8E4}
+section h2{font-size:20px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+section h2 .sec-num{font-size:13px;background:var(--purple);color:#fff;padding:2px 8px;border-radius:8px}
+h3{font-size:16px;font-weight:600;margin:16px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:14px 16px;margin:14px 0;border-left:4px solid}
+.card.intuition{background:var(--amber-bg);border-color:var(--amber)}
+.card.takeaway{background:var(--teal-bg);border-color:var(--teal)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card.deepen{background:var(--blue-bg);border-color:var(--blue)}
+.card.insight{background:var(--purple-bg);border-color:var(--purple)}
+.card-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px}
+.card.intuition .card-label{color:var(--amber)}
+.card.takeaway .card-label{color:var(--teal)}
+.card.warning .card-label{color:var(--coral)}
+.card.deepen .card-label{color:var(--blue)}
+.card.insight .card-label{color:var(--purple)}
+.diagram{margin:20px 0}
+.diagram p{font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid #E0E0DC;text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600;font-size:12px}
+td{background:#fff}
+code{font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;background:#F0F0EC;padding:1px 4px;border-radius:3px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+pre{background:#F7F6F3;border:1px solid #E8E8E4;border-radius:8px;padding:14px 18px;margin:14px 0;font-family:"SF Mono",Monaco,Consolas,monospace;font-size:12px;line-height:1.8;overflow-x:auto}
+.token{display:inline-block;padding:1px 7px;border-radius:4px;font-size:12px;font-weight:500;font-family:"SF Mono",Monaco,Consolas,monospace}
+.token.episodic{background:var(--amber-bg);color:var(--amber)}
+.token.semantic{background:var(--teal-bg);color:var(--teal)}
+.token.procedural{background:var(--blue-bg);color:var(--blue)}
+.token.context{background:var(--purple-bg);color:var(--purple)}
+ul,ol{padding-left:20px}
+li{margin-bottom:4px}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+.example-box{border-left:3px solid var(--purple);background:#fafafa;padding:14px 18px;margin:14px 0;border-radius:0 8px 8px 0}
+.example-box .example-label{font-size:11px;font-weight:600;color:var(--purple);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px}
+.compare-table{margin:16px 0}
+.compare-table th{background:linear-gradient(135deg,var(--purple),#6B5CE7);color:#fff}
+.compare-table td:first-child{font-weight:500}
+.flow-step{display:flex;gap:12px;align-items:flex-start;margin:10px 0}
+.step-num{min-width:28px;height:28px;background:var(--purple);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+.step-content{flex:1;padding-top:3px}
+</style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-domain">T2 Agent 工程</span>
+<span class="tag tag-chapter">A3 上下文记忆</span>
+<span class="tag tag-status">✅ 完成</span>
+<a href="../../../INDEX.html" class="nav-link" style="margin-left:auto;">&larr; 知识图谱</a>
+<a href="A3.2-memory-system-quiz.html" class="nav-link">Quiz &middot; 10 题 &rarr;</a>
+</div>
+<h1>A3.2 Memory 机制（四层架构）</h1>
+<p class="subtitle">从"每次对话从零开始"到"跨会话持续进化" — Agent 记忆系统的工程全景</p>
+<div class="spine-link">🔗 主线连接：状态持久化 → KBA 项目经历的理论化（回答问题7：如何管好模型能看到什么？）</div>
+</div>
+
+<!-- ===== SVG 总览图：四层记忆架构 ===== -->
+<svg overflow="visible" viewBox="0 0 720 340" style="width:100%;height:auto;border-radius:10px;background:#fff;border:1px solid #e0e0dc;">
+<defs>
+<linearGradient id="gL0" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#534AB7"/><stop offset="100%" stop-color="#7B6FE0"/></linearGradient>
+<linearGradient id="gL1" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#BA7517"/><stop offset="100%" stop-color="#D49230"/></linearGradient>
+<linearGradient id="gL2" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#1D9E75"/><stop offset="100%" stop-color="#2DB88A"/></linearGradient>
+<linearGradient id="gL3" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="#185FA5"/><stop offset="100%" stop-color="#3078C0"/></linearGradient>
+<marker id="ov-arr32" orient="auto" markerWidth="8" markerHeight="8" refX="7" refY="4"><path d="M0,0 L8,4 L0,8 Z" fill="#888"/>
+</marker>
+</defs>
+
+<text x="360" y="24" text-anchor="middle" fill="#333" font-size="15" font-weight="600">Agent 四层记忆架构全景图</text>
+<text x="360" y="42" text-anchor="middle" fill="#999" font-size="11">从瞬时 RAM 到持久化肌肉记忆 — 认知科学启发的工程实现</text>
+
+<!-- Layer 0: Main Context (顶层，最窄) -->
+<rect x="260" y="62" width="200" height="48" rx="8" fill="url(#gL0)"/>
+<text x="360" y="84" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">主上下文 (Main Context)</text>
+<text x="360" y="100" text-anchor="middle" fill="#e0d8ff" font-size="10">当前对话 + Tool 输出 | 单次请求 | 类比：RAM</text>
+
+<!-- Layer 1: Working Context -->
+<rect x="220" y="122" width="280" height="48" rx="8" fill="url(#gL1)"/>
+<text x="360" y="144" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">工作上下文 (Working Context)</text>
+<text x="360" y="160" text-anchor="middle" fill="#fef3e0" font-size="10">会话摘要 / 滑动窗口 | 会话内 | 类比：L1 Cache</text>
+
+<!-- Layer 2: External Context -->
+<rect x="170" y="182" width="380" height="48" rx="8" fill="url(#gL2)"/>
+<text x="360" y="204" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">外部上下文 (External Context)</text>
+<text x="360" y="220" text-anchor="middle" fill="#d4f5ea" font-size="10">历史对话 / 知识库 / 用户偏好 | 跨会话 | 类比：硬盘</text>
+
+<!-- Layer 3: Procedural Memory (底层，最宽) -->
+<rect x="120" y="242" width="480" height="48" rx="8" fill="url(#gL3)"/>
+<text x="360" y="264" text-anchor="middle" fill="#fff" font-size="13" font-weight="600">程序性记忆 (Procedural Memory)</text>
+<text x="360" y="280" text-anchor="middle" fill="#dceefb" font-size="10">学会的技能 / 工作流模式 | 持久进化 | 类比：肌肉记忆</text>
+
+<!-- 右侧标注：持续时间与实现 -->
+<line x1="590" y1="86" x2="650" y2="86" stroke="#ccc" stroke-width="1"/>
+<text x="656" y="90" fill="#666" font-size="9" dominant-baseline="middle">~秒级</text>
+<line x1="590" y1="146" x2="650" y2="146" stroke="#ccc" stroke-width="1"/>
+<text x="656" y="150" fill="#666" font-size="9" dominant-baseline="middle">~分钟-小时</text>
+<line x1="590" y1="206" x2="650" y2="206" stroke="#ccc" stroke-width="1"/>
+<text x="656" y="210" fill="#666" font-size="9" dominant-baseline="middle">~天-月</text>
+<line x1="590" y1="266" x2="650" y2="266" stroke="#ccc" stroke-width="1"/>
+<text x="656" y="270" fill="#666" font-size="9" dominant-baseline="middle">永久</text>
+
+<!-- 左侧标注：认知类型映射 -->
+<text x="110" y="86" text-anchor="end" fill="#534AB7" font-size="9">Episodic(即时)</text>
+<text x="110" y="146" text-anchor="end" fill="#BA7517" font-size="9">Episodic(会话)</text>
+<text x="110" y="206" text-anchor="end" fill="#1D9E75" font-size="9">Semantic+Episodic</text>
+<text x="110" y="266" text-anchor="end" fill="#185FA5" font-size="9">Procedural</text>
+
+<!-- 底部箭头：数据流向 -->
+<path d="M360 296 L360 310 L80 310 L80 330 L640 330 L640 310 L360 310" fill="none" stroke="#534AB7" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#ov-arr32)"/>
+<text x="360" y="320" text-anchor="middle" fill="#534AB7" font-size="10" font-weight="500">数据流方向：上层实时写入 → 下层异步沉淀 → 上层按需检索召回</text>
+</svg>
+
+
+<!-- ============================================================ -->
+<!-- §1 IS：为什么 LLM 需要 Memory -->
+<!-- ============================================================ -->
+<h2 id="s1-is">&sect;1 是什么：为什么 LLM 需要 Memory</h2>
+
+<div class="card intuition">
+<div class="card-label">💡 核心直觉</div>
+<p><strong>Memory is what turns a model into a product.</strong></p>
+<p>没有 Memory 的 Agent：</p>
+<ul>
+<li><strong>每次交互从零开始</strong>——不记得你是谁、做过什么、偏好是什么</li>
+<li><strong>不能从错误学习</strong>——上次踩过的坑，这次照踩不误</li>
+<li><strong>重复同样错误</strong>——同样的无效策略反复尝试</li>
+<li><strong>无法累积知识</strong>——每次对话产生的洞察随 session 结束而蒸发</li>
+</ul>
+<p><strong>LLM 本质是无状态的</strong>：API 返回那一刻所有对话信息消失。Memory 系统就是要在无状态的计算原语之上，构建有状态的产品体验。</p>
+</div>
+
+<h3>1.1 无状态本质 vs 有状态产品需求</h3>
+
+<p>LLM API 的调用模型是纯粹的<strong>无状态函数</strong>：</p>
+
+<pre><code># LLM 本质上就是一个纯函数
+response = llm(messages=[...])  # 输入 messages，输出 response
+# 调用结束 → 内部状态全部丢弃
+# 下次调用 = 全新的推理过程，对过去一无所知</code></pre>
+
+<p>但用户期望的产品体验是<strong>高度有状态</strong>的：</p>
+
+<table class="compare-table">
+<tr><th>维度</th><th>LLM 的现实（无状态）</th><th>用户的期望（有状态）</th></tr>
+<tr><td>身份认知</td><td>每次都是陌生人</td><td>"你还记得我叫 Fitz 吗？"</td></tr>
+<tr><td>上下文延续</td><td>每轮只知道 system prompt + 当前消息</td><td>"上周我们讨论的方案进展如何？"</td></tr>
+<tr><td>错误规避</td><td>同样的错误可以无限重复</td><td>"上次这个参数设成 3 失败了"</td></tr>
+<tr><td>能力成长</td><td>模型权重固定，不会因为使用而变强</td><td>"用久了应该更懂我"</td></tr>
+<tr><td>偏好适应</td><td>每次都用默认风格回复</td><td>"我喜欢简洁的回答，别啰嗦"</td></tr>
+</table>
+
+<div class="card warning">
+<div class="card-label">⚠️ 常见误区</div>
+<p><strong>误区："把历史对话全塞进 Context Window 不就行了吗？"</strong></p>
+<p>这确实是最简单的"记忆"方案，但它有三个致命限制：</p>
+<ol>
+<li><strong>Context Window 是有限资源</strong>——128K tokens 看似很大，但塞进 50 轮对话 + 工具定义 + System Prompt 后所剩无几</li>
+<li><strong>"大海捞针"效应</strong>——上下文越长，模型定位关键信息的准确率越低（业界观测约在 32K tokens 后显著下降）</li>
+<li><strong>成本线性增长</strong>——每轮对话都要重新发送全部历史，token 成本随对话长度线性放大</li>
+</ol>
+<p>这就是为什么我们需要一个<strong>分层的、结构化的记忆系统</strong>，而不是粗暴地把一切塞进上下文。</p>
+</div>
+
+<h3>1.2 Memory ≠ 存储，Memory = "在正确的时间回忆起正确的信息"</h3>
+
+<p>很多人把 Memory 系统简单理解为"数据库"。这是一个危险的简化。</p>
+
+<table class="compare-table">
+<tr><th>传统数据库</th><th>Agent Memory 系统</th></tr>
+<tr><td>存进去就能取出来</td><td>存了不一定能取出来——需要 <strong>recall 机制</strong></td></tr>
+<tr><td>查询精确匹配</td><td>需要 <strong>语义检索</strong>——"上次类似的失败经验"</td></tr>
+<tr><td>数据是静态的</td><td>记忆需要 <strong>衰减、更新、遗忘</strong></td></tr>
+<tr><td>存储和读取解耦</td><td><strong>写入时机和读取时机同等重要</strong></td></tr>
+<tr><td>一致性是核心目标</td><td><strong>相关性 > 一致性</strong>——模糊匹配优于精确空结果</td></tr>
+</table>
+
+<div class="card insight">
+<div class="card-label">💡 Memory 系统的四维设计空间</div>
+<p>设计一个 Memory 系统，本质上是在回答四个问题：</p>
+<ol>
+<li><strong>存什么（What）</strong>：不是所有东西都值得记。原始对话 vs 提炼后的摘要 vs 结构化三元组？</li>
+<li><strong>怎么存（How）</strong>：向量库？知识图谱？全文索引？Markdown 文件？各有取舍。</li>
+<li><strong>何时取（When）</strong>：每次都取？用户触发时取？Agent 判断需要时取？这是影响 token 成本的关键杠杆。</li>
+<li><strong>怎更新（Update）</strong>：追加式？覆盖式？冲突检测？记忆衰减（forgetting curve）？</li>
+</ol>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- §2 HOW：四层记忆架构详解 -->
+<!-- ============================================================ -->
+<h2 id="s2-how">&sect;2 怎么实现：四层记忆架构</h2>
+
+<h3>2.1 架构总览</h3>
+
+<p>受人类认知科学启发，工业界已形成一套<strong>四层记忆架构</strong>共识。每层有不同的生命周期、存储介质和访问模式：</p>
+
+<table class="compare-table">
+<tr><th>层级</th><th>存储内容</th><th>持续时间</th><th>类比</th><th>实现方式</th></tr>
+<tr><td><span class="token context">主上下文</span><br/>Main Context</td><td>当前任务对话、Tool 输出、中间推理</td><td>单次请求</td><td>RAM</td><td>Prompt 窗口内直接承载</td></tr>
+<tr><td><span class="token episodic">工作上下文</span><br/>Working Context</td><td>当前会话摘要、滑动窗口、轮次压缩</td><td>会话内</td><td>L1 Cache</td><td>KV Cache / 滑动窗口 / 对话压缩</td></tr>
+<tr><td><span class="token semantic">外部上下文</span><br/>External Context</td><td>历史对话精华、项目知识、用户偏好</td><td>跨会话</td><td>硬盘</td><td>向量库 / 图谱 / FTS / MD 文件</td></tr>
+<tr><td><span class="token procedural">程序性记忆</span><br/>Procedural</td><td>学会的技能、工作流模式、成功范式</td><td>持久进化</td><td>肌肉记忆</td><td>SKILL.md / 自动沉淀 / 技能注册表</td></tr>
+</table>
+
+<h3>2.2 第一层：主上下文（Main Context）— Prompt 窗口内的"现场"</h3>
+
+<p>这是最基础也最容易理解的一层。<strong>当前这一轮推理所需的一切信息，都在 Prompt 里</strong>。</p>
+
+<div class="example-box">
+<div class="example-label">例 1：一个典型 ReAct 循环的主上下文构成</div>
+<pre><code>&lt;system&gt;
+你是一个外汇分析助手。当前时间：2026-05-27
+可用工具：get_exchange_rate, search_news, format_report
+&lt;/system&gt;
+
+&lt;user&gt;
+帮我查一下 USD/CNY 最新汇率，并分析近一周趋势
+&lt;/user&gt;
+
+&lt;assistant&gt;
+Thought: 用户需要汇率查询和趋势分析。先获取最新汇率。
+FunctionCall: get_exchange_rate(from="USD", to="CNY")
+&lt;/assistant&gt;
+
+&lt;tool_result&gt;
+{"rate": 7.2451, "amount": 1.0, "updated_at": "2026-05-27T09:30:00Z"}
+&lt;/tool_result&gt;
+
+↑ 以上全部 = Main Context（约 ~400 tokens）
+= System Prompt + User Message + Assistant Thought
+  + Function Call + Tool Output</code></pre>
+</div>
+
+<p><strong>关键约束</strong>：Main Context 受限于模型的 Context Window 大小（4K ~ 1M+ tokens，取决于模型）。它是最"昂贵"的存储——每个 token 都要经过完整的注意力计算。</p>
+
+<h3>2.3 第二层：工作上下文（Working Context）— 会话内的"短期记忆"</h3>
+
+<p>当一个会话超过几十轮后，不可能把所有历史都放在 Main Context 中。<strong>工作上下文的职责是在会话范围内维护一个"压缩版的历史"</strong>。</p>
+
+<h4>三种主流实现方案</h4>
+
+<table class="compare-table">
+<tr><th>方案</th><th>原理</th><th>优点</th><th>缺点</th><th>代表</th></tr>
+<tr><td><strong>滑动窗口</strong><br/>(Sliding Window)</td><td>只保留最近 N 轮对话</td><td>实现极简，零延迟</td><td>丢失早期重要信息</td><td>LangChain ConversationBufferWindowMemory</td></tr>
+<tr><td><strong>对话摘要</strong><br/>(Summarization)</td><td>旧对话压缩为摘要，保留近期原文</td><td>信息密度高，保留关键语义</td><td>摘要质量依赖 LLM，有信息损失</td><td>LangChain ConversationSummaryMemory</td></tr>
+<tr><td><strong>向量检索</strong><br/>(Vector Retrieval)</td><td>历史向量化存储，按语义相似度召回</td><td>可精确定位相关片段</td><td>需要 embedding + 向量库基础设施</td><td>LlamaIndex / Mem0</td></tr>
+</table>
+
+<div class="example-box">
+<div class="example-label">例 2：滑动窗口 + 摘要混合策略（生产常用）</div>
+<pre><code>class WorkingContext:
+    """会话级工作上下文管理"""
+    
+    def __init__(self, window_size: int = 10, summary_threshold: int = 20):
+        self.window_size = window_size          # 最近 10 轮保持原文
+        self.summary_threshold = summary_threshold  # 超过 20 轮触发摘要
+        self.recent_messages: list[Message] = []   # 滑动窗口区
+        self.summary: str = ""                     # 摘要区
+    
+    def add_message(self, msg: Message):
+        self.recent_messages.append(msg)
+        
+        # 超过阈值 → 把最早的批次压缩为摘要
+        if len(self.recent_messages) > self.summary_threshold:
+            batch = self.recent_messages[:self.window_size]
+            new_summary = llm.summarize(
+                previous_summary=self.summary,
+                new_messages=batch
+            )
+            self.summary = new_summary
+            self.recent_messages = self.recent_messages[self.window_size:]
+    
+    def build_prompt_context(self) -> str:
+        """组装注入 Prompt 的工作上下文"""
+        parts = []
+        if self.summary:
+            parts.append(f"[之前的对话摘要]\n{self.summary}")
+        parts.extend(m.to_string() for m in self.recent_messages)
+        return "\n".join(parts)
+
+# 效果：
+# 第 1-10 轮：全部原文 (~2000 tokens)
+# 第 11-20 轮：摘要(~300 tokens) + 最近10轮原文 (~2000 tokens)
+# 第 21-30 轮：更新摘要(~400 tokens) + 最近10轮原文 (~2000 tokens)
+# → 无论聊多久，Prompt 中的上下文量基本恒定</code></pre>
+</div>
+
+<h3>2.4 第三层：外部上下文（External Context）— 跨会话的"长期记忆"</h3>
+
+<p>这是让 Agent 从"一次性工具"变成"持续进化的助手"<strong>最关键的一层</strong>。<strong>会话结束了，但有价值的信息不应该消失。</strong></p>
+
+<h4>认知科学的分类法：三种记忆类型</h4>
+
+<table class="compare-table">
+<tr><th>类型</th><th>存储内容</th><th>特征</th><th>例子</th><th>技术实现</th></tr>
+<tr><td><span class="token episodic">情景记忆</span><br/>Episodic</td><td><strong>具体事件</strong>——"什么时候发生了什么"</td><td>有时间戳、有时序关系、有情感标记</td><td>"2026-03-15 尝试用 X 方案失败了，原因是 Y"</td><td>带时间戳的向量记录 / 图谱时态边</td></tr>
+<tr><td><span class="token semantic">语义记忆</span><br/>Semantic</td><td><strong>事实和关系</strong>——"什么是真的"</td><td>去时间化的、结构化的、可推理的</td><td>"用户偏好 TypeScript"、"公司在北京"、"KBA 用 Python 开发"</td><td>知识图谱三元组 / JSON Fact 表 / 结构化 Profile</td></tr>
+<tr><td><span class="token procedural">程序性记忆</span><br/>Procedural</td><td><strong>技能和工作流</strong>——"怎么做"</td><td>条件-行动规则、SOP、反模式</td><td>"成功的调试流程"、"报告生成的标准步骤"</td><td>SKILL.md / 规则引擎 / 决策树</td></tr>
+</table>
+
+<div class="example-box">
+<div class="example-label">例 3：KBA 项目的情景记忆 + 语义记忆实例</div>
+<pre><code># KBAgent 的外部上下文存储示例
+
+## === 情景记忆 (Episodic) ===
+# 存储在向量库中，带时间戳和元数据
+episodic_memories = [
+    {
+        "id": "epi-001",
+        "timestamp": "2026-03-15T14:30:00Z",
+        "content": "尝试用 GPT-4o 直接提取 HQA，准确率仅 45%，
+                   主要问题是幻觉和非结构化输出",
+        "tags": ["hqa-extraction", "failure", "gpt-4o"],
+        "sentiment": "negative",
+        "lesson": "需要结构化输出约束 + 领域知识引导"
+    },
+    {
+        "id": "epi-002", 
+        "timestamp": "2026-04-02T10:15:00Z",
+        "content": "引入三段式流水线（主题挖掘→HQA提取→主题关联），
+                   HQA 准确率提升至 72%",
+        "tags": ["pipeline", "success", "accuracy-improvement"],
+        "sentiment": "positive",
+        "lesson": "流水线分解比端到端更可控"
+    }
+]
+
+## === 语义记忆 (Semantic) ===  
+# 存储在知识图谱或结构化表中
+semantic_facts = [
+    {"subject": "用户-Fitz", "predicate": "偏好编程语言", "object": "TypeScript"},
+    {"subject": "KBA项目", "predicate": "开发语言", "object": "Python"},
+    {"subject": "KBA项目", "predicate": "HQA总量", "object": "443条"},
+    {"subject": "DDAgent", "predicate": "覆盖银行数", "object": "12家"},
+    {"subject": "KBA-V5", "predicate": "准确率", "object": "82%"},
+]
+
+## === 检索流程 ===
+def retrieve_external_context(user_query: str, user_id: str) -> str:
+    """根据用户查询，从外部上下文中召回相关信息"""
+    
+    # Step 1: 语义记忆 —— 用户画像 + 项目事实
+    profile = graph_db.query(f"""
+        MATCH (u:User {{id: '{user_id}'}})-[r]->(o)
+        RETURN r.predicate, o.value
+    """)
+    
+    # Step 2: 情景记忆 —— 相关历史经验
+    similar_episodes = vector_store.search(
+        query=user_query,
+        filter={"user_id": user_id},
+        top_k=5
+    )
+    
+    # Step 3: 组装上下文
+    return build_context_prompt(
+        user_profile=profile,
+        relevant_history=similar_episodes
+    )</code></pre>
+</div>
+
+<h4>四种存储后端的对比</h4>
+
+<table class="compare-table">
+<tr><th>存储方案</th><th>适合的记忆类型</th><th>优势</th><th>劣势</th><th>开源方案</th></tr>
+<tr><td><strong>向量数据库</strong><br/>(Pinecone/Qdrant/Milvus)</td><td>情景记忆<br/>(非结构化文本)</td><td>语义检索精度高，支持模糊匹配，扩展性好</td><td>无法做精确推理，"黑盒"相似度</td><td>Qdrant / Chroma / Milvus</td></tr>
+<tr><td><strong>知识图谱</strong><br/>(Neo4j/NebulaGraph)</td><td>语义记忆<br/>(实体-关系)</td><td>支持多跳推理，关系显式化，可解释性强</td><td>写入成本高，schema 设计复杂，不适合高频更新</td><td>Neo4j / Graphiti</td></tr>
+<tr><td><strong>全文搜索</strong><br/>(FTS / SQLite-FTS5)</td><td>程序性记忆<br/>(文档/SOP)</td><td>实现简单，关键词匹配可靠，轻量</td><td>不支持语义理解，同义词问题</td><td>SQLite FTS5 / Hermes</td></tr>
+<tr><td><strong>Markdown 文件</strong><br/>(MEMORY.md / SKILL.md)</td><td>混合型<br/>(人工+自动)</td><td>人类可读可编辑，版本控制友好，零依赖</td><td>检索靠文件名/标签，结构化程度低</td><td>OpenClaw / MemGPT</td></tr>
+</table>
+
+<h3>2.5 第四层：程序性记忆（Procedural Memory）— 持续进化的"技能库"</h3>
+
+<p>这是最高阶也最容易被忽视的一层。<strong>前三层管的是"知道什么"，第四层管的是"会做什么"。</strong></p>
+
+<p>程序性记忆对应人类的<strong>肌肉记忆</strong>——骑自行车不需要每次都回忆平衡原理，弹钢琴不需要看乐谱。同理，一个成熟的 Agent 在处理同类任务时，应该能复用已经学会的工作流模式，而不是每次都从第一性原理重新推理。</p>
+
+<div class="example-box">
+<div class="example-label">例 4：KBAgent 的程序性记忆 — SKILL.md 作为技能载体</div>
+<pre><code># kb_skill/SKILL.md  —  这是 KBAgent 的程序性记忆核心
+---
+name: knowledge-base-production
+version: "2.3"
+description: "知识库三段式流水线的标准 SOP"
+auto_evolved: true  # 标记此 Skill 由系统自动进化而来
+last_updated: "2026-05-20"
+---
+
+## 你是谁
+你是 KBAgent，一个专业的金融知识库生产 Agent。
+你的目标是生产高质量、可独立存在的 HQA（High-Quality Q&A）。
+
+## 已习得的经验（从执行历史中沉淀）
+
+### ✅ 成功模式
+1. **三段式流水线**（验证 443 条 HQA 产出）：
+   - Phase 1 主题挖掘 → Phase 2 HQA 提取 → Phase 3 主题关联
+   - 关键：每步必须有明确的质量门禁
+
+2. **HQA 质量的三个铁律**：
+   - 必须是真问题（有人真的会这么问）
+   - 必须有明确答案（不含"视情况而定"）
+   - 必须含具体数字或引用来源
+
+3. **Topic 关联策略**：
+   - 新 topic 先查重（避免重复创建）
+   - 关联度 > 0.7 的 topic 必须建立边关系
+   - 孤立 topic（无关联）需在周报中标注
+
+### ❌ 反模式（从失败中学习）
+1. ❌ 不要用端到端 LLM 生成 HQA（准确率仅 ~45%，幻觉严重）
+2. ❌ 不要跳过 Phase 1 直接进入提取（会导致主题碎片化）
+3. ❌ 不要给每个 topic 只配 1-2 条 HQA（最少 3 条才能支撑语义覆盖）
+4. ❌ HQA answer 超过 200 字会导致用户阅读疲劳
+
+## 标准工作流（按顺序执行）
+[完整流程定义，类似 A1.2 中的 Prompt 原语示例...]</code></pre>
+</div>
+
+<p>注意上面 SKILL.md 中的 <code>auto_evolved: true</code> 和"已习得的经验"/"反模式"部分——这些不是人手写的，而是 Agent 在执行过程中<strong>自动沉淀</strong>出来的。这就是程序性记忆的核心：<strong>Agent 通过实践不断进化自己的能力</strong>。</p>
+
+<div class="card deepen">
+<div class="card-label">🔍 程序性记忆的三种形成路径</div>
+<table>
+<tr><th>路径</th><th>机制</th><th>例子</th><th>成熟度</th></tr>
+<tr><td><strong>人工编写</strong></td><td>领域专家手写 SKILL.md</td><td>OpenClaw 官方 Skills</td><td>质量高但成本高</td></tr>
+<tr><td><strong>经验沉淀</strong></td><td>从成功/失败案例中提取模式</td><td>Hermes Honcho 用户建模</td><td>中等（需要足够样本）</td></tr>
+<tr><td><strong>自我进化</strong></td><td>Generator-Verifier 双闭环优化</td><td>EvoSkills 自动进化框架</td><td>前沿（2026 方向）</td></tr>
+</table>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- §3 WHY：Token 经济学视角的第一性原理 -->
+<!-- ============================================================ -->
+<h2 id="s3-why">&sect;3 为什么：Token 经济学约束下的最优记忆策略</h2>
+
+<h3>3.1 核心矛盾：记忆是有代价的</h3>
+
+<p>在设计 Memory 系统时，有一个<strong>永恒的张力</strong>：</p>
+
+<div class="card intuition">
+<div class="card-label">⚖️ 记忆系统的核心权衡</div>
+<p><strong>更多信息 → 更好的决策质量</strong>（理论上）</p>
+<p><strong>更多信息 → 更高的 Token 成本 + 更低的注意力效率</strong>（实际上）</p>
+<p>这不是一个"越多越好"的问题，而是一个<strong>优化问题</strong>：在有限的 Token 预算下，选择<strong>业务价值密度最高</strong>的信息子集放入上下文。</p>
+</div>
+
+<h3>3.2 ENGRAM 方法论：1% Token 达到 Full-Context 效果</h3>
+
+<p>2025 年学术界提出的 ENGRAM 方法（NeurIPS 2025 Spotlight）给出了一个惊人的结论：</p>
+
+<blockquote style="border-left:4px solid var(--purple);padding:12px 18px;margin:16px 0;background:var(--purple-bg);border-radius:0 8px 8px 0;">
+<p style="font-style:italic;">通过精心设计的记忆检索策略，仅需约 <strong>1%</strong> 的 full-context tokens 就能达到接近完整上下文的 baseline 效果。</p>
+<p style="font-size:12px;color:var(--muted);margin-top:6px;">— ENGRAM: Efficient Neural Generative Reterieval Augmentation (NeurIPS 2025)</p>
+</blockquote>
+
+<p>这意味着什么？如果你的 full-context 是 100K tokens，ENGRAM 方法只需要 ~1K tokens 的精选记忆就能达到几乎相同的效果。<strong>核心原则不是"存越多越好"，而是"存对的最小集合"。</strong></p>
+
+<h3>3.3 四个决策变量（重新审视）</h3>
+
+<p>回到 §1.2 提出的四个问题，现在用 Token 经济学的镜头重新审视：</p>
+
+<table class="compare-table">
+<tr><th>变量</th><th>" naive 做法</th><th>"经济学最优"做法</th><th>节省幅度</th></tr>
+<tr><td><strong>存什么 (What)</strong></td><td>保存原始对话全文</td><td>只存提炼后的<strong>原子事实</strong> + <strong>经验教训</strong></td><td>~90% 存储压缩</td></tr>
+<tr><td><strong>怎么存 (How)</strong></td><td>全部存向量库</td><td><strong>分层存储</strong>：事实→图谱，经验→MD，对话→向量</td><td>~70% 检索加速</td></tr>
+<tr><td><strong>何时取 (When)</strong></td><td>每次都全量取出</td><td><strong>按需检索</strong>：只在 Agent 判断相关时才取</td><td>~80% Token 节省</td></tr>
+<tr><td><strong>怎更新 (Update)</strong></td><td>只追加不删除</td><td><strong>衰减 + 冲突检测</strong>：旧信息降权，矛盾事实标记</td><td>~50% 质量提升</td></tr>
+</table>
+
+<div class="card takeaway">
+<div class="card-label">✅ Token 经济学的三条铁律</div>
+<ol>
+<li><strong>密度优先于数量</strong>：一条精确的结构化事实 > 10 条原始对话片段</li>
+<li><strong>检索时机是最大杠杆</strong>：从"每次全量加载"改为"按需检索"，Token 消耗可降低一个数量级</li>
+<li><strong>遗忘是一种特性而非 bug</strong>：不是所有记忆都有永久价值。合理的遗忘曲线（forgetting curve）能让记忆系统保持在最佳效能状态</li>
+</ol>
+</div>
+
+<h3>3.4 一个具体的成本模型</h3>
+
+<p>假设你的 Agent 日活 1000 用户，平均每会话 20 轮：</p>
+
+<pre><code>## 方案 A：暴力全量上下文（Naive）
+每轮 tokens = System(500) + History_avg_10rounds(4000) + Tool_output(1000) 
+             + Response(500) = ~6000 tokens/轮
+每日总 tokens = 1000 users × 20 rounds × 6000 = 120M tokens
+月度成本 (@ $3/M tokens input) = **$10,800/月**
+额外问题：上下文超长 → 准确率下降 ~15%
+
+## 方案 B：四层记忆架构（Optimized）
+每轮 tokens = System(500) + WorkingContext_summary(800) 
+             + Recent_3rounds(1200) + Retrieved_memory(600) 
+             + Tool_output(1000) + Response(500) = ~4600 tokens/轮
+每日总 tokens = 1000 × 20 × 4600 = 92M tokens
+月度成本 (@ $3/M) = **$8,280/月** （省 23%）
+额外收益：上下文精炼 → 准确率提升 ~12%（记忆质量补偿）
+
+## 方案 C：ENGRAM 式极致优化（Advanced）
+每轮 tokens = System(500) + WorkingContext_compressed(400) 
+             + Recent_1round(400) + Top5_retrieved_facts(300) 
+             + Tool_output(1000) + Response(500) = ~3100 tokens/轮
+每日总 tokens = 1000 × 20 × 3100 = 62M tokens  
+月度成本 = **$5,580/月**（省 48%）</code></pre>
+
+<p>更重要的是<strong>准确率的非线性提升</strong>——方案 C 因为注入的信息都是经过筛选的高密度事实，模型决策质量反而高于方案 A。</p>
+
+
+<!-- ============================================================ -->
+<!-- §4 EVOLUTION：四代演进与主流框架对比 -->
+<!-- ============================================================ -->
+<h2 id="s4-evolution">&sect;4 演进与对比：四代记忆系统</h2>
+
+<h3>4.1 四代演进路线图</h3>
+
+<svg overflow="visible" viewBox="0 0 740 290" style="width:100%;height:auto;margin:16px 0;">
+<defs>
+<marker id="ev-a" orient="auto" markerWidth="6" markerHeight="6" refX="5" refY="3"><path d="M0,0 L6,3 L0,6 Z" fill="#999"/>
+</defs>
+<line x1="40" y1="248" x2="700" y2="248" stroke="#ccc" stroke-width="2"/>
+
+<!-- Gen 1 -->
+<circle cx="90" cy="248" r="6" fill="#534AB7"/>
+<text x="90" y="272" text-anchor="middle" fill="#666" font-size="11">2023</text>
+<rect x="25" y="178" width="130" height="58" rx="6" fill="#f0eeff" stroke="#534AB7"/>
+<text x="90" y="198" text-anchor="middle" fill="#534AB7" font-size="11" font-weight="600">第一代：会话级</text>
+<text x="90" y="214" text-anchor="middle" fill="#888" font-size="10">LangChain Buffer</text>
+<text x="90" y="228" text-anchor="middle" fill="#888" font-size="9">边界：会话结束即失忆</text>
+
+<!-- Gen 2 -->
+<circle cx="250" cy="248" r="6" fill="#BA7517"/>
+<text x="250" y="272" text-anchor="middle" fill="#666" font-size="11">2025 初</text>
+<rect x="175" y="168" width="150" height="68" rx="6" fill="#faeeda" stroke="#BA7517"/>
+<text x="250" y="190" text-anchor="middle" fill="#BA7517" font-size="11" font-weight="600">第二代：任务级</text>
+<text x="250" y="206" text-anchor="middle" fill="#888" font-size="10">Manus / DeepResearch</text>
+<text x="250" y="220" text-anchor="middle" fill="#888" font-size="9">数十次工具调用的中间产物组织</text>
+<text x="250" y="232" text-anchor="middle" fill="#888" font-size="9">边界：任务结束归档</text>
+
+<!-- Gen 3 -->
+<circle cx="430" cy="248" r="6" fill="#1D9E75"/>
+<text x="430" y="272" text-anchor="middle" fill="#666" font-size="11">2025-26</text>
+<rect x="340" y="158" width="180" height="78" rx="6" fill="#e1f5ee" stroke="#1D9E75"/>
+<text x="430" y="180" text-anchor="middle" fill="#1D9E75" font-size="11" font-weight="600">第三代：持久化记忆</text>
+<text x="430" y="196" text-anchor="middle" fill="#888" font-size="10">OpenClaw MEMORY.md</text>
+<text x="430" y="210" text-anchor="middle" fill="#888" font-size="9">Hermes / Letta (MemGPT)</text>
+<text x="430" y="224" text-anchor="middle" fill="#888" font-size="9">Markdown 持久化 + 自我进化闭环</text>
+<text x="430" y="236" text-anchor="middle" fill="#888" font-size="9">边界：文本扁平，结构化弱</text>
+
+<!-- Gen 4 -->
+<circle cx="620" cy="248" r="6" fill="#185FA5"/>
+<text x="620" y="272" text-anchor="middle" fill="#666" font-size="11">2026</text>
+<rect x="520" y="148" width="200" height="88" rx="6" fill="#e6f1fb" stroke="#185FA5"/>
+<text x="620" y="172" text-anchor="middle" fill="#185FA5" font-size="11" font-weight="600">第四代：本体范式</text>
+<text x="620" y="188" text-anchor="middle" fill="#888" font-size="10">Glean / Snowflake / Databricks</text>
+<text x="620" y="202" text-anchor="middle" fill="#888" font-size="9">企业图谱 (Enterprise Graph)</text>
+<text x="620" y="216" text-anchor="middle" fill="#888" font-size="9">实体/关系/规则/因果路径结构化</text>
+<text x="620" y="230" text-anchor="middle" fill="#888" font-size="9">本体层(Ontology)插入数据和LLM之间</text>
+
+<!-- 演进箭头 -->
+<path d="M100 188 L235 180" fill="none" stroke="#999" stroke-width="1.5" marker-end="url(#ev-a)"/>
+<path d="M260 176 L405 168" fill="none" stroke="#999" stroke-width="1.5" marker-end="url(#ev-a)"/>
+<path d="M420 166 L585 158" fill="none" stroke="#999" stroke-width="1.5" marker-end="url(#ev-a)"/>
+</svg>
+
+<h3>4.2 主流框架深度对比</h3>
+
+<table class="compare-table">
+<tr><th>框架</th><th>核心理念</th><th>存储方案</th><th>独特特色</th><th>生产案例</th></tr>
+<tr>
+<td><strong>Mem0</strong></td>
+<td>LLM 驱动的 CRUD 记忆平台</td>
+<td>向量库 + 图存储</td>
+<td>自动提取 GraphMemory 事实；内置冲突检测；支持命名空间隔离</td>
+<td>AWS Agent SDK / Sunflower 医疗</td>
+</tr>
+<tr>
+<td><strong>Letta</strong><br/>(原 MemGPT)</td>
+<td>操作系统式的三层记忆架构</td>
+<td>Core Memory (主上下文)<br/>Recall Memory (检索)<br/>Archival Memory (归档)</td>
+<td>Agent 自主决定何时更新记忆；无限的 archival 回滚上下文；managed memory concept</td>
+<td>11x 销售转化 AI / Kognitos</td>
+</tr>
+<tr>
+<td><strong>Graphiti</strong><br/>(Zep)</td>
+<td>双时态知识图谱记忆</td>
+<td>Neo4j 图谱</td>
+<td><strong>valid_time</strong>（事实何时为真）+ <strong>transaction_time</strong>（事实何时被记录）；支持时态推理</td>
+<td>Zep AI 平台 / 企业知识管理</td>
+</tr>
+<tr>
+<td><strong>Hermes</strong><br/>(Nous Research)</td>
+<td>自我进化三层架构</td>
+<td>SQLite + FTS5 + Markdown</td>
+<td><strong>Honcho</strong> 用户建模系统（动态用户画像）；完全离线运行；开源生态</td>
+<td>开源个人 Agent</td>
+</tr>
+</table>
+
+<h3>4.3 ChatGPT vs Claude：两种记忆模式的逆向工程对比</h3>
+
+<p>通过逆向分析和公开文档研究，工业界两大头部产品的记忆策略呈现出截然不同的设计哲学：</p>
+
+<table class="compare-table">
+<tr><th>维度</th><th><strong>ChatGPT</strong></th><th><strong>Claude</strong></th></tr>
+<tr><td><strong>记忆模式</strong></td>
+<td><span style="color:var(--amber)">被动注入（预计算）</span><br/>后台预计算一组事实，每次会话自动注入</td>
+<td><span style="color:var(--teal)">主动检索（按需）</span><br/>模型判断需要时才调用 conversation_search / recent_chats 工具</td>
+</tr>
+<tr><td><strong>内容构成</strong></td>
+<td>~33 条结构化事实摘要 + 近期对话概要<br/><span style="font-size:11px;color:var(--muted)">固定大小，预计算</span></td>
+<td>动态检索结果（基于语义相似度的历史片段）<br/><span style="font-size:11px;color:var(--muted)">按需变化</span></td>
+</tr>
+<tr><td><strong>触发时机</strong></td>
+<td><strong>每次自动</strong>——新会话开始时无条件注入</td>
+<td><strong>模型判断</strong>——当对话涉及历史信息时主动调用</td>
+</tr>
+<tr><td><strong>用户感知</strong></td>
+<td>完全无感——用户看不到记忆加载过程</td>
+<td>可见——界面显示<strong>"正在搜索记忆..."</strong></td>
+</tr>
+<tr><td><strong>Context 占用</strong></td>
+<td>固定消耗（~500-1500 tokens）<br/>不管用不用都得付这个成本</td>
+<td>按需消耗（~200-2000 tokens）<br/>只有相关时才产生开销</td>
+</tr>
+<tr><td><strong>设计哲学</strong></td>
+<td><em>"无感体验优先"</em><br/>牺牲灵活性换取确定性延迟</td>
+<td><em>"透明可控优先"</em><br/>牺牲一点延迟换取精准性和可解释性</td>
+</tr>
+<tr><td><strong>适合场景</strong></td>
+<td>高频短会话（"翻译这句话"），不需要历史的场景</td>
+<td>长周期协作（"继续上周的项目"），记忆敏感的场景</td>
+</tr>
+</table>
+
+<div class="card insight">
+<div class="card-label">💡 设计哲学背后的工程取舍</div>
+<p>ChatGPT 选择被动注入，是因为它的<strong>主要场景是短问答</strong>——大部分用户问完就走，预计算记忆的开销可以摊薄。而且 OpenAI 有强大的基础设施来维持数十亿用户的记忆索引。</p>
+<p>Claude 选择主动检索，是因为 Anthropic 定位的<strong>核心场景是深度工作</strong>——编程、写作、研究等需要长时间上下文的任务。让模型自己判断"我现在需要记忆吗"，虽然增加了一轮 tool call 的延迟，但换来了更高的 precision 和更好的 token 利用率。</p>
+<p><strong>对你的 Agent 来说</strong>：如果场景偏向高频短交互（如 FXAgent 汇率查询），ChatGPT 模式更合适；如果偏向长周期复杂任务（如 KBAgent 知识生产），Claude 模式更合适。最好的架构往往是<strong>混合式</strong>的。</p>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- §5 CONNECT：与产品连接 -->
+<!-- ============================================================ -->
+<h2 id="s5-connect">&sect;5 连接：KBA 67 天交付中的记忆设计实战</h2>
+
+<h3>5.1 KBA 项目中的记忆挑战</h3>
+
+<p>回顾你在 67 天内交付 KBA 项目的经历，<strong>记忆系统设计是贯穿始终的核心挑战之一</strong>：</p>
+
+<div class="flow-step"><div class="step-num">1</div><div class="step-content"><strong>挑战一：12 家银行的差异规则</strong><br/>每家银行的监管要求、字段格式、审批流程都不一样。Agent 如何"记住"这些差异并在正确的场景应用正确的规则？</div></div>
+<div class="flow-step"><div class="step-num">2</div><div class="step-content"><strong>挑战二：HQA 的质量控制</strong><br/>产出了 443 条 HQA，但如何确保每条的质量一致性？如何避免重复或矛盾的内容？</div></div>
+<div class="flow-step"><div class="step-num">3</div><div class="step-content"><strong>挑战三：V5 准确率从 68% 到 82%的提升</strong><br/>这 14 个百分点的提升中，记忆质量的改善贡献了多少？哪些类型的记忆改进效果最明显？</div></div>
+<div class="flow-step"><div class="step-num">4</div><div class="step-content"><strong>挑战四：4 个 Skill 的协同记忆</strong><br/>Skill 之间需要共享什么记忆？各自应该维护什么私有记忆？边界在哪里？</div></div>
+
+<h3>5.2 KBA 记忆架构映射</h3>
+
+<svg overflow="visible" viewBox="0 0 680 300" style="width:100%;height:auto;margin:16px 0;border-radius:10px;background:#fff;border:1px solid #e0e0dc;">
+<text x="340" y="22" text-anchor="middle" fill="#333" font-size="14" font-weight="600">KBA 项目的四层记忆架构映射</text>
+
+<!-- 四层横条 -->
+<rect x="30" y="40" width="620" height="38" rx="6" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.2"/>
+<text x="55" y="64" fill="#534AB7" font-size="11" font-weight="600">L0 主上下文</text>
+<text x="160" y="56" fill="#333" font-size="10">当前 Topic 的三段式流水线状态</text>
+<text x="160" y="70" fill="#888" font-size="9">Phase 进度 + 当前进度 + Tool 输出 (~2K tokens)</text>
+
+<rect x="30" y="86" width="620" height="38" rx="6" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.2"/>
+<text x="55" y="110" fill="#BA7517" font-size="11" font-weight="600">L1 工作上下文</text>
+<text x="160" y="102" fill="#333" font-size="10">本次知识生产 Session 的中间状态</text>
+<text x="160" y="116" fill="#888" font-size="9">候选 Topic 列表 + 已提取 HQA 草稿 + 待关联项</text>
+
+<rect x="30" y="132" width="620" height="46" rx="6" fill="#E6F7F1" stroke="#1D9E75" stroke-width="1.2"/>
+<text x="55" y="152" fill="#1D9E75" font-size="11" font-weight="600">L2 外部上下文</text>
+<text x="155" y="148" fill="#333" font-size="10">情景记忆:</text>
+<text x="225" y="148" fill="#888" font-size="9">443 条 HQA 生产历史 (向量)</text>
+<text x="155" y="162" fill="#333" font-size="10">语义记忆:</text>
+<text x="225" y="162" fill="#888" font-size="9">银行规则差异表 / 术语词典 / 用户偏好</text>
+<text x="155" y="174" fill="#333" font-size="10">载体:</text>
+<text x="195" y="174" fill="#888" font-size="9">format=27240 / atom=27243 / hqa=27244 / topic=27252</text>
+
+<rect x="30" y="186" width="620" height="46" rx="6" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.2"/>
+<text x="55" y="206" fill="#185FA5" font-size="11" font-weight="600">L3 程序性记忆</text>
+<text x="145" y="202" fill="#333" font-size="10">4 个 SKILL.md:</text>
+<text x="230" y="202" fill="#888" font-size="9">topic-mining / hqa-extraction / topic-linking / quality-gate</text>
+<text x="145" y="216" fill="#333" font-size="10">反模式库:</text>
+<text x="215" y="216" fill="#888" font-size="9">从 V1→V5 迭代中沉淀的 23 条失败教训</text>
+<text x="145" y="228" fill="#333" font-size="10">自动进化:</text>
+<text x="210" y="228" fill="#888" font-size="9">每次成功/失败案例自动更新 Skill</text>
+
+<!-- 底部关键指标 -->
+<rect x="30" y="244" width="620" height="42" rx="6" fill="#fafafa" stroke="#ddd" stroke-width="1"/>
+<text x="340" y="264" text-anchor="middle" fill="#333" font-size="11" font-weight="600">关键成果指标</text>
+<text x="140" y="280" text-anchor="middle" fill="#534AB7" font-size="10">67天 交付周期</text>
+<text x="280" y="280" text-anchor="middle" fill="#1D9E75" font-size="10">4 Skills</text>
+<text x="380" y="280" text-anchor="middle" fill="#BA7517" font-size="10">443 HQAs</text>
+<text x="480" y="280" text-anchor="middle" fill="#185FA5" font-size="10">V5: 82% 准确率</text>
+<text x="590" y="280" text-anchor="middle" fill="#993C1D" font-size="10">12 家银行</text>
+</svg>
+
+<h3>5.3 HQA 就是结构化的情景记忆</h3>
+
+<p>KBA 产出的 443 条 HQA，本质上是<strong>结构化的情景记忆（Structured Episodic Memory）</strong>：</p>
+
+<div class="example-box">
+<div class="example-label">例 5：一条 HQA 如何同时充当情景记忆和语义知识</div>
+<pre><code>{
+    "hqa_id": "hqa-27244-127",
+    "question": "跨境汇款的 SWIFT Code 格式要求是什么？",
+    "answer": "SWIFT Code（也称 BIC）由 8 或 11 位字符组成：
+           - 8 位：银行代码(4) + 国家代码(2) + 地区代码(2)
+           - 11 位：8 位 + 分行代码(3)
+           示例：BKCHCNBJ（中国银行总部），
+                 BKCHCNBJ110（中国北京分行）",
+    
+    # === 情景记忆属性 ===
+    "created_at": "2026-04-15",
+    "created_in_session": "kb-session-042",
+    "source_topic": "跨境支付-汇款流程",
+    "extraction_method": "三段式流水线-Phase2",
+    
+    # === 语义记忆属性 ===
+    "tags": ["swift-code", "跨境汇款", "银行格式"],
+    "related_topics": ["topic-27252-swire", "topic-27251-remittance"],
+    "confidence": 0.94,
+    "verified_by": "human-review-pass"
+    
+    # === 程序性记忆属性 ===
+    "quality_checks_passed": ["has_specific_numbers", "cites_example", 
+                               "under_200_chars", "not_generic"]
+}</code></pre>
+</div>
+
+<p>一条 HQA 同时承载了三种记忆类型的信息——这正是好的记忆系统设计的标志：<strong>一次写入，多层复用</strong>。
+
+<h3>5.4 DDAgent 的跨主体记忆隔离</h3>
+
+<p>在 DDAgent（尽调 Agent）的场景中，有一个 KBA 没有的特殊挑战：<strong>跨主体的记忆隔离</strong>。</p>
+
+<div class="card warning">
+<div class="card-label">⚠️ DDAgent 的记忆安全挑战</div>
+p>DDAgent 同时服务于多个尽调客户（不同基金公司、不同标的企业）。如果记忆系统不做隔离：
+<ul>
+<li>A 客户的敏感尽调结论可能泄漏给 B 客户</li>
+<li>甲企业的风险标签可能错误地关联到乙企业的报告中</li>
+<li>不同客户的偏好设置互相污染</li>
+</ul>
+<p><strong>解决方案：命名空间（Namespace）隔离 + 行级权限控制</strong></p>
+</div>
+
+<table class="compare-table">
+<tr><th>隔离维度</th><th>实现方式</th><th>技术选型</th></tr>
+<tr><td><strong>客户级隔离</strong></td>
+<td>每个客户 ID 作为向量集合（Collection）的前缀或独立命名空间</td>
+<td>Qdrant Collection per client / Pinecone Namespace</td>
+</tr>
+<tr><td><strong>项目级隔离</strong></td>
+<td>同一客户下的不同尽调项目的记忆互不可见</td>
+<td>Metadata Filter: <code>{"client_id": "X", "project_id": "Y"}</code>
+</td>
+<tr><td><strong>敏感等级分级</strong></td>
+<td>不同敏感等级的记忆采用不同的存储和检索策略</td>
+<td>PUBLIC → 向量检索；CONFIDENTIAL → 加密图谱；SECRET → 仅内存</td>
+</tr>
+</table>
+
+<h3>5.5 从 KBA 到通用 Agent 记忆框架的设计启示</h3>
+
+<div class="card takeaway">
+<div class="card-label">✅ A3.2 核心结论</div>
+<ol>
+<li><strong>Memory is what turns a model into a product</strong>——没有记忆系统，LLM 永远只是"每次从零开始的函数"，无法成为真正有用的产品</li>
+<li><strong>四层架构是工业界共识</strong>：Main Context → Working Context → External Context → Procedural Memory，每层解决不同时间尺度和粒度的记忆需求</li>
+<li><strong>Token 经济学是核心约束</strong>：不是存越多越好，而是通过"存什么/怎么存/何时取/怎更新"四维决策，找到最小有效记忆集合</li>
+<li><strong>ChatGPT（被动注入）vs Claude（主动检索）代表了两种哲学</strong>：前者适合高频短交互，后者适合深度长周期任务；混合式架构往往是最终答案</li>
+<li><strong>KBA 的 443 条 HQA 就是 structured episodic memory 的最佳实践</strong>：一条数据同时承载情景/语义/程序性三种记忆属性，Skill URLs 是持久化记忆的工程载体</li>
+<li><strong>跨主体隔离是企业级 Agent 的必修课</strong>：DDAgent 的 namespace 隔离模式可直接推广到任何 multi-tenant 场景</li>
+</ol>
+</div>
+
+<!-- ===== FOOTER ===== -->
+<div class="chapter-footer">
+<a href="../../../INDEX.html">&larr; 返回知识图谱</a> &nbsp;|&nbsp;
+<a href="../A3.1-prompt-context-eng/A3.1-prompt-context-eng-chapter.html">&larr; 上一章：A3.1 Prompt 上下文工程</a> &nbsp;|&nbsp;
+<a href="../A3-context-memory/A3.3-retrieval-augmented/A3.3-retrieval-augmented-chapter.html">下一章：A3.3 RAG 检索增强 &rarr;</a>
+</div>
+
+</body>
+</html>

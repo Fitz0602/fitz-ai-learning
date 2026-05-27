@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz · A3.1 Prompt → Context Engineering · T2 Agent 工程</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E6F7F1;
+  --amber: #BA7517; --amber-bg: #FAEEDA;
+  --blue: #185FA5; --blue-bg: #E6F1FB;
+  --coral: #993C1D; --coral-bg: #FDEEE8;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7;
+  max-width: 700px; margin: 0 auto; padding: 32px 24px 80px; font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius:12px; font-size:12px; font-weight:500; white-space: nowrap; }
+.tag.t-domain { background: var(--teal-bg); color: #0F6E56; }
+.tag.t-chap { background: var(--purple-bg); color: var(--purple); }
+.nav-link { font-size:12px; color: var(--purple); text-decoration:none; border:1px solid var(--purple); padding:3px 10px; border-radius:12px; font-weight:500; white-space:nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size:20px; font-weight:600; margin:8px 0 2px; }
+.subtitle { color: var(--muted); font-size:13px; }
+.section-divider { font-size:11px; color:var(--teal); font-weight:600; text-transform:uppercase; letter-spacing:1px; margin:28px 0 8px; padding:4px 10px; background:var(--teal-bg); border-radius:6px; display:inline-block; }
+
+.q-block { background: var(--card); border:1px solid var(--border); border-radius:12px; padding:20px 24px; margin:12px 0; transition: opacity 0.2s; }
+.q-block.answered { opacity: 0.88; }
+.q-num { font-size:11px; color:var(--muted); font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.q-text { font-size:15px; font-weight:500; margin-bottom:16px; line-height:1.5; }
+.options { display:flex; flex-direction:column; gap:8px; }
+.opt { padding:10px 14px 10px 42px; border-radius:8px; border:1.5px solid var(--border); cursor:pointer; font-size:14px; transition:all 0.15s; background:var(--card); line-height:1.5; position:relative; }
+.opt:hover { border-color: var(--purple); background: var(--purple-bg); }
+.opt.selected { border-color: var(--purple); background: var(--purple-bg); }
+.opt.correct { border-color: var(--teal); background: var(--teal-bg); }
+.opt.wrong { border-color: var(--coral); background: var(--coral-bg); }
+.opt::before { content:''; position:absolute; left:10px; top:50%; transform:translateY(-50%); width:16px; height:16px; border:2px solid var(--border); border-radius:50%; transition:all 0.15s; background:white; }
+.opt.selected::before { border-color: var(--purple); background: var(--purple); }
+.opt.selected::after { content:''; position:absolute; left:14px; top:50%; transform:translateY(-50%) rotate(45deg); width:5px; height:9px; border:solid white; border-width:0 2px 2px 0; }
+.opt.locked { pointer-events: none; }
+
+.action-btns { display:flex; gap:8px; margin-top:14px; }
+.q-btn { flex:1; padding:8px 12px; border-radius:6px; font-size:13px; font-weight:500; cursor:pointer; border:1.5px solid var(--border); background:var(--card); color:var(--text); transition:all 0.15s; text-align:center; }
+.q-btn:hover { border-color: var(--purple); background: var(--purple-bg); }
+.q-btn.submit-btn { background: var(--purple); color:white; border-color: var(--purple); }
+.q-btn.submit-btn:hover { background: #3C3489; }
+.q-btn.reveal-btn { color: var(--muted); }
+.q-btn.reveal-btn:hover { color: var(--text); }
+.q-btn:disabled { opacity:0.4; cursor:not-allowed; }
+
+.feedback { margin-top:14px; padding:12px 16px; border-radius:8px; font-size:14px; display:none; line-height:1.6; }
+.feedback.show { display:block; }
+.feedback.correct-fb { background: var(--teal-bg); color: #085041; }
+.feedback.wrong-fb { background: var(--coral-bg); color: #711B0C; }
+.source { font-size:11px; color:var(--muted); margin-top:8px; }
+
+.score-bar { background:var(--purple-bg); border-radius:12px; padding:24px; margin-top:32px; text-align:center; display:none; }
+.score-bar.show { display:block; }
+.score-num { font-size:44px; font-weight:700; color:var(--purple); }
+.score-label { font-size:13px; color:var(--muted); margin-top:4px; }
+.score-detail { display:flex; justify-content:center; gap:24px; margin-top:16px; font-size:13px; }
+.score-item { text-align:center; }
+.score-item .num { font-size:22px; font-weight:600; color:var(--text); }
+.score-item .lbl { font-size:11px; color:var(--muted); }
+
+.progress-dots { display:flex; gap:6px; justify-content:center; margin-bottom:24px; }
+.dot { width:10px; height:10px; border-radius:50%; background:#e0e0dc; transition:all 0.3s; }
+.dot.done { background: var(--teal); }
+.dot.current { background: var(--purple); box-shadow:0 0 0 3px var(--purple-bg); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t-domain">A3 上下文记忆</span>
+    <span class="tag t-chap">A3.1 Context Engineering</span>
+    <span style="font-size:13px;color:var(--muted);">Prompt → Context Engineering</span>
+    <a href="A3.1-prompt-context-eng-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+    <a href="../../INDEX.html" class="nav-link">知识图谱</a>
+  </div>
+  <h1>Quiz：Prompt → Context Engineering</h1>
+  <div class="subtitle">10 题 · 每节 2 题 · 选择题 + 即时反馈</div>
+</div>
+
+<div class="progress-dots" id="dots"></div>
+<div id="quiz-container"></div>
+
+<div class="score-bar" id="scoreBar">
+  <div class="score-num" id="scoreNum">0/10</div>
+  <div class="score-label">完成！你的得分</div>
+  <div class="score-detail">
+    <div class="score-item"><div class="num" id="correctNum">0</div><div class="lbl">正确</div></div>
+    <div class="score-item"><div class="num" id="wrongNum">0</div><div class="lbl">错误</div></div>
+  </div>
+</div>
+
+<script>
+const quizData = [
+  // ===== §① 是什么（Q1-Q2）=====
+  {
+    section: "§① 是什么",
+    num: 1,
+    question: "以下关于 Prompt Engineering 和 Context Engineering 的区分，哪个说法最准确？",
+    options: [
+      { label: "A", text: "两者是同一概念的不同叫法，Context Engineering 是新术语", correct: false },
+      { label: "B", text: "Prompt Engineering 关注「你怎么说」（指令格式/语气），Context Engineering 关注「AI 能看到什么」（背景数据/信息密度）", correct: true },
+      { label: "C", text: "Prompt Engineering 已经过时，2026 年只需要做 Context Engineering", correct: false },
+      { label: "D", text: "Context Engineering 只是 Prompt Engineering 的子集，专门处理长文本场景", correct: false }
+    ],
+    explanation: "法庭类比最直观：Prompt Engineering 是你在法庭上怎么说话（措辞/语气），Context Engineering是你递给法官的卷宗里放了哪些证据。Gartner 2025 官方定义也明确指出重心已从「编写更好的提示词」转移到「工程化更好的上下文」。",
+    source: "Gartner Hype Cycle 2025 / Karpathy 公开演讲"
+  },
+  {
+    section: "§① 是什么",
+    num: 2,
+    question: "Shopify CEO Tobi Lütke 和 Andrej Karpathy 共同推动从 PE 到 CE 的范式转移，其背后的根本原因是什么？",
+    options: [
+      { label: "A", text: "Prompt Engineering 的技巧太复杂，普通工程师学不会", correct: false },
+      { label: "B", text: "模型的指令跟随能力已趋近饱和，优化 prompt 措辞的边际收益急剧下降，而 context 质量成为新的瓶颈", correct: true },
+      { label: "C", text: "GPT-5 和 Claude 4 的上下文窗口变小了，需要更精细的管理", correct: false },
+      { label: "D", text: "学术界发现 Few-shot prompting 在数学推理中完全失效", correct: false }
+    ],
+    explanation: "核心原因是边际收益递减：2023 年精心设计 CoT 模板能让 GPT-3.5 显著提升；到 2025-26，Claude/GPT-5 几乎理解任何格式指令，优化措辞的 ROI 已极低。同时 128K+ 窗口让「放入什么信息」成为决定性因素。",
+    source: "A3.1 §① 边际收益递减表"
+  },
+
+  // ===== §② 怎么实现（Q3-Q4）=====
+  {
+    section: "§② 怎么实现",
+    num: 3,
+    question: "在 KBA Skill 的两阶段检索流程中，为什么需要先用混合检索粗召回 100 条、再用 Cross-encoder 重排选出 Top 5？直接向量检索 Top 5 不行吗？",
+    options: [
+      { label: "A", text: "Cross-encoder 更快，能降低检索延迟", correct: false },
+      { label: "B", text: "纯向量搜索召回率仅 60-70%，混合检索提升至 85-92%，重排序再提升准确率 15-25%", correct: true },
+      { label: "C", text: "BM25 关键词搜索已经过时了，应该只用语义向量", correct: false },
+      { label: "D", text: "这是为了满足 Gartner 对企业级 AI 的合规要求", correct: false }
+    ],
+    explanation: "纯向量搜索在实际生产中的召回率通常只有 60-70%（语义相似但关键词不匹配时会漏掉）。混合检索（BM25+Embedding）用双路并行解决互补盲区，将召回率拉到 85-92%；再用轻量 Cross-encoder 对前 100 条精排，Top-5 准确率再提升 15-25%。成本增加不到 5%，效果显著。",
+    source: "A3.1 §② Retrieval 两阶段流程"
+  },
+  {
+    section: "§② 怎么实现",
+    num: 4,
+    question: "DDAgent 根据 task_type（financial_analysis / risk_assessment / company_overview）动态选择不同的文档子集注入 Context。这属于四大策略中的哪一个？",
+    options: [
+      { label: "A", text: "Retrieval — 因为涉及从数据库取数据", correct: false },
+      { label: "B", text: "Compression — 因为减少了文档数量", correct: false },
+      { label: "C", text: "Selection — 根据任务意图智能筛选最相关的上下文子集", correct: true },
+      { label: "D", text: "Persistence — 因为结果会被缓存复用", correct: false }
+    ],
+    explanation: "这是 Selection 策略的典型实践：不是简单截断或全量加载，而是根据 Task 语义意图（财务分析→选财报标签文档，风险评估→选风险/合规标签）做有意义的筛选。同样的知识库，不同任务看到完全不同的「世界」。",
+    source: "A3.1 §② Selection DDAgent 示例"
+  },
+
+  // ===== §③ 为什么（Q5-Q6）=====
+  {
+    section: "§③ 为什么",
+    num: 5,
+    question: "在 128K Context Window 场景下，哪个组件占据最大的 Token 预算份额？这个事实对工程实践意味着什么？",
+    options: [
+      { label: "A", text: "对话历史占 19%，最大，所以应优先压缩对话", correct: false },
+      { label: "B", text: "检索文档占 50%，最大，说明这个预算块必须被最精心地管理——质量差就浪费了近一半预算", correct: true },
+      { label: "C", text: "Few-shot 示例占 13%，最大，应尽量减少示例数量", correct: false },
+      { label: "D", text: "各组件占比差不多，不需要特别关注某一块", correct: false }
+    ],
+    explanation: "Context Budget 表清晰显示：无论 32K 还是 128K 场景，检索文档都占 38%-50%，永远是最大块。这意味着如果检索文档噪声多、相关性低，等于浪费了近一半 Token 预算。这正是 Context Engineering 存在的根本理由。",
+    source: "A3.1 §③ Context Budget 分配表"
+  },
+  {
+    section: "§③ 为什么",
+    num: 6,
+    question: "ACE Framework (arXiv:2510.04618) 声称在不改模型的前提下，仅通过优化 context 组织就能将 Agent 任务完成率提升多少？其核心机制是什么？",
+    options: [
+      { label: "A", text: "+5% 左右，主要通过增加 Few-shot 示例数量实现", correct: false },
+      { label: "B", text: "+10.6%，通过 generation → reflection → curation 循环持续优化 context（evolving playbooks）", correct: true },
+      { label: "C", text: "+20% 以上，主要靠扩大 Context Window 到 1M tokens", correct: false },
+      { label: "D", text: "+3% 左右，主要是减少 System Prompt 长度带来的副作用消除", correct: false }
+    ],
+    explanation: "ACE Framework 给出了 +10.6% 的惊人提升，核心机制是将 context 视为「持续演进的战术手册」（evolving playbooks）：Generation 用当前 context 执行任务 → Reflection 反思哪些部分有用 → Curation 精炼和更新 playbook → 循环迭代。这证明 CE 不是玄学而是可度量可优化的工程学科。",
+    source: "ACE Framework, arXiv:2510.04618"
+  },
+
+  // ===== §④ 演进与对比（Q7-Q8）=====
+  {
+    section: "§④ 演进与对比",
+    num: 7,
+    question: "从 2023 Prompt Engineering 到 2025-26 Context Engineering 2.0 的演进过程中，每个阶段的「瓶颈所在」分别是什么？",
+    options: [
+      { label: "A", text: "PE 阶段瓶颈=模型算力，Agentic 阶段瓶颈=数据量，CE 阶段瓶颈=API 成本", correct: false },
+      { label: "B", text: "PE 阶段瓶颈=指令遵循率，Agentic 阶段瓶颈=工具可靠性，CE 阶段瓶颈=Token 预算与信息质量", correct: true },
+      { label: "C", text: "三个阶段瓶颈相同，都是如何写好 System Prompt", correct: false },
+      { label: "D", text: "PE 阶段无瓶颈，Agentic 和 CE 都受限于模型参数规模", correct: false }
+    ],
+    explanation: "三层演进的瓶颈迁移非常清晰：(1) 2023 PE 时代模型不够聪明，瓶颈在指令遵循率 → 需要 CoT/Few-shot 技巧；(2) 2024 Agentic WF 时代模型够聪明但缺工具，瓶颈在工具可靠性 → 需要 Function Calling/LangGraph；(3) 2025-26 CE 时代模型和工具都到位了，瓶颈转移到 Token 预算和信息质量。",
+    source: "A3.1 §④ 三阶段本质差异表"
+  },
+  {
+    section: "§④ 演进与对比",
+    num: 8,
+    question: "以下哪项不属于 2026 年 Context Engineering 的标准实践工件（artifact）？",
+    options: [
+      { label: "A", text: "CLAUDE.md — Agent 宪法文件，定义编码标准和架构决策", correct: false },
+      { label: "B", text: "CoT Prompt Template Library — Chain-of-Thought 推理模板库", correct: true },
+      { label: "C", text: "MCP Tool Descriptions — 高质量工具接口描述（Context 第一道防线）", correct: false },
+      { label: "D", text: "Context Window Config — 声明式配置文件（Token 配额/优先级/压缩策略）", correct: false }
+    ],
+    explanation: "CoT Template Library 属于 2023 Prompt Engineering 时代的产物。CE 时代的四大标准工件是：CLAUDE.md（持久化宪法）、AGENTS.md（角色定义）、MCP Tool Descriptions（工具描述规范）、Context Window Config（声明式配置）。CoT 模板虽然仍有用，但已不再是差异化竞争力的来源。",
+    source: "A3.1 §④ 关键工件表"
+  },
+
+  // ===== §⑤ 产品连接（Q9-Q10）=====
+  {
+    section: "§⑤ 产品连接",
+    num: 9,
+    question: "DDAgent 的 System Prompt 采用四层结构（身份目标/领域知识/行为约束/Few-shot），总计约 4000 tokens。这种分层设计的核心考量是什么？",
+    options: [
+      { label: "A", text: "为了让 Prompt 看起来更有层次感和专业感", correct: false },
+      { label: "B", text: "Layer 1-2 固定不变适合 Prompt Caching，Layer 3-4 按需调整，整体控制在 4K 为检索文档留空间", correct: true },
+      { label: "C", text: "每层对应一个独立的微服务模块，便于分布式部署", correct: false },
+      { label: "D", text: "这是 Anthropic 官方推荐的唯一正确格式", correct: false }
+    ],
+    explanation: "分层设计的核心工程意义在于与 Prompt Caching 协同：Layer 1-2（身份+领域知识）几乎不变，可作为缓存命中的前缀（节省 90% 输入成本）；Layer 3-4（行为约束+Few-shot）按客户/场景动态调整。整体 4K 以内确保为检索文档留出充足空间（检索文档占 38-50% 预算）。",
+    source: "A3.1 §⑤ DDAgent System Prompt 设计"
+  },
+  {
+    section: "§⑤ 产品连接",
+    num: 10,
+    question: "团队项目引入 CLAUDE.md 后，Agent 生成代码的一次通过率（first-pass acceptance rate）从约 45% 提升至约 72%。这个提升主要来自什么机制？它与 ACE Framework 结论的关系是什么？",
+    options: [
+      { label: "A", text: "因为 CLAUDE.md 让模型的编程能力变强了", correct: false },
+      { label: "B", text: "因为 CLAUDE.md 作为持久化的项目上下文基座，消除了「不知道团队规约」导致的风格违规——这正是 ACE Framework 「不改模型只改 context 可提 10%+」的实际验证", correct: true },
+      { label: "C", text: "因为 CLAUDE.md 自动修复了代码中的语法错误", correct: false },
+      { label: "D", text: "这只是统计波动，没有实际的工程意义", correct: false }
+    ],
+    explanation: "CLAUDE.md 的本质是 Persistence 策略的载体：无论第几轮对话、Agent 重启多少次，AI 始终拥有一致的项目上下文（编码规约、架构决策、反模式）。45%→72% 的跃升验证了 ACE Framework 的核心论点：不改模型权重，只优化 context 组织，就能获得显著的任务完成率提升。",
+    source: "A3.1 §⑤ CLAUDE.md 实践 + ACE Framework 对应"
+  }
+];
+
+let currentQ = 0;
+let score = { correct: 0, wrong: 0 };
+let answered = new Set();
+
+function renderQuiz() {
+  const container = document.getElementById('quiz-container');
+  const dotsContainer = document.getElementById('dots');
+  dotsContainer.innerHTML = quizData.map(function(_, i) {
+    return '<div class="dot' + (answered.has(i) ? ' done' : '') + (i === currentQ ? ' current' : '') + '" data-i="' + i + '"></div>';
+  }).join('');
+
+  if (currentQ >= quizData.length) {
+    showScore();
+    return;
+  }
+
+  const q = quizData[currentQ];
+  const isAnswered = answered.has(currentQ);
+  container.innerHTML =
+    '<div class="section-divider">' + q.section + ' · 第 ' + q.num + ' 题</div>' +
+    '<div class="q-block' + (isAnswered ? ' answered' : '') + '" id="qb' + currentQ + '">' +
+      '<div class="q-num">Question ' + q.num + ' / ' + quizData.length + '</div>' +
+      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="options" id="opts' + currentQ + '">' +
+        q.options.map(function(o, i) {
+          return '<div class="opt' + (isAnswered ? ' locked' : '') + '" data-i="' + i + '" onclick="selectOpt(' + i + ')">' + o.label + '. ' + o.text + '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="action-btns" id="btns' + currentQ + '">' +
+        '<button class="q-btn submit-btn" onclick="submitAnswer()" ' + (isAnswered ? 'disabled' : '') + '>提交答案</button> ' +
+        '<button class="q-btn reveal-btn" onclick="revealAnswer()" ' + (isAnswered ? 'disabled' : '') + '>查看答案</button>' +
+      '</div>' +
+      '<div class="feedback" id="fb' + currentQ + '"></div>' +
+      '<div class="source" id="src' + currentQ + '" style="display:none">' + q.source + '</div>' +
+    '</div>';
+
+  if (isAnswered) {
+    const selIdx = q._selected;
+    if (selIdx !== undefined) {
+      document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+        el.classList.toggle('selected', i === selIdx);
+        el.classList.toggle('correct', q.options[i].correct);
+        el.classList.toggle('wrong', i === selIdx && !q.options[i].correct);
+      });
+      showFeedback(true);
+    }
+  }
+
+  dotsContainer.querySelectorAll('.dot').forEach(function(d) {
+    d.onclick = function() { currentQ = parseInt(d.dataset.i); renderQuiz(); };
+  });
+}
+
+function selectOpt(idx) {
+  if (answered.has(currentQ)) return;
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+    el.classList.toggle('selected', i === idx);
+  });
+  quizData[currentQ]._selected = idx;
+}
+
+function submitAnswer() {
+  if (answered.has(currentQ)) return;
+  const q = quizData[currentQ];
+  const selIdx = q._selected;
+  if (selIdx === undefined) { alert('请先选择一个选项'); return; }
+  answered.add(currentQ);
+
+  const isCorrect = q.options[selIdx].correct;
+  if (isCorrect) score.correct++; else score.wrong++;
+
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+    el.classList.add('locked');
+    if (q.options[i].correct) el.classList.add('correct');
+    else if (i === selIdx) el.classList.add('wrong');
+  });
+
+  showFeedback(true);
+  document.getElementById('btns' + currentQ).querySelectorAll('.q-btn').forEach(function(b) { b.disabled = true; });
+}
+
+function revealAnswer() {
+  if (answered.has(currentQ)) return;
+  answered.add(currentQ);
+  score.wrong++;
+
+  const q = quizData[currentQ];
+  q._revealed = true;
+
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+    el.classList.add('locked');
+    if (q.options[i].correct) el.classList.add('correct');
+  });
+
+  showFeedback(false);
+  document.getElementById('btns' + currentQ).querySelectorAll('.q-btn').forEach(function(b) { b.disabled = true; });
+}
+
+function showFeedback(isSubmitted) {
+  const q = quizData[currentQ];
+  const fb = document.getElementById('fb' + currentQ);
+  const src = document.getElementById('src' + currentQ);
+  const selIdx = q._selected;
+  const isCorrect = q.options[selIdx] ? q.options[selIdx].correct : false;
+
+  if (isSubmitted && isCorrect) {
+    fb.className = 'feedback show correct-fb';
+    fb.innerHTML = '<strong>✅ 正确！</strong> ' + q.explanation;
+  } else if (isSubmitted && !isCorrect) {
+    fb.className = 'feedback show wrong-fb';
+    fb.innerHTML = '<strong>❌ 错误。</strong> 正确答案是 <strong>' + q.options.find(function(o){return o.correct}).label + '</strong>。' + q.explanation;
+  } else {
+    fb.className = 'feedback show wrong-fb';
+    fb.innerHTML = '<strong>📖 参考答案：</strong>' + q.explanation;
+  }
+  src.style.display = 'block';
+}
+
+function showScore() {
+  document.getElementById('quiz-container').innerHTML = '';
+  document.getElementById('scoreBar').classList.add('show');
+  document.getElementById('scoreNum').textContent = score.correct + '/' + quizData.length;
+  document.getElementById('correctNum').textContent = score.correct;
+  document.getElementById('wrongNum').textContent = score.wrong;
+}
+
+// Init
+renderQuiz();
+</script>
+
+</body>
+</html>

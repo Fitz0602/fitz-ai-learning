@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>4.1 推理流程 + KV Cache · LLM系统学习</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError:false});"></script>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F9F3;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--coral-bg:#FDE8E0;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D;--card:#FFFFFF;--border:#E8E8E4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px}
+.header{margin-bottom:32px}
+.tag-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:12px}
+.tag{font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px;letter-spacing:.3px}
+.tag-t1{background:var(--purple-bg);color:var(--purple)}
+.tag-d4{background:var(--blue-bg);color:var(--blue)}
+.tag-new{background:var(--teal-bg);color:var(--teal)}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+h1{font-size:28px;font-weight:700;margin-bottom:6px;letter-spacing:-.5px}
+.subtitle{font-size:15px;color:var(--muted);margin-bottom:4px}
+.spine-link{font-size:12px;color:var(--purple);background:var(--purple-bg);padding:6px 12px;border-radius:6px;margin-top:8px;display:inline-block}
+.progress-nav{display:flex;gap:4px;margin-top:16px}
+.progress-nav a{font-size:11px;padding:4px 10px;border-radius:8px;text-decoration:none;font-weight:500}
+.progress-nav .done{background:var(--purple-bg);color:var(--purple)}
+section{margin:40px 0}
+section h2{font-size:20px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+section h2 .num{font-size:14px;font-weight:600;background:var(--purple);color:#fff;width:28px;height:28px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center}
+section h3{font-size:16px;font-weight:600;margin:20px 0 8px}
+p{margin:8px 0}
+.card{border-radius:10px;padding:16px 18px;margin:16px 0;border-left:4px solid}
+.card.intuition{background:var(--teal-bg);border-color:var(--teal)}
+.card.takeaway{background:var(--purple-bg);border-color:var(--purple)}
+.card.warning{background:var(--coral-bg);border-color:var(--coral)}
+.card.intuition::before{content:"💡 直觉";font-weight:700;display:block;margin-bottom:4px;color:var(--teal);font-size:13px}
+.card.takeaway::before{content:"📌 Takeaway";font-weight:700;display:block;margin-bottom:4px;color:var(--purple);font-size:13px}
+.card.warning::before{content:"⚠️ 误区";font-weight:700;display:block;margin-bottom:4px;color:var(--coral);font-size:13px}
+.diagram{margin:24px 0 8px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px}
+th,td{padding:8px 10px;border:1px solid var(--border);text-align:left}
+th{background:var(--purple-bg);color:var(--purple);font-weight:600}
+code{background:var(--purple-bg);padding:1px 5px;border-radius:4px;font-size:13px;color:var(--purple)}
+.formula{background:#f7f7f5;padding:12px 16px;border-radius:8px;margin:12px 0;overflow-x:auto}
+.chapter-footer{margin-top:48px;padding:16px 20px;background:var(--purple-bg);border-radius:10px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.chapter-footer a{color:var(--purple);text-decoration:none;font-size:13px;font-weight:500}
+</style>
+</head>
+<body>
+
+<div class="header">
+<div class="tag-row">
+<span class="tag tag-t1">T1 · LLM系统</span>
+<span class="tag tag-d4">D4 推理部署</span>
+<span class="tag tag-new">4.1</span>
+<a href="../../INDEX.html" class="nav-link" style="margin-left:auto;">← 知识图谱</a>
+<a href="4.1-inference-kvcache-quiz.html" class="nav-link">Quiz →</a>
+</div>
+<h1>4.1 推理流程 + KV Cache</h1>
+<p class="subtitle">从自回归解码到内存管理：理解 LLM 推理为什么慢，以及如何让它快起来</p>
+<div class="spine-link">主线连接：KV Cache 是 Context 工程的物理约束</div>
+<div class="progress-nav">
+<a href="#is" class="done">① 是什么</a>
+<a href="#how" class="done">② 怎么实现</a>
+<a href="#why" class="done">③ 为什么</a>
+<a href="#evolution" class="done">④ 演进</a>
+<a href="#connect" class="done">⑤ 产品</a>
+</div>
+</div>
+
+<!-- ====== 章节一览图 ====== -->
+<div class="diagram">
+<p style="font-size:12px;font-weight:500;color:var(--muted);margin:0 0 10px;">章节一览 · 5节脉络速览</p>
+<svg viewBox="0 0 680 320" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="ov-arr41" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- ① 紫 -->
+<rect x="20" y="40" width="120" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="80" y="65" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="700">① 是什么</text>
+<text x="80" y="82" text-anchor="middle" font-size="10" fill="#534AB7">自回归=一次一个词</text>
+<!-- ② 蓝 -->
+<rect x="170" y="40" width="120" height="60" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="230" y="65" text-anchor="middle" font-size="12" fill="#185FA5" font-weight="700">② 怎么实现</text>
+<text x="230" y="82" text-anchor="middle" font-size="10" fill="#185FA5">KV Cache 机制</text>
+<!-- ③ 琥珀 -->
+<rect x="320" y="40" width="120" height="60" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="380" y="65" text-anchor="middle" font-size="12" fill="#BA7517" font-weight="700">③ 为什么</text>
+<text x="380" y="82" text-anchor="middle" font-size="10" fill="#BA7517">内存墙与碎片化</text>
+<!-- ④ 紫 -->
+<rect x="470" y="40" width="120" height="60" rx="10" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="530" y="65" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="700">④ 演进</text>
+<text x="530" y="82" text-anchor="middle" font-size="10" fill="#534AB7">PagedAtt→PD分离</text>
+<!-- ⑤ 绿 -->
+<rect x="270" y="220" width="140" height="60" rx="10" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="340" y="245" text-anchor="middle" font-size="12" fill="#1D9E75" font-weight="700">⑤ 与产品连接</text>
+<text x="340" y="262" text-anchor="middle" font-size="10" fill="#1D9E75">Agent成本=KV Cache</text>
+<!-- 箭头 ①→② -->
+<line x1="140" y1="70" x2="170" y2="70" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr41)"/>
+<!-- 箭头 ②→③ -->
+<line x1="290" y1="70" x2="320" y2="70" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr41)"/>
+<!-- 箭头 ③→④ -->
+<line x1="440" y1="70" x2="470" y2="70" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr41)"/>
+<!-- 箭头 ④→⑤ -->
+<line x1="530" y1="100" x2="530" y2="150" stroke="#888780" stroke-width="1.5"/>
+<line x1="530" y1="150" x2="340" y2="150" stroke="#888780" stroke-width="1.5"/>
+<line x1="340" y1="150" x2="340" y2="220" stroke="#888780" stroke-width="1.5" marker-end="url(#ov-arr41)"/>
+</svg>
+</div>
+
+<!-- ====== §① 是什么 ====== -->
+<section id="is">
+<h2><span class="num">1</span> 是什么：LLM 推理的两阶段本质</h2>
+
+<div class="card intuition">
+LLM 推理就像厨师做一道菜：先一次性读完整个菜谱（Prefill），然后一步一步按菜谱操作出菜（Decode）。菜谱越长，读的时间越长；但每出一道菜，你不需要重新读菜谱——你记住了之前读的内容，这就是 KV Cache。
+</div>
+
+<h3>自回归解码：一次一个 Token</h3>
+<p>LLM 生成文本的本质是<strong>自回归</strong>（autoregressive）：每一步基于前面所有 token 的上下文，预测下一个 token。假设输入 prompt 有 $n$ 个 token，输出 $m$ 个 token，模型总共需要做 $n + m$ 次前向传播中的注意力计算。</p>
+
+<p>关键洞察：<strong>第 $t$ 步的注意力计算需要所有 $1 \sim t$ 个 token 的 Key 和 Value 向量</strong>。如果每步都从头算，计算量是 $O(t^2)$，随序列长度二次增长——这不可接受。</p>
+
+<h3>Prefill 与 Decode：两种完全不同的计算模式</h3>
+<p>LLM 推理自然分为两个阶段：</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 200" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<rect x="20" y="20" width="300" height="160" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="170" y="50" text-anchor="middle" font-size="14" fill="#185FA5" font-weight="700">Prefill（预填充）</text>
+<text x="170" y="75" text-anchor="middle" font-size="11" fill="#185FA5">一次性并行处理全部 prompt tokens</text>
+<text x="170" y="95" text-anchor="middle" font-size="11" fill="#185FA5">计算密集型（Compute-bound）</text>
+<text x="170" y="115" text-anchor="middle" font-size="11" fill="#185FA5">决定 TTFT（首 token 延迟）</text>
+<text x="170" y="140" text-anchor="middle" font-size="11" fill="#185FA5">GPU 算力利用率高（60-80%）</text>
+<text x="170" y="165" text-anchor="middle" font-size="10" fill="#888780">类比：一口气读完菜谱</text>
+
+<rect x="360" y="20" width="300" height="160" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="510" y="50" text-anchor="middle" font-size="14" fill="#BA7517" font-weight="700">Decode（解码）</text>
+<text x="510" y="75" text-anchor="middle" font-size="11" fill="#BA7517">每步生成 1 个 token，串行执行</text>
+<text x="510" y="95" text-anchor="middle" font-size="11" fill="#BA7517">内存带宽受限（Memory-bound）</text>
+<text x="510" y="115" text-anchor="middle" font-size="11" fill="#BA7517">决定 TPOT（每 token 延迟）</text>
+<text x="510" y="140" text-anchor="middle" font-size="11" fill="#BA7517">GPU 算力利用率极低（5-10%）</text>
+<text x="510" y="165" text-anchor="middle" font-size="10" fill="#888780">类比：每出一道菜，只读一步</text>
+</svg>
+</div>
+
+<p>在 H100 GPU 上，处理 10,000 个 token 的 prompt 只需 200-400ms（Prefill），但 Decode 阶段每个 token 需要 25-40ms。这就是为什么<strong>输出 token 的成本通常是输入 token 的 3-10 倍</strong>（Morph 2026 数据）。</p>
+
+<div class="card takeaway">
+LLM 推理 = Prefill（算力瓶颈）+ Decode（内存瓶颈）。两个阶段的瓶颈完全不同，这决定了后续所有优化策略的方向：Prefill 优化计算效率，Decode 优化内存效率。
+</div>
+</section>
+
+<!-- ====== §② 怎么实现 ====== -->
+<section id="how">
+<h2><span class="num">2</span> 怎么实现：KV Cache 的机制与数学</h2>
+
+<div class="card intuition">
+KV Cache 就像你在考试时做的"笔记"：你已经算出的中间结果（Key/Value 向量），不需要每道题都重新算一遍，直接查笔记就行。笔记的代价是占桌面（显存），但省下的时间（避免重复计算）远超占桌的成本。
+</div>
+
+<h3>没有 KV Cache 的世界</h3>
+<p>假设一个 LLM 有 $L$ 层、$H$ 个注意力头、每个头的维度 $d_k$。生成第 $t$ 个输出 token 时，如果不缓存，注意力需要重新计算所有 $t$ 个 token 的 Key 和 Value：</p>
+
+<div class="formula">
+$$\text{计算量（无缓存）} = O(t^2 \cdot L \cdot H \cdot d_k)$$
+</div>
+
+<p>对于 $t = 10000$ 个 token，这意味着 1 亿次乘法——只是为了生成第 10001 个 token。</p>
+
+<h3>有 KV Cache 的世界</h3>
+<p>KV Cache 的核心思想：<strong>第 $t$ 步只需要计算新 token 的 $K_t, V_t$，历史 token 的 $K_{1:t-1}, V_{1:t-1}$ 直接从缓存读取</strong>。</p>
+
+<div class="formula">
+$$\text{Attention}(Q_t, K_{1:t}, V_{1:t}) = \text{softmax}\left(\frac{Q_t K_{1:t}^T}{\sqrt{d_k}}\right) V_{1:t}$$
+</div>
+
+<p>每步的计算量从 $O(t^2)$ 降为 $O(t)$——线性而非二次。</p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 220" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="how-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- Step 1: Prefill -->
+<rect x="10" y="20" width="200" height="180" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="110" y="45" text-anchor="middle" font-size="12" fill="#185FA5" font-weight="700">Step 1: Prefill</text>
+<rect x="25" y="55" width="170" height="25" rx="4" fill="#fff" stroke="#185FA5" stroke-width="0.8"/>
+<text x="110" y="72" text-anchor="middle" font-size="10" fill="#185FA5">输入: [t1, t2, t3, t4, t5]</text>
+<rect x="25" y="88" width="170" height="30" rx="4" fill="#fff" stroke="#BA7517" stroke-width="0.8"/>
+<text x="110" y="100" text-anchor="middle" font-size="10" fill="#BA7517">并行计算 K1-K5, V1-V5</text>
+<text x="110" y="113" text-anchor="middle" font-size="10" fill="#BA7517">存入 KV Cache</text>
+<rect x="25" y="126" width="170" height="25" rx="4" fill="#fff" stroke="#1D9E75" stroke-width="0.8"/>
+<text x="110" y="143" text-anchor="middle" font-size="10" fill="#1D9E75">输出: token t6</text>
+<text x="110" y="190" text-anchor="middle" font-size="9" fill="#888780">5 个 token → 1 次并行计算</text>
+
+<!-- 箭头 -->
+<line x1="215" y1="110" x2="240" y2="110" stroke="#888780" stroke-width="1.5" marker-end="url(#how-arr)"/>
+
+<!-- Step 2: Decode -->
+<rect x="245" y="20" width="200" height="180" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="345" y="45" text-anchor="middle" font-size="12" fill="#BA7517" font-weight="700">Step 2: Decode</text>
+<rect x="260" y="55" width="170" height="25" rx="4" fill="#fff" stroke="#BA7517" stroke-width="0.8"/>
+<text x="345" y="72" text-anchor="middle" font-size="10" fill="#BA7517">输入: t6（仅 1 个新 token）</text>
+<rect x="260" y="88" width="170" height="30" rx="4" fill="#fff" stroke="#534AB7" stroke-width="0.8"/>
+<text x="345" y="100" text-anchor="middle" font-size="10" fill="#534AB7">只算 K6, V6 → 追加缓存</text>
+<text x="345" y="113" text-anchor="middle" font-size="10" fill="#534AB7">读取 K1-K5, V1-V5</text>
+<rect x="260" y="126" width="170" height="25" rx="4" fill="#fff" stroke="#1D9E75" stroke-width="0.8"/>
+<text x="345" y="143" text-anchor="middle" font-size="10" fill="#1D9E75">输出: token t7</text>
+<text x="345" y="190" text-anchor="middle" font-size="9" fill="#888780">1 个 token → 复用全部历史</text>
+
+<!-- 箭头 -->
+<line x1="450" y1="110" x2="475" y2="110" stroke="#888780" stroke-width="1.5" marker-end="url(#how-arr)"/>
+
+<!-- KV Cache 盒子 -->
+<rect x="480" y="20" width="185" height="180" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="572" y="45" text-anchor="middle" font-size="12" fill="#534AB7" font-weight="700">KV Cache 状态</text>
+<rect x="495" y="55" width="155" height="25" rx="4" fill="#fff" stroke="#534AB7" stroke-width="0.8"/>
+<text x="572" y="72" text-anchor="middle" font-size="10" fill="#534AB7">K: [k1, k2, k3, k4, k5, k6]</text>
+<rect x="495" y="88" width="155" height="25" rx="4" fill="#fff" stroke="#534AB7" stroke-width="0.8"/>
+<text x="572" y="105" text-anchor="middle" font-size="10" fill="#534AB7">V: [v1, v2, v3, v4, v5, v6]</text>
+<rect x="495" y="120" width="155" height="40" rx="4" fill="#fff" stroke="#888780" stroke-width="0.8"/>
+<text x="572" y="138" text-anchor="middle" font-size="10" fill="#888780">大小 = 2 × L × S × H × d</text>
+<text x="572" y="153" text-anchor="middle" font-size="10" fill="#888780">S = 序列长度</text>
+<text x="572" y="190" text-anchor="middle" font-size="9" fill="#BA7517">随序列线性增长！</text>
+</svg>
+</div>
+
+<h3>KV Cache 的显存占用计算</h3>
+<p>对于一个模型的 KV Cache，显存占用公式：</p>
+
+<div class="formula">
+$$\text{KV Cache Size} = 2 \times L \times S \times H_{kv} \times d_k \times \text{dtype\_size}$$
+</div>
+
+<p>其中 $L$ = 层数，$S$ = 序列长度，$H_{kv}$ = KV 头数（GQA 下小于 $H$），$d_k$ = 每个头的维度。</p>
+
+<table>
+<tr><th>模型</th><th>L</th><th>H_kv</th><th>d_k</th><th>128K上下文 KV Cache</th></tr>
+<tr><td>Llama-3.1-70B (GQA)</td><td>80</td><td>8</td><td>128</td><td>~40 GB (FP16)</td></tr>
+<tr><td>DeepSeek-V3 (MLA)</td><td>61</td><td>压缩</td><td>512→低秩</td><td>~4 GB（压缩后）</td></tr>
+<tr><td>Qwen2.5-72B (GQA)</td><td>80</td><td>8</td><td>128</td><td>~40 GB (FP16)</td></tr>
+</table>
+
+<div class="card warning">
+常见误区：以为 KV Cache 只占"一小块"显存。实际上，在 70B 模型 + 128K 上下文的场景下，KV Cache 可以吃掉 40-80GB 显存——比模型权重本身还多！这就是"Memory Wall"：推理的瓶颈不在计算，而在存储。
+</div>
+
+<div class="card takeaway">
+KV Cache 将每步注意力计算从 $O(t^2)$ 降为 $O(t)$，代价是显存随序列长度线性增长。GQA/MQA 减少缓存体积（$H_{kv} \ll H$），MLA 进一步通过低秩压缩将缓存压缩到极致。
+</div>
+</section>
+
+<!-- ====== §③ 为什么 ====== -->
+<section id="why">
+<h2><span class="num">3</span> 为什么：Memory Wall 与碎片化的第一性原理</h2>
+
+<div class="card intuition">
+传统 KV Cache 管理就像在停车场的每个车位上放一个"已预订"标志——即使车还没来，车位也不能给别人用。PagedAttention 则像停车场真正按需分配：车来了才占位，走了就释放，不同车位不需要连续。
+</div>
+
+<h3>第一性原理：为什么推理慢？</h3>
+<p>推理延迟的根本原因不是"算力不够"，而是<strong>内存带宽不够</strong>。Decode 阶段每个 token 的前向传播：</p>
+
+<div class="formula">
+$$\text{Decode 延迟} \approx \frac{\text{模型权重大小} + \text{KV Cache 大小}}{\text{GPU 内存带宽}}$$
+</div>
+
+<p>在 H100 上（3.35 TB/s 带宽），一个 70B FP8 模型的权重约 70GB，一次 Decode 读取权重就需要约 21ms——与实测 25-40ms 吻合。<strong>GPU 的算力单元在等内存总线搬数据，利用率只有 5-10%。</strong></p>
+
+<div class="diagram">
+<svg viewBox="0 0 680 180" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<!-- Prefill bar -->
+<rect x="20" y="20" width="640" height="60" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<rect x="30" y="30" width="500" height="40" rx="4" fill="#185FA5"/>
+<text x="280" y="55" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">Prefill: 计算 ~80% 时间（GPU 算力繁忙）</text>
+<text x="560" y="55" font-size="10" fill="#185FA5">MFU ≈ 60%</text>
+
+<!-- Decode bar -->
+<rect x="20" y="100" width="640" height="60" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<rect x="30" y="110" width="80" height="40" rx="4" fill="#BA7517"/>
+<text x="70" y="135" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">5%</text>
+<rect x="115" y="110" width="535" height="40" rx="4" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5" stroke-dasharray="4,3"/>
+<text x="400" y="135" text-anchor="middle" font-size="11" fill="#BA7517">Decode: 等 ~95% 时间（内存总线搬运）</text>
+</svg>
+</div>
+
+<h3>连续内存分配的三大问题</h3>
+<p>传统推理系统为每个请求<strong>预分配最大长度的连续 KV Cache</strong>，导致：</p>
+
+<table>
+<tr><th>问题</th><th>描述</th><th>浪费率</th></tr>
+<tr><td>内部碎片</td><td>预分配最大长度，实际输出往往短很多</td><td>20-40%</td></tr>
+<tr><td>外部碎片</td><td>不同请求长度不同，释放后产生无法复用的小块</td><td>15-30%</td></tr>
+<tr><td>预留浪费</td><td>为未来 token 预留的空间，在生成前无法供其他请求使用</td><td>10-25%</td></tr>
+</table>
+
+<p>根据 vLLM 论文（SOSP 2023）的实测，传统系统的 KV Cache 有效利用率仅 <strong>20.4%-38.2%</strong>——超过 60% 的显存被浪费了。</p>
+
+<h3>内存共享机会的错失</h3>
+<p>在 Agent 场景中，多个请求共享相同的系统提示词（System Prompt）。传统连续内存方案下，每个请求独立存储 System Prompt 的 KV Cache，无法跨请求复用。</p>
+
+<div class="card takeaway">
+推理慢的根因是 Memory Wall：Decode 阶段 GPU 95% 的时间在等内存搬运。传统连续内存分配导致 60%+ 的显存浪费，严重限制了批处理大小和吞吐量。优化方向不是"更快地算"，而是"更省地存"。
+</div>
+</section>
+
+<!-- ====== §④ 演进 ====== -->
+<section id="evolution">
+<h2><span class="num">4</span> 演进格局：从 PagedAttention 到分布式推理（2023-2026）</h2>
+
+<div class="diagram">
+<svg viewBox="0 0 680 260" width="100%" xmlns="http://www.w3.org/2000/svg" overflow="visible">
+<defs><marker id="evo-arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M2 1L8 5L2 9" fill="none" stroke="#888780" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+<!-- Era 1 -->
+<rect x="10" y="20" width="150" height="80" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1.5"/>
+<text x="85" y="42" text-anchor="middle" font-size="11" fill="#534AB7" font-weight="700">Era 1: 2023</text>
+<text x="85" y="58" text-anchor="middle" font-size="10" fill="#534AB7">连续内存分配</text>
+<text x="85" y="72" text-anchor="middle" font-size="9" fill="#888780">利用率 20-38%</text>
+<text x="85" y="86" text-anchor="middle" font-size="9" fill="#888780">vLLM 0.x 早期</text>
+<!-- 箭头 -->
+<line x1="165" y1="60" x2="185" y2="60" stroke="#888780" stroke-width="1.5" marker-end="url(#evo-arr)"/>
+<!-- Era 2 -->
+<rect x="190" y="20" width="150" height="80" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1.5"/>
+<text x="265" y="42" text-anchor="middle" font-size="11" fill="#185FA5" font-weight="700">Era 2: 2023-24</text>
+<text x="265" y="58" text-anchor="middle" font-size="10" fill="#185FA5">PagedAttention</text>
+<text x="265" y="72" text-anchor="middle" font-size="9" fill="#888780">利用率 95%+</text>
+<text x="265" y="86" text-anchor="middle" font-size="9" fill="#888780">vLLM/SGLang 标准</text>
+<!-- 箭头 -->
+<line x1="345" y1="60" x2="365" y2="60" stroke="#888780" stroke-width="1.5" marker-end="url(#evo-arr)"/>
+<!-- Era 3 -->
+<rect x="370" y="20" width="150" height="80" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1.5"/>
+<text x="445" y="42" text-anchor="middle" font-size="11" fill="#BA7517" font-weight="700">Era 3: 2024-25</text>
+<text x="445" y="58" text-anchor="middle" font-size="10" fill="#BA7517">异构KV+前缀缓存</text>
+<text x="445" y="72" text-anchor="middle" font-size="9" fill="#888780">RadixAttention</text>
+<text x="445" y="86" text-anchor="middle" font-size="9" fill="#888780">MLA/FlashInfer</text>
+<!-- 箭头 -->
+<line x1="525" y1="60" x2="545" y2="60" stroke="#888780" stroke-width="1.5" marker-end="url(#evo-arr)"/>
+<!-- Era 4 -->
+<rect x="550" y="20" width="120" height="80" rx="8" fill="#E6F9F3" stroke="#1D9E75" stroke-width="1.5"/>
+<text x="610" y="42" text-anchor="middle" font-size="11" fill="#1D9E75" font-weight="700">Era 4: 2025+</text>
+<text x="610" y="58" text-anchor="middle" font-size="10" fill="#1D9E75">PD 分离</text>
+<text x="610" y="72" text-anchor="middle" font-size="9" fill="#888780">分布式KV</text>
+<text x="610" y="86" text-anchor="middle" font-size="9" fill="#888780">NVIDIA Dynamo</text>
+
+<!-- 底部三大优化方向 -->
+<rect x="20" y="150" width="200" height="90" rx="8" fill="#EEEDFE" stroke="#534AB7" stroke-width="1"/>
+<text x="120" y="172" text-anchor="middle" font-size="11" fill="#534AB7" font-weight="700">缓存压缩</text>
+<text x="120" y="190" text-anchor="middle" font-size="10" fill="#534AB7">NVIDIA KVTC (20x压缩)</text>
+<text x="120" y="205" text-anchor="middle" font-size="10" fill="#534AB7">LCA (90%缩减, ACL2026)</text>
+<text x="120" y="220" text-anchor="middle" font-size="10" fill="#534AB7">KVzip (NeurIPS 2025)</text>
+<text x="120" y="235" text-anchor="middle" font-size="9" fill="#888780">方向：存得更小</text>
+
+<rect x="240" y="150" width="200" height="90" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="340" y="172" text-anchor="middle" font-size="11" fill="#185FA5" font-weight="700">投机解码</text>
+<text x="340" y="190" text-anchor="middle" font-size="10" fill="#185FA5">EAGLE-3 (2-3x加速)</text>
+<text x="340" y="205" text-anchor="middle" font-size="10" fill="#185FA5">Medusa (多预测头)</text>
+<text x="340" y="220" text-anchor="middle" font-size="10" fill="#185FA5">Apple Mirror-SD (5.8x)</text>
+<text x="340" y="235" text-anchor="middle" font-size="9" fill="#888780">方向：一次算更多</text>
+
+<rect x="460" y="150" width="200" height="90" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="560" y="172" text-anchor="middle" font-size="11" fill="#BA7517" font-weight="700">PD 分离</text>
+<text x="560" y="190" text-anchor="middle" font-size="10" fill="#BA7517">DistServe (4.48x)</text>
+<text x="560" y="205" text-anchor="middle" font-size="10" fill="#BA7517">DualPath (DeepSeek+清华)</text>
+<text x="560" y="220" text-anchor="middle" font-size="10" fill="#BA7517">vLLM 0.7+ 原生支持</text>
+<text x="560" y="235" text-anchor="middle" font-size="9" fill="#888780">方向：专用硬件更高效</text>
+</svg>
+</div>
+
+<h3>Era 2 深入：PagedAttention（2023，vLLM，SOSP 2023）</h3>
+<p>PagedAttention 借鉴操作系统虚拟内存的分页思想，将 KV Cache 划分为固定大小的<strong>块（Block）</strong>，每个块存储固定数量（默认 16）的 token 的 KV 向量。每个请求维护一个<strong>块表（Block Table）</strong>，记录逻辑块到物理块的映射。</p>
+
+<table>
+<tr><th>特性</th><th>传统连续分配</th><th>PagedAttention</th></tr>
+<tr><td>内存碎片</td><td>内部 + 外部，60%+ 浪费</td><td>仅最后一个块未满，浪费 &lt;4%</td></tr>
+<tr><td>分配策略</td><td>预分配最大长度</td><td>按需动态分配</td></tr>
+<tr><td>跨请求共享</td><td>不支持</td><td>Copy-on-Write 共享</td></tr>
+<tr><td>显存利用率</td><td>20-38%</td><td>95%+</td></tr>
+</table>
+
+<h3>Era 3 深入：前缀缓存与异构 KV</h3>
+<p><strong>RadixAttention</strong>（SGLang）用基数树（Radix Tree）维护 KV Block 的 LRU 缓存，支持跨多次生成的自动复用。在 Agent、思维树等复杂场景中缓存命中率远高于 vLLM 的块级哈希匹配。</p>
+
+<p><strong>FlashInfer</strong>（MLSys 2025 最佳论文）统一了 Page/Radix/Tree 等异构 KV Cache 布局为块稀疏行（BSR）矩阵，通过 JIT 编译生成定制注意力内核。集成到 vLLM/SGLang 后，inter-token 延迟降低 29-69%。</p>
+
+<p><strong>异构 KV Cache</strong>（2024）处理混合架构：MoE 的稀疏激活、VLM 的视觉编码器、SWA 的滑动窗口——Llama 3.2 11B Vision 如果统一管理，内存浪费达 79.6%（Jenga 论文数据）。</p>
+
+<h3>Era 4 深入：PD 分离架构（2025-2026）</h3>
+<p>核心洞察：Prefill 受算力约束，Decode 受内存带宽约束——两者适合不同硬件配置和并行策略。</p>
+
+<div class="formula">
+$$\text{PD 分离加速} \approx \frac{\text{Prefill 专用 GPU} + \text{Decode 专用 GPU}}{\text{混合 GPU 的互相干扰}} \approx 1.5\text{x-}4.5\text{x}$$
+</div>
+
+<table>
+<tr><th>方案</th><th>机构</th><th>效果</th><th>特点</th></tr>
+<tr><td>DistServe</td><td>UC Berkeley</td><td>4.48x 吞吐提升</td><td>PD 分离开创性工作</td></tr>
+<tr><td>DualPath</td><td>DeepSeek + 清华 + 北大</td><td>1.96x 服务吞吐</td><td>双路 KV 加载，Agent 场景优化</td></tr>
+<tr><td>NVIDIA Dynamo</td><td>NVIDIA</td><td>KV 感知路由</td><td>集群级前缀缓存最大化</td></tr>
+<tr><td>vLLM 0.7+</td><td>社区</td><td>生产可用</td><td>原生 PD 分离 + KV 传输</td></tr>
+</table>
+
+<h3>投机解码：绕过 Memory Wall 的另一种思路</h3>
+<p>投机解码用一个小型草稿模型一次预测 K 个候选 token，目标模型一次前向传播验证全部——利用了 Transformer 天然产生每个位置概率分布的特性。EAGLE-3 / Medusa 可实现 2-3x 加速，Apple 的 Mirror-SD 更达 5.8x。关键保障：<strong>输出分布与原始模型 bit-exact 相同</strong>，不是近似。</p>
+
+<div class="card takeaway">
+KV Cache 优化四代演进：① 连续分配 → ② PagedAttention（消除碎片） → ③ 前缀缓存 + 异构 KV（复用+混合架构） → ④ PD 分离 + 投机解码（架构级优化）。2026 年行业共识：vLLM/SGLang/TensorRT-LLM 全部基于 PagedAttention，PD 分离从实验走向标配。
+</div>
+</section>
+
+<!-- ====== §⑤ 与产品连接 ====== -->
+<section id="connect">
+<h2><span class="num">5</span> 与产品连接：Agent 成本 = KV Cache 成本</h2>
+
+<div class="card intuition">
+DDAgent 处理一笔跨境汇款投诉时，System Prompt 约 2000 token，多轮对话累积到 10000+ token。每轮对话都要把整个历史"喂"给模型——这不是"读一遍"，而是把历史 KV Cache 搬进 GPU 内存。10000 token 的 KV Cache 在 70B 模型上约 3GB。5 个并发 Agent = 15GB，光 KV Cache 就吃掉一张 A100 40GB 的 37%。
+</div>
+
+<h3>Agent 场景的 KV Cache 特征</h3>
+<p>Agent 与普通 Chat 的本质区别：<strong>上下文持续累积，多轮互动，大量共享前缀</strong>。DeepSeek + 清华的 DualPath 论文指出，Agent 场景 KV Cache 命中率通常 &gt;95%。</p>
+
+<table>
+<tr><th>场景</th><th>上下文特征</th><th>KV Cache 行为</th><th>关键优化</th></tr>
+<tr><td>DDAgent 多步尽调</td><td>长上下文 + 短追加</td><td>95%+ 命中率</td><td>前缀缓存 + PD 分离</td></tr>
+<tr><td>KBA 知识库问答</td><td>共享 System Prompt + 不同问题</td><td>前缀复用率高</td><td>RadixAttention</td></tr>
+<tr><td>FxAgent 汇率咨询</td><td>短对话 + 高并发</td><td>缓存小但并发高</td><td>PagedAttention + 连续批处理</td></tr>
+<tr><td>Coding Agent</td><td>超长上下文（60-80% token 在搜索）</td><td>大量冗余 KV</td><td>上下文压缩（Morph Compact）</td></tr>
+</table>
+
+<h3>选型决策：推理引擎怎么选？</h3>
+
+<table>
+<tr><th>维度</th><th>vLLM</th><th>SGLang</th><th>TensorRT-LLM</th></tr>
+<tr><td>上手速度</td><td>⭐⭐⭐ 最快</td><td>⭐⭐</td><td>⭐（28min 编译冷启动）</td></tr>
+<tr><td>吞吐峰值</td><td>⭐⭐ 2400 tok/s</td><td>⭐⭐ 2460 tok/s</td><td>⭐⭐⭐ 2780 tok/s</td></tr>
+<tr><td>前缀缓存</td><td>块级哈希匹配</td><td>RadixAttention（更强）</td><td>Prefix Caching</td></tr>
+<tr><td>PD 分离</td><td>v0.7+ 原生</td><td>支持</td><td>支持</td></tr>
+<tr><td>适用场景</td><td>通用生产首选</td><td>Agent/RAG 共享前缀</td><td>极致吞吐，NVIDIA 生态</td></tr>
+</table>
+
+<p><strong>Fitz 的场景选型建议</strong>：</p>
+<p>• <strong>DDAgent</strong>（多步尽调 + 共享 System Prompt）→ SGLang，RadixAttention 在 Agent 场景缓存命中率更高</p>
+<p>• <strong>KBAgent</strong>（知识库 + 共享前缀）→ SGLang 或 vLLM + 前缀缓存</p>
+<p>• <strong>FxAgent</strong>（高并发短对话）→ vLLM，连续批处理已经足够</p>
+
+<h3>从 KV Cache 理解 Context 工程的物理约束</h3>
+<p>3.2 章学了 RLHF/DPO 塑造模型行为，但 Agent 的 Context 管理还受物理约束：KV Cache 的大小决定了你能塞多少上下文，PD 分离的延迟决定了 Agent 能多快响应。这就是主线连接句说的<strong>"KV Cache 是 Context 工程的物理约束"</strong>——A3.1（Context Engineering）章节将深入这个约束。</p>
+
+<div class="card takeaway">
+Agent 成本 = KV Cache 成本。Agent 场景的特征是"长上下文 + 短追加 + 高前缀复用"，对应的优化策略是前缀缓存 + PD 分离。推理引擎选型取决于场景：共享前缀多选 SGLang，通用场景选 vLLM，极致吞吐选 TensorRT-LLM。下一章（4.2 量化+Serving）将从另一个角度降成本。
+</div>
+</section>
+
+<div class="chapter-footer">
+<a href="../../INDEX.html">← 返回知识图谱</a>
+<a href="4.1-inference-kvcache-quiz.html">📝 去做 Quiz（10 题）→</a>
+</div>
+
+</body>
+</html>

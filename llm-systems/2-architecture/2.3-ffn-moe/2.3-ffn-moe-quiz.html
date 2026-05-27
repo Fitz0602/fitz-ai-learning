@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2.3 Quiz · FFN + 归一化 + MoE</title>
+<style>
+:root{--purple:#534AB7;--purple-bg:#EEEDFE;--teal:#1D9E75;--teal-bg:#E6F7F1;--amber:#BA7517;--amber-bg:#FAEEDA;--blue:#185FA5;--blue-bg:#E6F1FB;--coral:#993C1D;--muted:#888780;--bg:#FAFAF8;--text:#2D2D2D}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:15px;max-width:760px;margin:0 auto;padding:20px 24px 60px}
+h1{font-size:24px;font-weight:700;margin-bottom:6px}
+.subtitle{font-size:14px;color:var(--muted);margin-bottom:24px}
+.q-block{margin:24px 0;padding:20px;border:1px solid #E0E0DC;border-radius:10px;background:#fff}
+.q-id{font-size:11px;color:var(--purple);font-weight:600;margin-bottom:4px}
+.q-text{font-size:15px;font-weight:500;margin-bottom:12px}
+.options{display:flex;flex-direction:column;gap:8px}
+.opt-btn{display:block;width:100%;text-align:left;padding:10px 14px;border:1px solid #E0E0DC;border-radius:8px;background:#fff;cursor:pointer;font-size:14px;transition:all 0.2s}
+.opt-btn:hover{border-color:var(--purple);background:var(--purple-bg)}
+.opt-btn.selected{border-color:var(--purple);background:var(--purple-bg)}
+.opt-btn.correct{border-color:var(--teal);background:var(--teal-bg);color:var(--teal)}
+.opt-btn.wrong{border-color:var(--coral);background:var(--amber-bg);color:var(--coral)}
+.opt-btn:disabled{cursor:default;opacity:0.85}
+.feedback{margin-top:10px;padding:10px 14px;border-radius:8px;font-size:13px;display:none}
+.feedback.show{display:block}
+.feedback.correct-fb{background:var(--teal-bg);color:var(--teal);border-left:3px solid var(--teal)}
+.feedback.wrong-fb{background:var(--amber-bg);color:var(--coral);border-left:3px solid var(--coral)}
+.score-box{margin-top:30px;padding:20px;border-radius:10px;background:var(--purple-bg);text-align:center;display:none}
+.score-box.show{display:block}
+.score-num{font-size:36px;font-weight:700;color:var(--purple)}
+.score-msg{font-size:14px;color:var(--purple);margin-top:4px}
+.nav-link{font-size:12px;color:var(--purple);text-decoration:none;border:1px solid var(--purple);padding:3px 10px;border-radius:12px;font-weight:500;white-space:nowrap}
+.nav-link:hover{background:var(--purple);color:#fff}
+.top-nav{display:flex;align-items:center;gap:8px;margin-bottom:20px}
+</style>
+</head>
+<body>
+<div class="top-nav">
+<a href="2.3-ffn-moe-chapter.html" class="nav-link">← 返回章节</a>
+<a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+</div>
+<h1>2.3 Quiz</h1>
+<p class="subtitle">FFN + 归一化 + MoE · 10 题 · 每节 2 题</p>
+
+<!-- Q1: §① 概念辨析 -->
+<div class="q-block" data-answer="B" id="q1">
+<div class="q-id">T1-2.3-①-a</div>
+<div class="q-text">1. 在 Transformer 每层中，FFN 的核心角色是什么？</div>
+<div class="options">
+<button class="opt-btn" onclick="check(this,'q1')">A. 建立 token 之间的动态关联（像 Attention 一样）</button>
+<button class="opt-btn" onclick="check(this,'q1')">B. 从训练好的权重中提取和存储知识</button>
+<button class="opt-btn" onclick="check(this,'q1')">C. 对输入进行位置编码</button>
+<button class="opt-btn" onclick="check(this,'q1')">D. 控制每层的信号幅度防止爆炸</button>
+</div>
+<div class="feedback" id="q1-fb"></div>
+</div>
+
+<!-- Q2: §① 判断/应用 -->
+<div class="q-block" data-answer="B" id="q2">
+<div class="q-id">T1-2.3-①-b</div>
+<div class="q-text">2. 如果把 DDAgent 的 Dispatcher + 子 Agent 体系比作 MoE，那么"共享专家"最对应哪个部分？</div>
+<div class="options">
+<button class="opt-btn" onclick="check(this,'q2')">A. 某个专门的尽调子 Agent（如银行尽调 Agent）</button>
+<button class="opt-btn" onclick="check(this,'q2')">B. 所有场景都需要的基础尽调框架（通用模板和规则）</button>
+<button class="opt-btn" onclick="check(this,'q2')">C. Dispatcher 路由器本身</button>
+<button class="opt-btn" onclick="check(this,'q2')">D. 用户输入的尽调需求</button>
+</div>
+<div class="feedback" id="q2-fb"></div>
+</div>
+
+<!-- Q3: §② 概念辨析 -->
+<div class="q-block" data-answer="C" id="q3">
+<div class="q-id">T1-2.3-②-a</div>
+<div class="q-text">3. SwiGLU 相比 ReLU 的关键优势是什么？</div>
+<div class="options">
+<button class="opt-btn" onclick="check(this,'q3')">A. 参数量更少（只有 2 个矩阵）</button>
+<button class="opt-btn" onclick="check(this,'q3')">B. 计算速度更快（硬截断更简单）</button>
+<button class="opt-btn" onclick="check(this,'q3')">C. 乘法门控创造了特征交叉项，表达能力更强</button>
+<button class="opt-btn" onclick="check(this,'q3')">D. 不需要归一化层配合</button>
+</div>
+<div class="feedback" id="q3-fb"></div>
+</div>
+
+<!-- Q4: §② 判断/应用 -->
+<div class="q-block" data-answer="B" id="q4">
+<div class="q-id">T1-2.3-②-b</div>
+<div class="q-text">4. RMSNorm 与 LayerNorm 的核心区别是什么？</div>
+<div class="options">
+<button class="opt-btn" onclick="check(this,'q4')">A. RMSNorm 在 batch 维度归一化，LayerNorm 在特征维度归一化</button>
+<button class="opt-btn" onclick="check(this,'q4')">B. RMSNorm 省略了均值中心化，只做幅度归一化，参数更少</button>
+<button class="opt-btn" onclick="check(this,'q4')">C. RMSNorm 使用 ReLU 激活，LayerNorm 使用 GELU</button>
+<button class="opt-btn" onclick="check(this,'q4')">D. RMSNorm 只能在 Post-Norm 位置使用</button>
+</div>
+<div class="feedback" id="q4-fb"></div>
+</div>
+
+<!-- Q5: §③ 概念辨析 -->
+<div class="q-block" data-answer="D" id="q5">
+<div class="q-id">T1-2.3-③-a</div>
+<div class="q-text">5. 为什么说 FFN 本质上是一个 Key-Value 知识库？</div>
+<div class="options">
+<button class="opt-btn" onclick="check(this,'q5')">A. 因为 FFN 使用了 Attention 的 QKV 机制</button>
+<button class="opt-btn" onclick="check(this,'q5')">B. 因为 FFN 的输入就是 Key-Value 对</button>
+<button class="opt-btn" onclick="check(this,'q5')">C. 因为 FFN 的输出格式是键值对</button>
+<button class="opt-btn" onclick="check(this,'q5')">D. 因为 W₁ 的行像"键"（匹配输入模式），W₂ 的列像"值"（输出对应知识）</button>
+</div>
+<div class="feedback" id="q5-fb"></div>
+</div>
+
+<!-- Q6: §③ 判断/应用 -->
+<div class="q-block" data-answer="A" id="q6">
+<div class="q-id">T1-2.3-③-b</div>
+<div class="q-text">6. MoE 模型推理时的显存需求取决于什么？</div>
+<div class="options">
+<button class="opt-btn" onclick="check(this,'q6')">A. 总参数量（需要把所有专家都加载到显存）</button>
+<button class="opt-btn" onclick="check(this,'q6')">B. 激活参数量（只加载被选中的专家）</button>
+<button class="opt-btn" onclick="check(this,'q6')">C. Router 的参数量</button>
+<button class="opt-btn" onclick="check(this,'q6')">D. 共享专家的参数量</button>
+</div>
+<div class="feedback" id="q6-fb"></div>
+</div>
+
+<!-- Q7: §④ 概念辨析 -->
+<div class="q-block" data-answer="C" id="q7">
+<div class="q-id">T1-2.3-④-a</div>
+<div class="q-text">7. DeepSeek-V3 的"无辅助损失均衡"核心思路是什么？</div>
+<div class="options">
+<button class="opt-btn" onclick="check(this,'q7')">A. 删除负载均衡机制，让路由自由选择</button>
+<button class="opt-btn" onclick="check(this,'q7')">B. 用 Expert Choice 方法让专家选择 token</button>
+<button class="opt-btn" onclick="check(this,'q7')">C. 为每个专家维护可调偏置 b_i，在 TopK 选择时动态调整负载</button>
+<button class="opt-btn" onclick="check(this,'q7')">D. 增大辅助损失的权重来强制均衡</button>
+</div>
+<div class="feedback" id="q7-fb"></div>
+</div>
+
+<!-- Q8: §④ 判断/应用 -->
+<div class="q-block" data-answer="B" id="q8">
+<div class="q-id">T1-2.3-④-b</div>
+<div class="q-text">8. 2026 年 MoE 模型的稀疏比（总参数/激活参数）趋势是什么？</div>
+<div class="options">
+<button class="opt-btn" onclick="check(this,'q8')">A. 越来越低（趋向 Dense），因为稀疏损害质量</button>
+<button class="opt-btn" onclick="check(this,'q8')">B. 越来越高（从 18× 到 33×），用更少算力撬动更大知识容量</button>
+<button class="opt-btn" onclick="check(this,'q8')">C. 维持在 8-10× 不变，这是最优平衡点</button>
+<button class="opt-btn" onclick="check(this,'q8')">D. 各模型差异不大，都在 5× 左右</button>
+</div>
+<div class="feedback" id="q8-fb"></div>
+</div>
+
+<!-- Q9: §⑤ 概念辨析 -->
+<div class="q-block" data-answer="A" id="q9">
+<div class="q-id">T1-2.3-⑤-a</div>
+<div class="q-text">9. 对于多步 Agent 推理场景，为什么 MoE 模型特别有优势？</div>
+<div class="options">
+<button class="opt-btn" onclick="check(this,'q9')">A. 每步推理成本降低 10×，10 步累积后总成本优势巨大</button>
+<button class="opt-btn" onclick="check(this,'q9')">B. MoE 模型的每步推理质量比 Dense 模型高</button>
+<button class="opt-btn" onclick="check(this,'q9')">C. MoE 模型不需要 KV Cache</button>
+<button class="opt-btn" onclick="check(this,'q9')">D. MoE 模型的显存需求更小</button>
+</div>
+<div class="feedback" id="q9-fb"></div>
+</div>
+
+<!-- Q10: §⑤ 判断/应用 -->
+<div class="q-block" data-answer="D" id="q10">
+<div class="q-id">T1-2.3-⑤-b</div>
+<div class="q-text">10. Fitz 的 Harness 框架中，Gate 组件与本章哪个概念的设计原理最相似？</div>
+<div class="options">
+<button class="opt-btn" onclick="check(this,'q10')">A. SwiGLU 的门控机制（决定信息通过多少）</button>
+<button class="opt-btn" onclick="check(this,'q10')">B. MoE 的 Router（决定激活哪个专家）</button>
+<button class="opt-btn" onclick="check(this,'q10')">C. FFN 的 W₁ 矩阵（匹配输入模式）</button>
+<button class="opt-btn" onclick="check(this,'q10')">D. 归一化层（每步后校验输出范围，防止错误放大）</button>
+</div>
+<div class="feedback" id="q10-fb"></div>
+</div>
+
+<div class="score-box" id="score-box">
+<div class="score-num" id="score-num">0</div>
+<div class="score-msg" id="score-msg"></div>
+</div>
+
+<script>
+let total=0,answered=0;
+const explanations={
+q1:{correct:'B',why:'FFN 是知识存储器——W₁ 的行匹配输入模式（Key），W₂ 的列输出对应知识（Value）。Attention 才是建立 token 间动态关联。→ 详见 §① #is'},
+q2:{correct:'B',why:'共享专家处理所有 token 都需要的通用知识（语法、常识），对应 DDAgent 中所有场景都需要的基础尽调框架。领域子 Agent 对应路由专家。→ 详见 §① #is'},
+q3:{correct:'C',why:'SwiGLU 的核心是 Swish(xW₁)⊙xW₃ 的乘法门控，创造了特征交叉项 xⱼ×xₖ，类似 Attention 中 QK 乘积的思路。ReLU/GELU 只有单路径加权和。→ 详见 §② #how'},
+q4:{correct:'B',why:'RMSNorm 省略了 LayerNorm 中的均值中心化（不减 μ），只做幅度归一化，可学习参数只有 γ（无 β），计算更快但效果相当。→ 详见 §② #how'},
+q5:{correct:'D',why:'Geva et al. (2021) 发现 W₁ 的每一行像一个"键"匹配特定输入模式，W₂ 的每一列像一个"值"输出对应知识——这是 FFN 作为 Key-Value 存储的实证基础。→ 详见 §③ #why'},
+q6:{correct:'A',why:'MoE 模型虽然只激活部分参数计算，但所有专家参数都必须加载到显存（因为你不知道下一个 token 会选哪些专家）。这是 MoE 的主要代价。→ 详见 §③ #why'},
+q7:{correct:'C',why:'DeepSeek-V3 为每个专家维护偏置 b_i，在 TopK 选择时加入 ρ+b 做动态调整，无需额外损失函数干扰模型性能。→ 详见 §④ #evolution'},
+q8:{correct:'B',why:'DeepSeek-V3 的 18× → Llama4 Maverick 的 23× → DeepSeek-V4 的 33×，稀疏比持续提升，意味着同等知识容量下推理成本越来越低。→ 详见 §④ #evolution'},
+q9:{correct:'A',why:'MoE 每步推理只激活 1/10~1/30 的参数，10 步 Agent 推理的总成本优势 = 单步优势 × 步数。Dense 模型多步累积成本更高。→ 详见 §⑤ #connect'},
+q10:{correct:'D',why:'归一化层在每层后校验信号幅度，防止放大/衰减。Harness 的 Gate 在每步行动后校验输出是否在合理范围，防止错误在后续步骤放大——设计原理完全一致。→ 详见 §⑤ #connect'}
+};
+
+function check(btn,qid){
+  const block=document.getElementById(qid);
+  const answer=block.dataset.answer;
+  const btns=block.querySelectorAll('.opt-btn');
+  const fb=document.getElementById(qid+'-fb');
+  const isCorrect=btn.textContent.charAt(0)===answer;
+  
+  btns.forEach(b=>{
+    b.disabled=true;
+    if(b.textContent.charAt(0)===answer) b.classList.add('correct');
+  });
+  
+  btn.classList.add('selected');
+  if(!isCorrect) btn.classList.add('wrong');
+  
+  fb.className='feedback show '+(isCorrect?'correct-fb':'wrong-fb');
+  fb.innerHTML=(isCorrect?'✅ 正确！':'❌ 错误。正确答案是 '+answer+'。')+' '+explanations[qid].why;
+  
+  if(isCorrect) total++;
+  answered++;
+  if(answered===10) showScore();
+}
+
+function showScore(){
+  const box=document.getElementById('score-box');
+  box.classList.add('show');
+  document.getElementById('score-num').textContent=total+'/10';
+  let msg='';
+  if(total<=4) msg='重读章节，关注每个 takeaway 卡片';
+  else if(total<=7) msg='良好！再看错题对应的章节节';
+  else if(total<=9) msg='扎实！对 FFN/MoE 的理解已经到位';
+  else msg='满分！🧭 完全掌握了知识存储与稀疏激活的精髓';
+  document.getElementById('score-msg').textContent=msg;
+}
+</script>
+</body>
+</html>

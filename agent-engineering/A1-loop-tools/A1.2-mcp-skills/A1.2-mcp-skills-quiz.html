@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz · A1.2 MCP协议 · Tools vs Skills</title>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE;
+  --amber: #BA7517; --amber-bg: #FAEEDA;
+  --blue: #185FA5; --blue-bg: #E6F1FB;
+  --coral: #993C1D; --coral-bg: #FAECE7;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7;
+  max-width: 700px; margin: 0 auto; padding: 32px 24px 80px; font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.tag.t2 { background: var(--teal-bg); color: #0F6E56; }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 20px; font-weight: 600; margin: 8px 0 2px; }
+.subtitle { color: var(--muted); font-size: 13px; }
+.section-divider { font-size: 11px; color: var(--teal); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 28px 0 8px; padding: 4px 10px; background: var(--teal-bg); border-radius: 6px; display: inline-block; }
+.q-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 12px 0; transition: opacity 0.2s; }
+.q-block.answered { opacity: 0.85; }
+.q-num { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.q-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt { padding: 10px 14px 10px 42px; border-radius: 8px; border: 1.5px solid var(--border); cursor: pointer; font-size: 14px; transition: all 0.15s; background: var(--card); line-height: 1.5; position: relative; }
+.opt:hover { border-color: var(--purple); background: var(--purple-bg); }
+.opt.selected { border-color: var(--purple); background: var(--purple-bg); }
+.opt.correct { border-color: var(--teal); background: var(--teal-bg); }
+.opt.wrong { border-color: var(--coral); background: var(--coral-bg); }
+.opt::before { content: ''; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 50%; transition: all 0.15s; background: white; }
+.opt.selected::before { border-color: var(--purple); background: var(--purple); }
+.opt.selected::after { content: ''; position: absolute; left: 14px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; }
+.opt.locked { pointer-events: none; }
+.action-btns { display: flex; gap: 8px; margin-top: 14px; }
+.q-btn { flex: 1; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; text-align: center; }
+.q-btn:hover { border-color: var(--purple); background: var(--purple-bg); }
+.q-btn.submit-btn { background: var(--purple); color: white; border-color: var(--purple); }
+.q-btn.submit-btn:hover { background: #3C3489; }
+.q-btn.reveal-btn { color: var(--muted); }
+.q-btn.reveal-btn:hover { color: var(--text); }
+.q-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: 14px; display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.correct-fb { background: var(--teal-bg); color: #085041; }
+.feedback.wrong-fb { background: var(--coral-bg); color: #711B0C; }
+.source { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.score-bar { background: var(--purple-bg); border-radius: 12px; padding: 24px; margin-top: 32px; text-align: center; display: none; }
+.score-bar.show { display: block; }
+.score-num { font-size: 44px; font-weight: 700; color: var(--purple); }
+.score-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.score-detail { display: flex; justify-content: center; gap: 24px; margin-top: 16px; font-size: 13px; }
+.score-item { text-align: center; }
+.score-item .num { font-size: 22px; font-weight: 600; color: var(--text); }
+.score-item .lbl { font-size: 11px; color: var(--muted); }
+.progress-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #e0e0dc; transition: all 0.3s; }
+.dot.done { background: var(--teal); }
+.dot.current { background: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t2">T2 Agent 工程</span>
+    <span style="font-size:13px;color:var(--muted);">A1.2 MCP协议 · Tools vs Skills</span>
+    <a href="A1.2-mcp-skills-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+    <a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+  </div>
+  <h1>Quiz：MCP 协议 · Tools vs Skills</h1>
+  <div class="subtitle">10 题 · 每节 2 题 · 选择题为主</div>
+</div>
+
+<div class="progress-dots" id="dots"></div>
+<div id="quiz-container"></div>
+
+<div class="score-bar" id="scoreBar">
+  <div class="score-num" id="scoreNum">0/10</div>
+  <div class="score-label">完成！你的得分</div>
+  <div class="score-detail">
+    <div class="score-item"><div class="num" id="correctNum">0</div><div class="lbl">正确</div></div>
+    <div class="score-item"><div class="num" id="wrongNum">0</div><div class="lbl">错误</div></div>
+  </div>
+</div>
+
+<script>
+const quizData = [
+  // ===== §① 是什么（Q1-Q2）=====
+  {
+    section: "§① 是什么",
+    num: 1,
+    question: "DDAgent 需要调用搜索企业信息、查询风险标签、生成报告模板、路由复核、记录日志等 5 种异构能力。如果没有 MCP 协议，核心痛点是什么？",
+    options: [
+      { label: "A", text: "LLM 无法理解这些能力的含义，需要更强的模型" },
+      { label: "B", text: "每种能力都要为每个 AI Client 写独立适配器（N×M 问题）", correct: true },
+      { label: "C", text: "这些能力的数据格式不统一（JSON/XML/SQL），无法标准化" },
+      { label: "D", text: "函数调用的延迟太高，影响用户体验" }
+    ],
+    explanation: "MCP 的核心价值是统一协议：N 个 AI Client 和 M 个工具服务只需各实现一份协议接口，工作量从 O(N×M) 降到 O(N+M)。数据格式和模型能力不是 MCP 解决的问题。",
+    source: "MCP 官方规范 / Anthropic Blog"
+  },
+  {
+    section: "§① 是什么",
+    num: 2,
+    question: "在 DDAgent 的 MCP Server 示例中，search_enterprise 是 Tool、get_report_template 是 Resource、due_diligence_workflow 是 Prompt。这三者的本质区别是？",
+    options: [
+      { label: "A", text: "Tool 执行操作，Resource 读数据，Prompt 定义工作流模板", correct: true },
+      { label: "B", text: "Tool 给开发人员用，Resource 给 LLM 用，Prompt 给用户用" },
+      { label: "C", text: "Tool 用 HTTP 调用，Resource 从本地文件读取，Prompt 硬编码在代码里" },
+      { label: "D", text: "三者在运行时没有区别，只是命名约定不同" }
+    ],
+    explanation: "Tool = 做一件事（POST语义，有副作用），Resource = 读一段数据（GET语义，只读），Prompt = SOP工作流（引导 LLM 按步骤执行）。这是 MCP 三原语的核心设计。",
+    source: "MCP 规范 §2 三原语定义"
+  },
+
+  // ===== §② 怎么实现（Q3-Q4）=====
+  {
+    section: "§② 怎么实现",
+    num: 3,
+    question: "以下哪个关于 FastMCP @mcp.tool() 装饰器的说法是正确的？",
+    options: [
+      { label: "A", text: "docstring 只是给人看的注释，不影响 LLM 行为" },
+      { label: "B", text: "类型注解自动生成 JSON Schema，docstring 成为 LLM 决策是否调用此工具的关键依据", correct: true },
+      { label: "C", text: "每个 Tool 必须有返回值，否则 MCP Server 启动报错" },
+      { label: "D", text: "一个函数只能注册为一个 Tool，不能同时作为 Resource 使用" }
+    ],
+    explanation: "FastMCP 从 Python 类型注解推断输入 Schema（含校验规则），docstring 成为工具描述注入给 LLM。这是 Tool 选择质量的关键——写得越好，LLM 选得越准。",
+    source: "FastMCP 文档 / Anthropic Tool Use 最佳实践"
+  },
+  {
+    section: "§② 怎么实现",
+    num: 4,
+    question: "TRSAgent 的 classify_ticket 工具使用了 Python Enum 定义 TicketCategory 和 UrgencyLevel。这样做的实际效果是？",
+    options: [
+      { label: "A", text: "让代码更规范，但对 LLM 行为无影响" },
+      { label: "B", text: "Enum 值自动变成 MCP Schema 中的枚举约束，LLM 只能从中选择", correct: true },
+      { label: "C", text: "Enum 让工具调用更快，因为减少了参数解析时间" },
+      { label: "D", text: "Enum 必须配合 OAuth 认证才能生效" }
+    ],
+    explanation: "Enum 类型 → MCP 自动生成 enum 约束 → LLM 的输出被限制为预定义值。这对分类、状态选择等场景特别有效，能大幅减少幻觉输出。",
+    source: "FastMCP 类型系统文档"
+  },
+
+  // ===== §③ 为什么（Q5-Q6）=====
+  {
+    section: "§③ 为什么",
+    num: 5,
+    question: "假设有 100 个 Tool，每个 Schema 描述消耗约 200 tokens。一次性全量加载到 Context Window 的主要问题是什么？",
+    options: [
+      { label: "A", text: "API 调用费用增加 20,000 tokens 的成本" },
+      { label: "B", text: "Context Window 过长导致注意力稀释，工具选择准确率下降约 15-25%", correct: true },
+      { label: "C", text: "MCP Server 的内存占用过大导致性能退化" },
+      { label: "D", text: "LLM 的推理速度变慢超过 50%" }
+    ],
+    explanation: "这是 Token 经济学视角的核心问题：大量工具定义挤占 Context Window 后，模型的「大海捞针」效应会导致工具选择质量断崖下降。Skill 的渐进式披露正是为此设计。",
+    source: "Token 经济学 / Lost in the Middle 论文"
+  },
+  {
+    section: "§③ 为什么",
+    num: 6,
+    question: "MCP 在众多候选方案中成为事实标准，最关键的胜出原因是什么？",
+    options: [
+      { label: "A", text: "技术最先进，性能比其他方案高一个数量级" },
+      { label: "B", text: "Anthropic 品牌影响力大，其他公司被迫跟进" },
+      { label: "C", text: "开放但有用——三层抽象粒度合适 + 开发者体验好 + 双模传输，且 6 个月内获得全行业采纳", correct: true },
+      { label: "D", text: "解决了 Google A2A 协议未覆盖的 Agent 间协作问题" }
+    ],
+    explanation: "MCP 胜出靠的是时机和权衡恰到好处：开放标准避免私有协议割裂、三原语覆盖 90% 场景不多不少、FastMCP 一个装饰器就能用、stdio+HTTP 双模覆盖个人到企业。",
+    source: "AgentPatch Blog 'The MCP Protocol in 2026'"
+  },
+
+  // ===== §④ 演进（Q7-Q8）=====
+  {
+    section: "§④ 演进",
+    num: 7,
+    question: "Tool 和 Skill 的本质区别，以下哪个比喻最准确？",
+    options: [
+      { label: "A", text: "Tool = 菜刀，Skill = 菜谱（知道怎么切菜）", correct: true },
+      { label: "B", text: "Tool = 函数，Skill = 类（面向对象封装）" },
+      { label: "C", text: "Tool = API 接口，Skill = SDK（包含示例代码）" },
+      { label: "D", text: "Tool = 单元测试，Skill = 集成测试（覆盖更广）" }
+    ],
+    explanation: "Tool 回答「能做什么」（原子操作），Skill 回答「怎么做」（多步工作流+判断逻辑）。菜刀(Tool)能切菜但不知道怎么做出一道好菜；菜谱(Skill)告诉你什么时候用什么刀、怎么切、顺序是什么。",
+    source: "WorkBuddy Skill 系统设计"
+  },
+  {
+    section: "§④ 演进",
+    num: 8,
+    question: "渐进式披露（Progressive Disclosure）在 Skill 架构中节省了多少 context space？（对比 50 个 Skill vs 50 个 Tool 全量加载的例子中）",
+    options: [
+      { label: "A", text: "约 30%（从 10K tokens 降到 7K）" },
+      { label: "B", text: "约 50%（从 10K tokens 降到 5K）" },
+      { label: "C", text: "约 72%（从约 10K tokens 降到约 2.75K tokens）", correct: true },
+      { label: "D", text: "约 90%（从 10K tokens 降到 1K）" }
+    ],
+    explanation: "L0 加载 50 个 Skill 元数据 (约250 tokens)，L1 仅加载当前需要的 1 个 Skill 详情 (约2000 tokens)，L2 按需加载 Resource (约500 tokens)。总计约 2750 tokens vs Tool 全量的约 10000 tokens，节省约 72%。",
+    source: "WorkBuddy Skill 架构 Token 分析"
+  },
+
+  // ===== §⑤ 连接（Q9-Q10）=====
+  {
+    section: "§⑤ 连接",
+    num: 9,
+    question: "根据 Fitz 的 6 个 Agent MCP 改造 ROI 分析，哪个 Agent 的 MCP 化改造工作量最大但收益也最高？",
+    options: [
+      { label: "A", text: "FXAgent —— 抽出汇率模块即可，工作量小收益中等" },
+      { label: "B", text: "BAAgent —— FBI 卡片 ID 改为 Resource，改动最小" },
+      { label: "C", text: "TRSAgent —— 分类逻辑和路由逻辑耦合是其 3 个 P0 问题的根因之一，需重新设计 Tool 边界", correct: true },
+      { label: "D", text: "Eval Agent —— 尚未开发，无需改造" }
+    ],
+    explanation: "TRSAgent 当前的 3 个 P0 问题中有多个根因指向 ReAct 循环中的环节耦合。将 classify_tool 和 route_tool 分离为独立 Tool 后，各自可独立测试和替换——这正是 MCP Tool 边界设计的优势。",
+    source: "Fitz Agent MCP 改造 ROI 分析"
+  },
+  {
+    section: "§⑤ 连接",
+    num: 10,
+    question: "Fitz 原创 Harness 六组件中，「Gate（治理运维）」对应 MCP 的什么概念？",
+    options: [
+      { label: "A", text: "Tool 层的 docstring 约束" },
+      { label: "B", text: "Server 层的校验机制 + OAuth 认证 + 速率限制 + 审计日志", correct: true },
+      { label: "C", text: "Skill 的 SKILL.md 中定义的反模式列表" },
+      { label: "D", text: "Resource 层的数据行级安全控制" }
+    ],
+    explanation: "Harness Gate 关注的是安全边界和运维治理。MCP 层面这体现为：Server 层做输入校验防注入、OAuth/Bearer Token 控制访问权限、速率限制防滥用、审计日志留痕可追溯。",
+    source: "Harness 六组件框架 vs MCP 映射分析"
+  }
+];
+
+let currentQ = 0;
+let score = { correct: 0, wrong: 0 };
+let answered = new Set();
+
+function renderQuiz() {
+  const container = document.getElementById('quiz-container');
+  const dotsContainer = document.getElementById('dots');
+  dotsContainer.innerHTML = quizData.map((_, i) =>
+    '<div class="dot ' + (answered.has(i)?'done':'') + ' ' + (i===currentQ?'current':'') + '" data-i="' + i + '"></div>'
+  ).join('');
+
+  if (currentQ >= quizData.length) {
+    showScore();
+    return;
+  }
+
+  const q = quizData[currentQ];
+  const isAnswered = answered.has(currentQ);
+  container.innerHTML =
+    '<div class="section-divider">' + q.section + ' · 第 ' + q.num + ' 题</div>' +
+    '<div class="q-block ' + (isAnswered?'answered':'') + '" id="qb' + currentQ + '">' +
+      '<div class="q-num">Question ' + q.num + ' / ' + quizData.length + '</div>' +
+      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="options" id="opts' + currentQ + '">' +
+        q.options.map((o, i) => '<div class="opt' + (isAnswered?' locked':'') + '" data-i="' + i + '" onclick="selectOpt(' + i + ')">' + o.label + '. ' + o.text + '</div>').join('') +
+      '</div>' +
+      '<div class="action-btns" id="btns' + currentQ + '">' +
+        '<button class="q-btn submit-btn" onclick="submitAnswer()" ' + (isAnswered?'disabled':'') + '>提交答案</button> ' +
+        '<button class="q-btn reveal-btn" onclick="revealAnswer()" ' + (isAnswered?'disabled':'') + '>查看答案</button>' +
+      '</div>' +
+      '<div class="feedback" id="fb' + currentQ + '"></div>' +
+      '<div class="source" id="src' + currentQ + '" style="display:none">' + q.source + '</div>' +
+    '</div>';
+
+  if (isAnswered) {
+    const selIdx = q._selected;
+    if (selIdx !== undefined) {
+      document.querySelectorAll('#opts' + currentQ + ' .opt').forEach((el, i) => {
+        el.classList.toggle('selected', i === selIdx);
+        el.classList.toggle('correct', q.options[i].correct);
+        el.classList.toggle('wrong', i === selIdx && !q.options[i].correct);
+      });
+      showFeedback(true);
+    }
+  }
+
+  dotsContainer.querySelectorAll('.dot').forEach(d => {
+    d.onclick = function() { currentQ = parseInt(d.dataset.i); renderQuiz(); };
+  });
+}
+
+function selectOpt(idx) {
+  if (answered.has(currentQ)) return;
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+  });
+  quizData[currentQ]._selected = idx;
+}
+
+function submitAnswer() {
+  if (answered.has(currentQ)) return;
+  const q = quizData[currentQ];
+  const selIdx = q._selected;
+  if (selIdx === undefined) { alert('请先选择一个选项'); return; }
+  answered.add(currentQ);
+
+  const isCorrect = q.options[selIdx].correct;
+  if (isCorrect) score.correct++; else score.wrong++;
+
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach((el, i) => {
+    el.classList.add('locked');
+    if (q.options[i].correct) el.classList.add('correct');
+    else if (i === selIdx) el.classList.add('wrong');
+  });
+
+  showFeedback(isCorrect);
+  document.getElementById('btns' + currentQ).querySelectorAll('.q-btn').forEach(function(b) { b.disabled = true; });
+}
+
+function revealAnswer() {
+  if (answered.has(currentQ)) return;
+  answered.add(currentQ);
+  score.wrong++;
+
+  const q = quizData[currentQ];
+  q._revealed = true;
+
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach((el, i) => {
+    el.classList.add('locked');
+    if (q.options[i].correct) el.classList.add('correct');
+  });
+
+  showFeedback(false);
+  document.getElementById('btns' + currentQ).querySelectorAll('.q-btn').forEach(function(b) { b.disabled = true; });
+}
+
+function showFeedback(isSubmitted) {
+  const q = quizData[currentQ];
+  const fb = document.getElementById('fb' + currentQ);
+  const src = document.getElementById('src' + currentQ);
+  const selIdx = q._selected;
+  const isCorrect = q.options[selIdx] ? q.options[selIdx].correct : false;
+
+  if (isSubmitted && isCorrect) {
+    fb.className = 'feedback show correct-fb';
+    fb.innerHTML = '<strong>✅ 正确！</strong> ' + q.explanation;
+  } else if (isSubmitted && !isCorrect) {
+    fb.className = 'feedback show wrong-fb';
+    fb.innerHTML = '<strong>❌ 错误。</strong> 正确答案是 <strong>' + q.options.find(function(o){return o.correct}).label + '</strong>。' + q.explanation;
+  } else {
+    fb.className = 'feedback show wrong-fb';
+    fb.innerHTML = '<strong>📖 参考答案：</strong>' + q.explanation;
+  }
+  src.style.display = 'block';
+}
+
+function showScore() {
+  document.getElementById('quiz-container').innerHTML = '';
+  document.getElementById('scoreBar').classList.add('show');
+  document.getElementById('scoreNum').textContent = score.correct + '/' + quizData.length;
+  document.getElementById('correctNum').textContent = score.correct;
+  document.getElementById('wrongNum').textContent = score.wrong;
+}
+
+// Init
+renderQuiz();
+</script>
+
+</body>
+</html>

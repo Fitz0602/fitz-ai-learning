@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Quiz · A2.2 Planning · 任务分解 · 反思循环</title>
+<style>
+:root {
+  --bg: #fafaf7; --card: #ffffff; --text: #1a1a1a; --muted: #6b6b6b;
+  --border: rgba(0,0,0,0.08);
+  --purple: #534AB7; --purple-bg: #EEEDFE;
+  --teal: #1D9E75; --teal-bg: #E1F5EE;
+  --amber: #BA7517; --amber-bg: #FAEEDA;
+  --blue: #185FA5; --blue-bg: #E6F1FB;
+  --coral: #993C1D; --coral-bg: #FAECE7;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  background: var(--bg); color: var(--text); line-height: 1.7;
+  max-width: 700px; margin: 0 auto; padding: 32px 24px 80px; font-size: 15px;
+}
+.header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.tag-row { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; }
+.tag { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+.tag.t2 { background: var(--teal-bg); color: #0F6E56; }
+.nav-link { font-size: 12px; color: var(--purple); text-decoration: none; border: 1px solid var(--purple); padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.nav-link:hover { background: var(--purple); color: white; }
+h1 { font-size: 20px; font-weight: 600; margin: 8px 0 2px; }
+.subtitle { color: var(--muted); font-size: 13px; }
+.section-divider { font-size: 11px; color: var(--teal); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 28px 0 8px; padding: 4px 10px; background: var(--teal-bg); border-radius: 6px; display: inline-block; }
+.q-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px 24px; margin: 12px 0; transition: opacity 0.2s; }
+.q-block.answered { opacity: 0.85; }
+.q-num { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+.q-text { font-size: 15px; font-weight: 500; margin-bottom: 16px; line-height: 1.5; }
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt { padding: 10px 14px 10px 42px; border-radius: 8px; border: 1.5px solid var(--border); cursor: pointer; font-size: 14px; transition: all 0.15s; background: var(--card); line-height: 1.5; position: relative; }
+.opt:hover { border-color: var(--purple); background: var(--purple-bg); }
+.opt.selected { border-color: var(--purple); background: var(--purple-bg); }
+.opt.correct { border-color: var(--teal); background: var(--teal-bg); }
+.opt.wrong { border-color: var(--coral); background: var(--coral-bg); }
+.opt::before { content: ''; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; border: 2px solid var(--border); border-radius: 50%; transition: all 0.15s; background: white; }
+.opt.selected::before { border-color: var(--purple); background: var(--purple); }
+.opt.selected::after { content: ''; position: absolute; left: 14px; top: 50%; transform: translateY(-50%) rotate(45deg); width: 5px; height: 9px; border: solid white; border-width: 0 2px 2px 0; }
+.opt.locked { pointer-events: none; }
+.action-btns { display: flex; gap: 8px; margin-top: 14px; }
+.q-btn { flex: 1; padding: 8px 12px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--card); color: var(--text); transition: all 0.15s; text-align: center; }
+.q-btn:hover { border-color: var(--purple); background: var(--purple-bg); }
+.q-btn.submit-btn { background: var(--purple); color: white; border-color: var(--purple); }
+.q-btn.submit-btn:hover { background: #3C3489; }
+.q-btn.reveal-btn { color: var(--muted); }
+.q-btn.reveal-btn:hover { color: var(--text); }
+.q-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.feedback { margin-top: 14px; padding: 12px 16px; border-radius: 8px; font-size: 14px; display: none; line-height: 1.6; }
+.feedback.show { display: block; }
+.feedback.correct-fb { background: var(--teal-bg); color: #085041; }
+.feedback.wrong-fb { background: var(--coral-bg); color: #711B0C; }
+.source { font-size: 11px; color: var(--muted); margin-top: 8px; }
+.score-bar { background: var(--purple-bg); border-radius: 12px; padding: 24px; margin-top: 32px; text-align: center; display: none; }
+.score-bar.show { display: block; }
+.score-num { font-size: 44px; font-weight: 700; color: var(--purple); }
+.score-label { font-size: 13px; color: var(--muted); margin-top: 4px; }
+.score-detail { display: flex; justify-content: center; gap: 24px; margin-top: 16px; font-size: 13px; }
+.score-item { text-align: center; }
+.score-item .num { font-size: 22px; font-weight: 600; color: var(--text); }
+.score-item .lbl { font-size: 11px; color: var(--muted); }
+.progress-dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 24px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: #e0e0dc; transition: all 0.3s; }
+.dot.done { background: var(--teal); }
+.dot.current { background: var(--purple); box-shadow: 0 0 0 3px var(--purple-bg); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag-row">
+    <span class="tag t2">T2 Agent 工程</span>
+    <span style="font-size:13px;color:var(--muted);">A2.2 Planning · 任务分解 · 反思循环</span>
+    <a href="A2.2-planning-reflection-chapter.html" class="nav-link" style="margin-left:auto;">← 返回章节</a>
+    <a href="../../../INDEX.html" class="nav-link">知识图谱</a>
+  </div>
+  <h1>Quiz：Planning · 任务分解 · 反思循环</h1>
+  <div class="subtitle">10 题 · 每节 2 题 · 选择题为主</div>
+</div>
+
+<div class="progress-dots" id="dots"></div>
+<div id="quiz-container"></div>
+
+<div class="score-bar" id="scoreBar">
+  <div class="score-num" id="scoreNum">0/10</div>
+  <div class="score-label">完成！你的得分</div>
+  <div class="score-detail">
+    <div class="score-item"><div class="num" id="correctNum">0</div><div class="lbl">正确</div></div>
+    <div class="score-item"><div class="num" id="wrongNum">0</div><div class="lbl">错误</div></div>
+  </div>
+</div>
+
+<script>
+const quizData = [
+  // ===== §① 是什么（Q1-Q2）=====
+  {
+    section: "§① 是什么",
+    num: 1,
+    question: "章节用「穿越原始森林」类比 ReAct 和 Plan-Act-Reflect。其中「徒步者 A」每到一个岔路口停下来观察地面再选路，对应的是哪种范式？它有什么核心缺陷？",
+    options: [
+      { label: "A", text: "Plan-Act-Reflect；缺陷是反思成本太高", correct: false },
+      { label: "B", text: "ReAct；核心缺陷是短视决策——每步只基于当前 Observation，没有全局视角", correct: true },
+      { label: "C", text: "Chain-of-Thought；缺陷是推理链可能断裂", correct: false },
+      { label: "D", text: "Reflexion；缺陷是记忆更新开销大", correct: false }
+    ],
+    explanation: "徒步者 A 的行为完美对应 ReAct 范式：Thought→Action→Observation 循环，每步只做局部决策。其三大致命缺陷为：短视决策（无全局视角）、重复试错（无记忆反思）、无法分解复杂任务。",
+    source: "A2.2 §1 ReAct 三大致命缺陷"
+  },
+  {
+    section: "§① 是什么",
+    num: 2,
+    question: "章节提出「反思（Reflect）是区分脚本执行器与智能体的分水岭」。以下哪个场景最能体现这句话的含义？",
+    options: [
+      { label: "A", text: "Agent 能调用 50 个不同的 API 工具", correct: false },
+      { label: "B", text: "Agent 在执行过程中发现某步结果与预期不符，主动调整后续策略而非机械继续", correct: true },
+      { label: "C", text: "Agent 使用最强的 GPT-4o 模型来生成回答", correct: false },
+      { label: "D", text: "Agent 的响应速度小于 2 秒", correct: false }
+    ],
+    explanation: "关键区别在于「自我诊断」能力。没有 Reflect 的 Agent = if-else 脚本（只是 LLM 驱动）；有 Reflect 的 Agent 能判断「这步对不对」「要不要换方案」，从工具使用者进化为问题解决者。",
+    source: "A2.2 §1.2 核心洞察"
+  },
+
+  // ===== §② 怎么实现（Q3-Q4）=====
+  {
+    section: "§② 怎么实现",
+    num: 3,
+    question: "在 DDAgent 的 Plan Prompt 示例中，步骤之间通过 $stepN.company_id 这种变量引用传递数据。这种设计的直接好处是什么？",
+    options: [
+      { label: "A", text: "让代码更简洁，减少重复定义", correct: false },
+      { label: "B", text: "使步骤间的数据流显式化，支持依赖分析、并行优化和程序化调度", correct: true },
+      { label: "C", text: "提高 LLM 推理速度约 30%", correct: false },
+      { label: "D", text: "防止 SQL 注入等安全攻击", correct: false }
+    ],
+    explanation: "$stepN 变量引用让步骤间数据流变成显式的有向图结构，从而可以：(1) 自动检测 depends_on 是否满足再执行 (2) 识别可并行步骤 (3) 出错时精确定位数据断点。这是 Plan 从自然语言升级为可调度结构的关键。",
+    source: "A2.2 §2.1 DDAgent Plan Prompt 设计要点"
+  },
+  {
+    section: "§② 怎么实现",
+    num: 4,
+    question: "逐步反射（Mode B）和全局反射（Mode A）的核心权衡是什么？以下哪条实践建议最合理？",
+    options: [
+      { label: "A", text: "始终使用 Mode B（逐步反射），因为越早发现错误越好", correct: false },
+      { label: "B", text: "始终使用 Mode A（全局反射），因为成本低效率高", correct: false },
+      { label: "C", text: "默认 Mode A + 关键步骤（资金操作/数据写入/不可逆动作）强制插入 Mode B checkpoint", correct: true },
+      { label: "D", text: "两种模式效果完全一样，选择哪个都无所谓", correct: false }
+    ],
+    explanation: "Mode B 纠错及时但计算成本高（每步都调 LLM 做 Reflect），Mode A 成本低但错误可能累积。最佳策略是混合模式：大部分步骤全局反思省钱省时，关键节点逐步反思保安全。",
+    source: "A2.2 §2.3 实践经验法则"
+  },
+
+  // ===== §③ 为什么（Q5-Q6）=====
+  {
+    section: "§③ 为什么",
+    num: 5,
+    question: "章节用一个数字例子说明搜索空间裁剪的威力：DDAgent 尽调 5 步流程，每步平均 8 种可选组合。纯 ReAct 盲搜 vs Plan-Act-Reflect 的探索量分别约为多少？缩小了多少倍？",
+    options: [
+      { label: "A", text: "ReAct: 40 种；P-A-R: 10 种；缩小 4 倍", correct: false },
+      { label: "B", text: "ReAct: 32,768 种；P-A-R: 约 10 种；缩小约 3,000 倍", correct: true },
+      { label: "C", text: "ReAct: 8^5=32,768 种；P-A-R: 5×8=40 种；缩小约 800 倍", correct: false },
+      { label: "D", text: "ReAct: 5^8=390,625 种；P-A-R: 5+8=13 种；缩小约 30,000 倍", correct: false }
+    ],
+    explanation: "纯 ReAct 是 b^k = 8^5 = 32,768（指数爆炸）。Plan 锁定 1 条最优路径(~5步)，每步只需 ~2 个候选验证，总计 ~10。比值 ≈ 3,277 倍（约 3,000 倍）。且 k 越大优势越显著。",
+    source: "A2.2 §3.1 搜索空间裁剪数字例"
+  },
+  {
+    section: "§③ 为什么",
+    num: 6,
+    question: "关于「反思的经济学」，每次 Reflect 调用的成本约 $0.01-$0.03。如果不在 Step 1 发现错误而是等到最后才发现，浪费的成本大约是多少？ROI 大约在什么范围？",
+    options: [
+      { label: "A", text: "浪费约 $0.05，ROI 约 2x", correct: false },
+      { label: "B", text: "浪费约 $0.5-$2.0（4次Tool调用+4次LLM推理+上下文重建），ROI 通常在 10x-50x", correct: true },
+      { label: "C", text: "浪费约 $10-$20，ROI 约 100x+", correct: false },
+      { label: "D", text: "不产生额外成本，因为 LLM 会自动纠正", correct: false }
+    ],
+    explanation: "错误传播的成本 = N步浪费的Tool调用(N×$0.02~$0.10) + N步浪费的LLM推理(N×$0.01~$0.05) + 上下文重建($0.10~$0.30)。对5步任务约$0.5-$2。除以单次Reflect成本$0.01-$0.03 → ROI 10x-50x。",
+    source: "A2.2 §3.2 反思的经济学"
+  },
+
+  // ===== §④ 演进（Q7-Q8）=====
+  {
+    section: "§④ 演进",
+    num: 7,
+    question: "SPIRAL（IBM, AAAI 2026）与传统 Plan-Act-Reflect 框架的最根本区别是什么？",
+    options: [
+      { label: "A", text: "SPIRAL 只能用于游戏和模拟环境，不能用于实际业务", correct: false },
+      { label: "B", text: "SPIRAL 将 P-A-R 从单一 LLM 承担拆分为 Planner/Simulator/Critic 三个专门化角色，避免认知偏差", correct: true },
+      { label: "C", text: "SPIRAL 不需要 LLM，完全基于规则引擎", correct: false },
+      {label: "D", text: "SPIRAL 只支持并行执行，不支持串行步骤", correct: false }
+    ],
+    explanation: "传统框架中 Plan/Act/Reflect 都由同一个 LLM 承担（既是运动员又是裁判）。SPIRAL 引入角色分工：Planner=创意发散(像PM)、Simulator=务实检验(像QA)、Critic=严苛评审(像Tech Lead)。DailyLifeAPIs 准确率83.6%，超次优基线16pp+。",
+    source: "A2.2 §4.2 SPIRAL 架构解读"
+  },
+  {
+    section: "§④ 演进",
+    num: 8,
+    question: "Anthropic 总结的企业级五种工作流中，哪种最接近 Plan-Act-Reflect 的工程实践？它的对应关系是怎样的？",
+    options: [
+      { label: "A", text: "#1 链式提示 — 对应 Act 阶段的串行流水线", correct: false },
+      { label: "B", text: "#2 路由系统 — 对应 Plan 阶段的意图分类", correct: false },
+      { label: "C", text: "#4 协调器编排（Orchestrator-Workers）— Coordinator 承担 Plan+Reflect，Workers 承担 Act", correct: true },
+      { label: "D", text: "#5 评估器优化器 — 完全等同于 Reflect 阶段", correct: false }
+    ],
+    explanation: "#4 Orchestrator-workers 最接近 P-A-R：中央 Coordinator = Plan（分配任务）+ Reflect（收集评估结果整合），多个 Workers = Act（各自执行具体动作）。注意：#5 evaluator-optimizer 只是 Reflect 的一种变体，不是完整 P-A-R。",
+    source: "A2.2 §4.3 企业级五种工作流"
+  },
+
+  // ===== §⑤ 连接（Q9-Q10）=====
+  {
+    section: "§⑤ 连接",
+    num: 9,
+    question: "DDAgent 的 Dispatcher→子Agent 架构如何映射到 Plan-Act-Reflect？以下哪个映射关系是正确的？",
+    options: [
+      { label: "A", text: "Dispatcher=Act, 子Agent=Plan, 结果汇聚=Reflect", correct: false },
+      { label: "B", text: "Dispatcher=Plan（意图理解+路由决策），子Agent集群=Act（各司其职执行Tool调用），结果汇聚+准确率判断=Reflect", correct: true },
+      { label: "C", text: "Dispatcher=Reflect, 子Agent=Plan, 用户输入=Act", correct: false },
+      { label: "D", text: "三者没有明确对应关系，DDAgent 使用的是完全不同的架构", correct: false }
+    ],
+    explanation: "Dispatcher 接收用户指令后解析意图、决定调用哪些子Agent及顺序 → 这是 Plan。子Agent（搜索/风控/对标/报告/复核）各自执行具体的API/SQL/Webhook调用 → 这是 Act。结果汇聚后做准确率判断、低于阈值路由人工复核 → 这是 Reflect。",
+    source: "A2.2 §5.1 DDAgent 的 P-A-R 映射表"
+  },
+  {
+    section: "§⑤ 连接",
+    num: 10,
+    question: "DDAgent 的运营数据显示 83%预填率 / 95%准确率 / 100%路由准确率。这三个指标分别验证了 P-A-R 中哪个阶段的核心价值？",
+    options: [
+      { label: "A", text: "83%=Act执行效率, 95%=Plan规划质量, 100%=Reflect纠错能力", correct: false },
+      { label: "B", text: "83%=Plan的高质量路由确保自动化覆盖广, 95%=Reflect拦截低质量结果, 100%=Plan从不发错目标", correct: true },
+      { label: "C", text: "三个指标都只与 Act 阶段相关，和 Plan/Reflect 无关", correct: false },
+      { label: "D", text: "83%=Reflect的容错能力, 95%=Act的工具质量, 100%=Plan的搜索算法", correct: false }
+    ],
+    explanation: "83%预填率高 → Plan(Dispatcher)路由决策好，大部分字段能自动填充到正确子Agent。95%准确率 → Reflect(置信度判断)成功拦截了5%低质量输出。100%路由准确率 → Plan从不把尽调单发到错误的子Agent。三个数字共同证明：好的规划减少无效执行，好的反思保证质量。",
+    source: "A2.2 §5.2 DDAgent P-A-R 数据验证"
+  }
+];
+
+let currentQ = 0;
+let score = { correct: 0, wrong: 0 };
+let answered = new Set();
+
+function renderQuiz() {
+  const container = document.getElementById('quiz-container');
+  const dotsContainer = document.getElementById('dots');
+  dotsContainer.innerHTML = quizData.map(function(_, i) {
+    return '<div class="dot ' + (answered.has(i) ? 'done' : '') + ' ' + (i === currentQ ? 'current' : '') + '" data-i="' + i + '"></div>';
+  }).join('');
+
+  if (currentQ >= quizData.length) {
+    showScore();
+    return;
+  }
+
+  var q = quizData[currentQ];
+  var isAnswered = answered.has(currentQ);
+  container.innerHTML =
+    '<div class="section-divider">' + q.section + ' · 第 ' + q.num + ' 题</div>' +
+    '<div class="q-block ' + (isAnswered ? 'answered' : '') + '" id="qb' + currentQ + '">' +
+      '<div class="q-num">Question ' + q.num + ' / ' + quizData.length + '</div>' +
+      '<div class="q-text">' + q.question + '</div>' +
+      '<div class="options" id="opts' + currentQ + '">' +
+        q.options.map(function(o, i) {
+          return '<div class="opt' + (isAnswered ? ' locked' : '') + '" data-i="' + i + '" onclick="selectOpt(' + i + ')">' + o.label + '. ' + o.text + '</div>';
+        }).join('') +
+      '</div>' +
+      '<div class="action-btns" id="btns' + currentQ + '">' +
+        '<button class="q-btn submit-btn" onclick="submitAnswer()" ' + (isAnswered ? 'disabled' : '') + '>提交答案</button> ' +
+        '<button class="q-btn reveal-btn" onclick="revealAnswer()" ' + (isAnswered ? 'disabled' : '') + '>查看答案</button>' +
+      '</div>' +
+      '<div class="feedback" id="fb' + currentQ + '"></div>' +
+      '<div class="source" id="src' + currentQ + '" style="display:none">' + q.source + '</div>' +
+    '</div>';
+
+  if (isAnswered) {
+    var selIdx = q._selected;
+    if (selIdx !== undefined) {
+      document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+        el.classList.toggle('selected', i === selIdx);
+        el.classList.toggle('correct', q.options[i].correct);
+        el.classList.toggle('wrong', i === selIdx && !q.options[i].correct);
+      });
+      showFeedback(true);
+    }
+  }
+
+  dotsContainer.querySelectorAll('.dot').forEach(function(d) {
+    d.onclick = function() { currentQ = parseInt(d.dataset.i); renderQuiz(); };
+  });
+}
+
+function selectOpt(idx) {
+  if (answered.has(currentQ)) return;
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+    el.classList.toggle('selected', i === idx);
+  });
+  quizData[currentQ]._selected = idx;
+}
+
+function submitAnswer() {
+  if (answered.has(currentQ)) return;
+  var q = quizData[currentQ];
+  var selIdx = q._selected;
+  if (selIdx === undefined) { alert('请先选择一个选项'); return; }
+  answered.add(currentQ);
+
+  var isCorrect = q.options[selIdx].correct;
+  if (isCorrect) score.correct++; else score.wrong++;
+
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+    el.classList.add('locked');
+    if (q.options[i].correct) el.classList.add('correct');
+    else if (i === selIdx) el.classList.add('wrong');
+  });
+
+  showFeedback(isCorrect);
+  document.getElementById('btns' + currentQ).querySelectorAll('.q-btn').forEach(function(b) { b.disabled = true; });
+}
+
+function revealAnswer() {
+  if (answered.has(currentQ)) return;
+  answered.add(currentQ);
+  score.wrong++;
+
+  var q = quizData[currentQ];
+  q._revealed = true;
+
+  document.querySelectorAll('#opts' + currentQ + ' .opt').forEach(function(el, i) {
+    el.classList.add('locked');
+    if (q.options[i].correct) el.classList.add('correct');
+  });
+
+  showFeedback(false);
+  document.getElementById('btns' + currentQ).querySelectorAll('.q-btn').forEach(function(b) { b.disabled = true; });
+}
+
+function showFeedback(isSubmitted) {
+  var q = quizData[currentQ];
+  var fb = document.getElementById('fb' + currentQ);
+  var src = document.getElementById('src' + currentQ);
+  var selIdx = q._selected;
+  var isCorrect = q.options[selIdx] ? q.options[selIdx].correct : false;
+
+  if (isSubmitted && isCorrect) {
+    fb.className = 'feedback show correct-fb';
+    fb.innerHTML = '<strong>✅ 正确！</strong> ' + q.explanation;
+  } else if (isSubmitted && !isCorrect) {
+    fb.className = 'feedback show wrong-fb';
+    fb.innerHTML = '<strong>❌ 错误。</strong> 正确答案是 <strong>' + q.options.find(function(o){return o.correct}).label + '</strong>。' + q.explanation;
+  } else {
+    fb.className = 'feedback show wrong-fb';
+    fb.innerHTML = '<strong>📖 参考答案：</strong>' + q.explanation;
+  }
+  src.style.display = 'block';
+}
+
+function showScore() {
+  document.getElementById('quiz-container').innerHTML = '';
+  document.getElementById('scoreBar').classList.add('show');
+  document.getElementById('scoreNum').textContent = score.correct + '/' + quizData.length;
+  document.getElementById('correctNum').textContent = score.correct;
+  document.getElementById('wrongNum').textContent = score.wrong;
+}
+
+// Init
+renderQuiz();
+</script>
+
+</body>
+</html>
